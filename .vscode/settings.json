@@ -98,5 +98,6 @@
         "complex": "cpp",
         "unordered_set": "cpp",
         "*.ipp": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

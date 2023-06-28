@@ -1,0 +1,31 @@
+
+## Потоковые манипуляторы
+
+#include <iomanip>
+setw - задать ширину поля ввода
+setprecision - точность вывода вещественных чисел
+setfill - заполнитель для setw
+left - выравнивание данных по левому краю
+fixed - выведение чисел в фиксированном формате
+
+## Ввод и вывод пользовательских типов
+// оператор вывода в поток
+ostream& operator<<(ostream &s, Obj &o)
+// оператор ввода из потока
+istream& operator>>(istream &s, Obj &o)
+
+## Удобное использование пользовательских типов
+??? operator ???(???)
+bool operator <(const &Tobj lhs, const &Tobj rhs)
+Tobj operator +(const &Tobj lhs, const &Tobj rhs)
+
+## Удобный способ сообщить о проблеме: exception, runtime_error, ...
+try
+{
+    // опасный код
+}
+catch (const exception &e)
+{
+    // обработка ошибки
+    // e.what() возвращает текст ошибки
+}
