@@ -19,6 +19,7 @@ struct Date
     int mounth = 0;
     int day = 0;
 };
+map<Date, set<string>> date_and_events;
 
 void ensureSymbol(istringstream &ss, const string &date_str)
 {
@@ -366,6 +367,39 @@ void testDate()
     }
 }
 
+void deleteEventIfExists(Date &date, const string &event)
+{
+    // если событие существует
+    if (date_and_events.at(date).count(event))
+    {
+        date_and_events[date].erase(event);
+        cout << "Deleted successfully" << endl;
+    }
+    else
+    {
+        cout << "Event not found" << endl;
+    }
+}
+
+void deleteAllEvents(Date &date)
+{
+    if (date_and_events.count(date) and not date_and_events.at(date).empty())
+    {
+        size_t event_number = date_and_events.at(date).size();
+        date_and_events[date].clear();
+        cout << "Deleted " << event_number << " events" << endl;
+    }
+    else
+    {
+        cout << "Deleted 0 events" << endl;
+    }
+}
+
+void printAll()
+{
+    for (const auto date : date_and_events)
+}
+
 void run()
 {
     bool test = false;
@@ -375,8 +409,6 @@ void run()
         cout << "testDate OK" << endl;
         throw runtime_error("TESTS OK");
     }
-
-    static map<Date, set<string>> date_and_events;
 
     string line;
     Date date;
@@ -412,11 +444,11 @@ void run()
         getline(ss, event);
         if (not event.empty())
         {
-            cout << "without event" << endl;
+            deleteEventIfExists(date, event);
         }
         else
         {
-            cout << "event" << endl;
+            deleteAllEvents(date);
         }
     }
     else if (command == "Find")
@@ -430,6 +462,7 @@ void run()
     }
     else if (command == "Print")
     {
+        printAll();
     }
     else
     {
@@ -446,7 +479,7 @@ int main()
             run();
         }
     }
-    catch (const std::exception &e)
+    catch (const exception &e)
     {
         cout << e.what() << endl;
     }
