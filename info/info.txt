@@ -29,3 +29,17 @@ catch (const exception &e)
     // обработка ошибки
     // e.what() возвращает текст ошибки
 }
+
+## Кортежи:
+- Упрощают реализацию operator<
+- Позволяют вернуть несколько значений из функции и сохранить их
+Пары - частный случай кортежей, но чуть приятнее
+
+## structure bindings
+tuple<bool, string> FindCountry()
+{
+    return {false, "Not exist"};
+}
+
+auto [success, message] = FindCountry();
+
