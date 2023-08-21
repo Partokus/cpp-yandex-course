@@ -145,12 +145,11 @@ private:
     };
     map<int, Name> _yearToName{};
 
-    string getFullNameHistory(int year, const map<int, string> &name)
+    Name getFullNameHistory(std::map<int, Person::Name>::iterator year)
     {
-        string result{"("};
-        string current_name{name.at(year)};
+        Name result{"(", "("};
+        Name current_name{year->second.first_name, year->second.last_name};
 
-        name.
         for (auto i = prev(year); i != prev(_yearToName.begin()); --i)
         {
             if (i->second.first_name == "" && i->second.last_name == "")
