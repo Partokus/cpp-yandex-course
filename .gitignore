@@ -1,0 +1,9 @@
+# Ignore all subdirectories
+/*/*
+
+# White list
+!/src/**
+!/info/**
+!/.vscode/**
+!/meson.build
+
