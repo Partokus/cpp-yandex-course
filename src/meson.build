@@ -11,13 +11,15 @@ add_project_link_arguments(linker_script_flags, language: ['c', 'cpp'])
 dep = [
 ]
 
+inc = include_directories(
+    '.'
+)
+
 src = [
     'main.cpp',
+    'test_runner.cpp',
+    'test_asserts.cpp',
 ]
-
-inc = include_directories(
-    '.',
-)
 
 if host_machine.system() == 'windows'
     winmm_lib = meson.get_compiler('cpp').find_library('winmm', required : true)
