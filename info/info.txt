@@ -43,3 +43,26 @@ tuple<bool, string> FindCountry()
 
 auto [success, message] = FindCountry();
 
+## Вставка в произвольное место вектора
+v.insert(it, value) вставляет value перед итератором it:
+v.insert(v.end(), value) вставит value перед end
+
+v.insert(it, range_begin, range_end)
+вставляет диапазон [range_begin, range_end] в позицию it
+v.insert(it, count, value)
+count раз вставляет элемент value в позицию it
+v.insert(it, {1, 2, 3})
+вставляет 1, 2, 3 в позицию it
+
+## Обратные итераторы
+Упрощают итерирование по контейнеру в обратную сторону
+sort(rbegin(v), rend(v)) - сортировка вектора по убыванию
+
+## Справочник по C++ - https://ru.cppreference.com/w/
+## Алгоритмы C++ - https://ru.cppreference.com/w/cpp/algorithm
+
+## Категории итераторов
+Input: итераторы любых контейнеров
+Forward, Bidir: итераторы любых контейнеров (кроме set и map, если нужно менять содержимое)
+Random: итераторы векторов и строк
+Output: итераторы векторов и строк, inserter, back_inserter
