@@ -66,3 +66,14 @@ Input: итераторы любых контейнеров
 Forward, Bidir: итераторы любых контейнеров (кроме set и map, если нужно менять содержимое)
 Random: итераторы векторов и строк
 Output: итераторы векторов и строк, inserter, back_inserter
+Полный список требований к input-итераторам: https://en.cppreference.com/w/cpp/named_req/InputIterator
+Полный список требований к output-итераторам: https://en.cppreference.com/w/cpp/named_req/OutputIterator
+Полный список требований к forward-итераторам: https://en.cppreference.com/w/cpp/named_req/ForwardIterator
+Полный список требований к bidirectional-итераторам: https://en.cppreference.com/w/cpp/named_req/BidirectionalIterator
+Полный список требований к итераторам произвольного доступа: https://en.cppreference.com/w/cpp/named_req/RandomAccessIterator
+Полный список требований к contiguous-итераторам: https://en.cppreference.com/w/cpp/named_req/ContiguousIterator
+next замещает it + 1 или it + n;
+prev замещает it - 1 или it - n;
+advance замещает it += n;
+distance замещает it2 - it1.
+vector<bool> устроен так, что каждый элемент занимает в нём не один байт (как одна переменная типа bool), а один бит
