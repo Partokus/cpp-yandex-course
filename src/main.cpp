@@ -6,47 +6,65 @@
 #include <tuple>
 #include <ctime>
 #include <cstring>
+#include <iomanip>
 
 using namespace std;
 
 class PersonalBudjet
 {
 public:
-    double ComputeIncome(const std::chrono::year year_from, const std::chrono::month month_from, const std::chrono::day day_from,
-                         const std::chrono::year year_to, const std::chrono::month month_to, const std::chrono::day day_to) const
+    double ComputeIncome(int year_from, int month_from, int day_from,
+                         int year_to, int month_to, int day_to) const
     {
-        const auto date_begin = MakeTimePoint(year_from, month_from, day_from);
-        const auto date_end = MakeTimePoint(year_to, month_to, day_to) + std::chrono::days{1};
-        return accumulate(_dates.lower_bound(date_begin), _dates.find(date_end), 0.0, [](double value, const auto &my_pair)
-                          { return my_pair.second + value; });
+        time_t date_begin = MakeTime(year_from, month_from, day_from);
+        time_t date_end = MakeTime(year_to, month_to, day_to + 1);
+
+        double sum = 0.0;
+        for (auto date = date_begin; date != date_end; date += OneDay)
+        {
+            sum = accumulate(_budjet.begin(), _budjet.end(), sum, [&, date](double value, const auto &budjet)
+            {
+                if (date >= budjet.first[0] and date <= budjet.first[1])
+                {
+                    return value + budjet.second;
+                }
+                return value;
+            });
+        }
+        return sum;
     }
 
-    void Earn(const std::chrono::year year_from, const std::chrono::month month_from, const std::chrono::day day_from,
-              const std::chrono::year year_to, const std::chrono::month month_to, const std::chrono::day day_to,
+    void Earn(int year_from, int month_from, int day_from,
+              int year_to, int month_to, int day_to,
               double value)
     {
-        auto date = MakeTimePoint(year_from, month_from, day_from);
-        const auto date_end = MakeTimePoint(year_to, month_to, day_to) + std::chrono::days{1};
+        time_t date_from = MakeTime(year_from, month_from, day_from);
+        time_t date_to = MakeTime(year_to, month_to, day_to);
 
-        const auto days_count = std::chrono::duration_cast<std::chrono::days>(date_end - date).count();
-        const double value_for_day = value / days_count;
+        int days = CountDays(date_from, date_to);
+        double value_for_day = value / days;
 
-        while (date != date_end)
-        {
-            _dates[date] += value_for_day;
-            date += std::chrono::days{1};
-        }
+        _budjet[{date_from, date_to}] += value_for_day;
     }
 
-private:
-    map<time_t, double> _dates{};
+// private:
+    map<vector<time_t>, double> _budjet{};
 
-    std::chrono::system_clock::time_point MakeTimePoint(std::chrono::year year,
-                                                        std::chrono::month month,
-                                                        std::chrono::day day) const
+    static constexpr time_t OneDay = 60 * 60 * 24;
+
+    time_t MakeTime(int year, int month, int day) const
     {
-        const std::chrono::year_month_day ymd{year, month, day};
-        return std::chrono::sys_days{ymd};
+        time_t empty_time{};
+        tm *ltm = localtime(&empty_time);
+        ltm->tm_year = year - 1900;
+        ltm->tm_mon = month - 1;
+        ltm->tm_mday = day;
+        return mktime(ltm);
+    }
+
+    int CountDays(time_t date_from, time_t date_to)
+    {
+        return ((date_to - date_from) / OneDay) + 1;
     }
 };
 
@@ -60,65 +78,42 @@ int main()
 {
     TestAll();
 
-    // using namespace std::chrono;
+    cout << fixed << setprecision(25);
 
-    // cout << fixed << setprecision(25);
+    PersonalBudjet pb{};
+    int Q = 0;
+    cin >> Q;
 
-    // PersonalBudjet pb{};
-    // int Q = 0;
-    // cin >> Q;
+    for (int i = 0; i < Q; ++i)
+    {
+        string req{};
+        cin >> req;
 
-    // for (int i = 0; i < Q; ++i)
-    // {
-    //     string req{};
-    //     cin >> req;
+        int year_from = 0;
+        unsigned int month_from = 0;
+        unsigned int day_from = 0;
+        int year_to = 0;
+        unsigned int month_to = 0;
+        unsigned int day_to = 0;
 
-    //     int year_from = 0;
-    //     unsigned int month_from = 0;
-    //     unsigned int day_from = 0;
-    //     int year_to = 0;
-    //     unsigned int month_to = 0;
-    //     unsigned int day_to = 0;
+        char separ{};
 
-    //     char separ{};
+        cin >> year_from >> separ >> month_from >> separ >> day_from >>
+            year_to >> separ >> month_to >> separ >> day_to;
 
-    //     cin >> year_from >> separ >> month_from >> separ >> day_from >>
-    //         year_to >> separ >> month_to >> separ >> day_to;
-
-    //     if (req == "Earn")
-    //     {
-    //         unsigned int value = 0;
-    //         cin >> value;
-    //         pb.Earn(year{year_from}, month{month_from}, day{day_from},
-    //                 year{year_to}, month{month_to}, day{day_to},
-    //                 value);
-    //     }
-    //     else if (req == "ComputeIncome")
-    //     {
-    //         cout << pb.ComputeIncome(year{year_from}, month{month_from}, day{day_from},
-    //                                  year{year_to}, month{month_to}, day{day_to}) << endl;
-    //     }
-    // }
-
-    // std::time_t result = std::time(nullptr);
-    // std::cout << std::ctime(&result);
-
-    // char buffer[32];
-    // std::strncpy(buffer, std::ctime(&result), 26);
-    // assert('\n' == buffer[std::strlen(buffer) - 1]);
-    // std::cout << buffer;
-    time_t now = time(0);
-
-    cout << "Number of sec since January 1,1970 is:: " << now << endl;
-
-    tm *ltm = localtime(&now);
-
-    // print various components of tm structure.
-    cout << "Year:" << 1900 + ltm->tm_year << endl;
-    cout << "Month: " << 1 + ltm->tm_mon << endl;
-    cout << "Day: " << ltm->tm_mday << endl;
-    cout << "Time: " << 5 + ltm->tm_hour << ":";
-    cout << 30 + ltm->tm_min << ":";
-    cout << ltm->tm_sec << endl;
+        if (req == "Earn")
+        {
+            unsigned int value = 0;
+            cin >> value;
+            pb.Earn(year_from, month_from, day_from,
+                    year_to, month_to, day_to,
+                    value);
+        }
+        else if (req == "ComputeIncome")
+        {
+            cout << pb.ComputeIncome(year_from, month_from, day_from,
+                                     year_to, month_to, day_to) << endl;
+        }
+    }
     return 0;
 }
