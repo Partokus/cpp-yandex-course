@@ -10,15 +10,15 @@
             "group": "build",
             "command": "meson",
             "args": [
-                "build-win",
+                "build-win"
             ],
             "options": {
                 "statusbar": {
-                    "label": "$(arrow-up) w-meson",
+                    "label": "$(arrow-up) W-Meson",
                     "color": "#FFCB6B",
-                    "tooltip": "meson win",
+                    "tooltip": "meson win"
                 }
-            },
+            }
         },
         {
             "label": "W-Build",
@@ -28,13 +28,15 @@
             },
             "group": "build",
             "command": "meson",
-            "args": ["compile"],
+            "args": [
+                "compile"
+            ],
             "options": {
                 "cwd": "${workspaceRoot}/build-win",
                 "statusbar": {
-                    "label": "$(star-full) w-build",
+                    "label": "$(star-full) W-Build",
                     "color": "#A8FF60",
-                    "tooltip": "meson compile -C build-win",
+                    "tooltip": "meson compile -C build-win"
                 }
             },
             "problemMatcher": {
@@ -47,7 +49,10 @@
                     "severity": 4,
                     "message": 5
                 },
-                "fileLocation": ["relative", "${workspaceRoot}"],
+                "fileLocation": [
+                    "relative",
+                    "${workspaceRoot}"
+                ]
             }
         },
         {
@@ -65,9 +70,9 @@
             "options": {
                 "cwd": "${workspaceRoot}/build-win",
                 "statusbar": {
-                    "label": "$(circle-large-outline) w-clean",
+                    "label": "$(circle-large-outline) W-Clean",
                     "color": "#A463D6",
-                    "tooltip": "meson compile -C build-win --clean",
+                    "tooltip": "meson compile -C build-win --clean"
                 }
             }
         },
@@ -81,27 +86,28 @@
             "command": "remove-item",
             "args": [
                 "-r",
-                "build-win",
+                "build-win"
             ],
             "options": {
                 "statusbar": {
-                    "label": "$(trash) w-delete",
+                    "label": "$(trash) W-Delete",
                     "color": "#FF6C60",
-                    "tooltip": "delete build-win",
+                    "tooltip": "delete build-win"
                 }
-            },
+            }
         },
         {
-            "label": "run",
+            "label": "Run",
             "type": "shell",
             "command": "build-win/src/white.exe",
             "options": {
                 "statusbar": {
-                    "label": "$(debug-start) run",
+                    "label": "$(debug-start) Run",
                     "color": "#1094cd",
-                    "tooltip": "cmd /c build.dat",
+                    "tooltip": "cmd /c build.dat"
                 }
-            }
-        },
+            },
+            "problemMatcher": []
+        }
     ]
 }
