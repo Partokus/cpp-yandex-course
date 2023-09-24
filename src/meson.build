@@ -12,13 +12,14 @@ dep = [
 ]
 
 inc = include_directories(
-    '.'
+    '.',
+    'tests'
 )
 
 src = [
     'main.cpp',
-    'test_runner.cpp',
-    'test_asserts.cpp',
+    'tests/test_runner.cpp',
+    'tests/test_asserts.cpp',
 ]
 
 if host_machine.system() == 'windows'
