@@ -7,31 +7,9 @@
 #include <ctime>
 #include <cstring>
 #include <iomanip>
+#include <span>
 
 using namespace std;
-
-struct DateRange
-{
-    time_t date_from{};
-    time_t date_to{};
-};
-
-bool operator<(const DateRange &lhs, const DateRange &rhs)
-{
-    if (lhs.date_from < rhs.date_from)
-    {
-        return true;
-    }
-    if (lhs.date_from > rhs.date_from)
-    {
-        return false;
-    }
-    if (lhs.date_to < rhs.date_to)
-    {
-        return true;
-    }
-    return false;
-}
 
 struct Date
 {
@@ -45,6 +23,31 @@ bool operator<(const Date &lhs, const Date &rhs)
     return make_tuple(lhs.year, lhs.month, lhs.day) < make_tuple(rhs.year, rhs.month, rhs.day);
 }
 
+template <class InputIt, class OutputKey, class OutputValue, class BinaryOperator>
+void MapPartialSum(InputIt first, InputIt last,
+                   map<OutputKey, OutputValue> &dest,
+                   BinaryOperator op)
+{
+    if (first == last)
+        return;
+
+    typename InputIt::value_type::second_type sum = first->second;
+    dest[first->first] = sum;
+
+    while (++first != last)
+    {
+        sum = op(sum, first->second);
+        dest[first->first] = sum;
+    }
+}
+
+template <class InputIt, class OutputKey, class OutputValue>
+void MapPartialSum(InputIt first, InputIt last,
+                   map<OutputKey, OutputValue> &dest)
+{
+    return MapPartialSum(first, last, dest, std::plus<OutputValue>());
+}
+
 class PersonalBudjet
 {
 public:
@@ -54,28 +57,31 @@ public:
         {
             swap(date_from, date_to);
         }
+        const time_t from = MakeTime(date_from);
+        const time_t to = MakeTime(date_to);
 
-        const time_t date_begin = MakeTime(date_from);
-        const time_t date_end = MakeTime(date_to);
-
-        auto it_date_begin = _budjet.find(date_begin);
-        if (it_date_begin == end(_budjet))
+        auto it_from = _budjet.find(from);
+        if (it_from == _budjet.end())
         {
-            it_date_begin = _budjet.upper_bound(date_begin);
+            it_from = _budjet.upper_bound(from);
         }
 
-        const auto it_date_end = _budjet.upper_bound(date_end);
+        auto it_to = _budjet.find(to);
+        if (it_to == _budjet.end())
+        {
+            it_to = prev(_budjet.lower_bound(to));
+        }
 
-        // if (not _isPartialSumUpdated)
-        // {
-        //     _isPartialSumUpdated = true;
-        //     partial_sum(_budjet.cbegin(), _budjet.cend(), _partial_sums.begin(), [](auto &lhs, auto &rhs)
-        //     {
-        //         return {};
-        //     });
-        // }
+        if (not _isPartialSumUpdated)
+        {
+            _isPartialSumUpdated = true;
+            MapPartialSum(_budjet.cbegin(), _budjet.cend(), _budjet);
+        }
 
-        return 0.0;
+        const double lhs_sum = it_from == _budjet.cbegin() ? 0.0 : prev(it_from)->second;
+        const double rhs_sum = it_to->second;
+
+        return rhs_sum - lhs_sum;
     }
 
     void Earn(const Date date, const double value)
@@ -83,14 +89,11 @@ public:
         _budjet[MakeTime(date)] += value;
     }
 
-// private:
+private:
     map<time_t, double> _budjet{};
-    map<time_t, double> _budjet_partial_sums{};
     bool _isPartialSumUpdated = false;
 
     static constexpr time_t OneDay = 60 * 60 * 24;
-    static constexpr time_t TimeRangeBegin = 946684800; // 2000-1-1
-    static constexpr unsigned int DaysCount = 36525;
 
     time_t MakeTime(const Date &date) const
     {
@@ -106,22 +109,10 @@ public:
     {
         return ((date_time_to - date_time_from) / OneDay) + 1;
     }
-
-    unsigned int TimeToIndex(time_t my_time)
-    {
-        return (my_time - TimeRangeBegin) / OneDay;
-    }
 };
 
 void TestPersonalBudjet()
 {
-    {
-        PersonalBudjet pb{};
-        AssertEqual(pb.TimeToIndex(pb.MakeTime({2000, 1, 1})), 0U, "TimeToIndex 0");
-        AssertEqual(pb.TimeToIndex(pb.MakeTime({2000, 1, 2})), 1U, "TimeToIndex 1");
-        AssertEqual(pb.TimeToIndex(pb.MakeTime({2099, 12, 31})), PersonalBudjet::DaysCount - 1, "TimeToIndex 3");
-        cout << pb.TimeToIndex(pb.MakeTime({2099, 12, 31}));
-    }
 }
 
 void TestAll()
@@ -135,7 +126,6 @@ int main()
     cout.precision(25);
 
     TestAll();
-    return 0;
 
     PersonalBudjet pb{};
 
