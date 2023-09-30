@@ -117,4 +117,14 @@ upper_bound(begin(v), end(v), x)
 Диапазон элементов, равных данному:
 equal_range(begin(v), end(v), x) == make_pair(lower_bound(...), uppder_bound(...))
 
+## equal_range
+Если элемент есть, equal_range = [lower_bound, upper_bound] - диапазон всех вхождений
+Если элемента нет, lower_bound == upper_bound - позиция, куда можно вставить элемент без нарушения порядка сортировки
+Найти количество вхождений - upper_bound - lower_bound
+Как перебрать все вхождения - проитерироваться от lower_bound до upper_bound
+
+Вместо алгоритмов лучше использовать именно методы, если они есть у контейнера
+
+
+
 
