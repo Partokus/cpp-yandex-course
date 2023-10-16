@@ -10,92 +10,56 @@
 
 using namespace std;
 
-class Person
+template <typename RandomIt>
+pair<RandomIt, RandomIt> FindStartsWith(RandomIt range_begin, RandomIt range_end, const string &prefix)
 {
-public:
-    void ChangeFirstName(int year, const string &first_name)
-    {
-        _first_names[year] = first_name;
-    }
+    // Все строки, начинающиеся с prefix, больше или равны строке "<prefix>"
+    auto left = lower_bound(range_begin, range_end, prefix);
 
-    void ChangeLastName(int year, const string &last_name)
-    {
-        _last_names[year] = last_name;
-    }
+    // Составим строку, которая в рамках буквенных строк является
+    // точной верхней гранью множества строк, начинающихся с prefix
+    string upper_bound = prefix;
+    ++upper_bound[upper_bound.size() - 1];
 
-    string GetFullName(int year) const
-    {
-        auto first_name_year = findNearlyYear(year, _first_names);
-        auto last_name_year = findNearlyYear(year, _last_names);
+    // Первое встреченное слово, не меньшее upper_bound,
+    // обязательно является концом полуинтервала
+    auto right = lower_bound(range_begin, range_end, upper_bound);
 
-        if (not first_name_year and not last_name_year)
-        {
-            return "Incognito";
-        }
-        if (first_name_year and not last_name_year)
-        {
-            return _first_names.at(first_name_year.value()) + " with unknown last name";
-        }
-        else if (last_name_year and not first_name_year)
-        {
-            return _last_names.at(last_name_year.value()) + " with unknown first name";
-        }
+    return {left, right};
+}
 
-        return _first_names.at(first_name_year.value()) + " " + _last_names.at(last_name_year.value());
-    }
-
-private:
-    map<int, string> _first_names;
-    map<int, string> _last_names;
-
-    /**
-     * findNearlyYear
-     * * return bigger or same year if exists
-     */
-    std::optional<int> findNearlyYear(int year, const map<int, string> &names) const noexcept
-    {
-        auto iter_after = names.upper_bound(year);
-        if (iter_after != names.begin())
-        {
-            return prev(iter_after)->first;
-        }
-        return std::nullopt;
-    }
-};
+void TestFindStartsWith()
+{
+}
 
 void TestAll()
 {
     TestRunner tr = {};
+
+    tr.RunTest(TestFindStartsWith, "TestFindStartsWith");
 }
 
 int main()
 {
     TestAll();
 
-    Person person;
+    const vector<string> sorted_strings = {"moscow", "motovilikha", "murmansk", "m", "p"};
 
-    for (int year : {1900, 1965, 1990})
+    const auto mo_result =
+        FindStartsWith(begin(sorted_strings), end(sorted_strings), "mo");
+    for (auto it = mo_result.first; it != mo_result.second; ++it)
     {
-        cout << person.GetFullName(year) << endl;
+        cout << *it << " ";
     }
+    cout << endl;
 
-    person.ChangeFirstName(1965, "Polina");
-    person.ChangeLastName(1967, "Sergeeva");
-    for (int year : {1900, 1965, 1990})
-    {
-        cout << person.GetFullName(year) << endl;
-    }
+    const auto mt_result =
+        FindStartsWith(begin(sorted_strings), end(sorted_strings), "mt");
+    cout << (mt_result.first - begin(sorted_strings)) << " " << (mt_result.second - begin(sorted_strings)) << endl;
 
-    person.ChangeFirstName(1970, "Appolinaria");
-    for (int year : {1969, 1970})
-    {
-        cout << person.GetFullName(year) << endl;
-    }
+    const auto na_result =
+        FindStartsWith(begin(sorted_strings), end(sorted_strings), "na");
+    cout << (na_result.first - begin(sorted_strings)) << " " << (na_result.second - begin(sorted_strings)) << endl;
 
-    person.ChangeLastName(1968, "Volkova");
-    for (int year : {1969, 1970})
-    {
-        cout << person.GetFullName(year) << endl;
-    }
     return 0;
 }
