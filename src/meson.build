@@ -20,6 +20,11 @@ src = [
     'main.cpp',
     'tests/test_runner.cpp',
     'tests/test_asserts.cpp',
+    # 'condition_parser_test.cpp',
+    'date.cpp',
+    # 'token.cpp',
+    # 'database.cpp',
+    'node.cpp',
 ]
 
 if host_machine.system() == 'windows'
