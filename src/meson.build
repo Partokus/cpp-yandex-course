@@ -20,10 +20,11 @@ src = [
     'main.cpp',
     'tests/test_runner.cpp',
     'tests/test_asserts.cpp',
-    # 'condition_parser_test.cpp',
-    'date.cpp',
-    # 'token.cpp',
+    'condition_parser_test.cpp',
+    'condition_parser.cpp',
     # 'database.cpp',
+    'date.cpp',
+    'token.cpp',
     'node.cpp',
 ]
 

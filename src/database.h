@@ -19,4 +19,5 @@ public:
     std::string Last(const Date &date);
 private:
     std::map<Date, std::set<std::string>> _date_and_events{};
+    
 };

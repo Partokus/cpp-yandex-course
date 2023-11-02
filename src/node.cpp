@@ -48,7 +48,7 @@ DateComparisonNode::DateComparisonNode(const Comparison cmp, const Date &date)
     }
 }
 
-bool DateComparisonNode::Evaluate(const Date &date, const string &)
+bool DateComparisonNode::Evaluate(const Date &date, const string &) const
 {
     return _cmp(date);
 }
@@ -99,7 +99,28 @@ EventComparisonNode::EventComparisonNode(const Comparison cmp, const string &eve
     }
 }
 
-bool EventComparisonNode::Evaluate(const Date &, const string &event)
+bool EventComparisonNode::Evaluate(const Date &, const string &event) const
 {
     return _cmp(event);
+}
+
+LogicalOperationNode::LogicalOperationNode(const LogicalOperation logical_operation, const std::shared_ptr<Node> left_node, const std::shared_ptr<Node> right_node)
+    : LogicalOperationVar(logical_operation),
+      LeftNode(left_node),
+      RightNode(right_node)
+{
+}
+
+bool LogicalOperationNode::Evaluate(const Date &date, const std::string &event) const
+{
+    if (LogicalOperationVar == LogicalOperation::And)
+    {
+        return LeftNode->Evaluate(date, event) and RightNode->Evaluate(date, event);
+    }
+    return LeftNode->Evaluate(date, event) or RightNode->Evaluate(date, event);
+}
+
+bool EmptyNode::Evaluate(const Date &, const std::string &) const
+{
+    return true;
 }
