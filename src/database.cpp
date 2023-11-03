@@ -46,10 +46,10 @@ void Database::Print(ostream &os) const
         for (const auto &event : events)
         {
             os << setfill('0')
-                << setw(4) << date.year << "-"
-                << setw(2) << date.mounth << "-"
-                << setw(2) << date.day << " "
-                << event << endl;
+               << setw(4) << date.year << "-"
+               << setw(2) << date.mounth << "-"
+               << setw(2) << date.day << " "
+               << event << endl;
         }
     }
 }
