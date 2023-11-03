@@ -3,21 +3,21 @@
 #include <map>
 #include <set>
 #include <string>
+#include <functional>
+#include <vector>
+
 #include "date.h"
+
+using Predicate = std::function<bool(const Date &date, const std::string &event)>;
 
 class Database
 {
 public:
     void Add(const Date &date, const std::string &event);
-    RemoveIf
-    bool DeleteEvent(const Date &date, const std::string &event);
-    int DeleteDate(const Date &date);
-    void Find(const Date &date) const;
-    void Print(std::istream &is) const;
-    int FindIf();
-    int RemoveIf();
-    std::string Last(const Date &date);
+    unsigned int RemoveIf(const Predicate &predicate);
+    std::vector<std::string> FindIf(const Predicate &predicate) const; // TODO: const & ???
+    void Print(std::ostream &os) const;
+    std::string Last(const Date &date) const;
 private:
-    std::map<Date, std::set<std::string>> _date_and_events{};
-    
+    std::map<Date, std::vector<std::string>> _date_and_events{};
 };

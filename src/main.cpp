@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 #include "test_runner.h"
-// #include "database.h"
+#include "database.h"
 #include "date.h"
 #include "condition_parser.h"
 #include "node.h"
@@ -126,10 +126,51 @@ void TestParseEvent()
     }
 }
 
+void TestDataBase()
+{
+    {
+        Database db{};
+        stringstream ss{};
+        db.Add(Date{2000, 1, 1}, "wow tournament makgora 4");
+        db.Add(Date{2000, 1, 2}, "wow tournament makgora 3");
+        db.Add(Date{2000, 1, 3}, "wow tournament makgora 6");
+        db.Print(ss);
+        string data_and_event{};
+        getline(ss, data_and_event);
+        AssertEqual(data_and_event, "2000-01-01 wow tournament makgora 4", "DataBase Print 0");
+        getline(ss, data_and_event);
+        AssertEqual(data_and_event, "2000-01-02 wow tournament makgora 3", "DataBase Print 1");
+        getline(ss, data_and_event);
+        AssertEqual(data_and_event, "2000-01-03 wow tournament makgora 6", "DataBase Print 2");
+    }
+    {
+        Database db{};
+        db.Add(Date{2017, 6, 1}, "1st of June");
+        db.Add(Date{2017, 7, 8}, "8th of July");
+        db.Add(Date{2017, 7, 8}, "Someone's birthday");
+
+        stringstream ss{"date == 2017-07-08"};
+        auto condition = ParseCondition(ss);
+        auto predicate1 = [condition](const Date &date, const string &event)
+        {
+            return condition->Evaluate(date, event);
+        };
+        AssertEqual(db.RemoveIf(predicate1), 2U, "DataBase RemoveIf 0");
+        ss = stringstream{"event == \"1st of June\""};
+        condition = ParseCondition(ss);
+        auto predicate2 = [condition](const Date &date, const string &event)
+        {
+            return condition->Evaluate(date, event);
+        };
+        AssertEqual(db.RemoveIf(predicate2), 1U, "DataBase RemoveIf 1");
+    }
+}
+
 void TestAll()
 {
     TestRunner tr;
     tr.RunTest(TestParseEvent, "TestParseEvent");
     tr.RunTest(TestParseDate, "TestParseDate");
     tr.RunTest(TestParseCondition, "TestParseCondition");
+    tr.RunTest(TestDataBase, "TestDataBase");
 }

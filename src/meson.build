@@ -22,7 +22,7 @@ src = [
     'tests/test_asserts.cpp',
     'condition_parser_test.cpp',
     'condition_parser.cpp',
-    # 'database.cpp',
+    'database.cpp',
     'date.cpp',
     'token.cpp',
     'node.cpp',
