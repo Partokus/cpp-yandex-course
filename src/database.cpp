@@ -1,42 +1,68 @@
 #include "database.h"
 
+#include <sstream>
+
 using namespace std;
 
 void Database::Add(const Date &date, const string &event)
 {
-    _date_and_events[date].push_back(event);
+    auto &events = _date_and_events[date];
+    if (find(events.cbegin(), events.cend(), event) == events.cend())
+    {
+        events.push_back(event);
+    }
 }
 
 unsigned int Database::RemoveIf(const Predicate &predicate)
 {
-    unsigned int count = 0;
-    for (auto &[date, events] : _date_and_events)
+    unsigned int removed_count = 0;
+
+    for (auto it = _date_and_events.begin(); it != _date_and_events.cend();)
     {
-        unsigned int elem_index = 0;
-        for (auto &event : events)
+        auto it_begin_remove = remove_if(_date_and_events[it->first].begin(), _date_and_events[it->first].end(), [&predicate, &it](const string &event)
+        {
+            return predicate(it->first, event);
+        });
+        removed_count += it->second.cend() - it_begin_remove;
+        it->second.erase(it_begin_remove, it->second.end());
+
+        if (_date_and_events[it->first].empty())
+        {
+            _date_and_events.erase((it++)->first);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+    return removed_count;
+}
+
+vector<string> Database::FindIf(const Predicate &predicate) const
+{
+    vector<string> date_and_event{};
+    for (const auto &[date, events] : _date_and_events)
+    {
+        for (const auto &event : events)
         {
             if (predicate(date, event))
             {
-                _date_and_events[date].erase(_date_and_events[date].cbegin() + elem_index++);
-                if (_date_and_events[date].empty())
-                {
-                    _date_and_events.erase(date);
-                }
-                ++count;
+                date_and_event.push_back(MakeStr(date, event));
             }
         }
     }
-    return count;
+    return date_and_event;
 }
 
-vector<std::string> Database::FindIf(const Predicate &predicate) const
+string Database::Last(const Date &date) const
 {
-    return {};
-}
-
-std::string Database::Last(const Date &date) const
-{
-    return {};
+    if (_date_and_events.empty() or date < _date_and_events.cbegin()->first)
+    {
+        throw std::invalid_argument("No entries");
+    }
+    const auto it = prev(_date_and_events.upper_bound(date));
+    const auto &[date_result, events] = *it;
+    return MakeStr(date_result, *events.rbegin());
 }
 
 void Database::Print(ostream &os) const
@@ -45,66 +71,14 @@ void Database::Print(ostream &os) const
     {
         for (const auto &event : events)
         {
-            os << setfill('0')
-               << setw(4) << date.year << "-"
-               << setw(2) << date.mounth << "-"
-               << setw(2) << date.day << " "
-               << event << endl;
+            os << date << " " << event << endl;
         }
     }
 }
 
-// bool Database::DeleteEvent(const Date &date, const string &event)
-// {
-//     // если событие существует
-//     if (_date_and_events.count(date) and _date_and_events.at(date).count(event))
-//     {
-//         _date_and_events[date].erase(event);
-//         if (_date_and_events.at(date).empty())
-//         {
-//             _date_and_events.erase(date);
-//         }
-//         return true;
-//     }
-//     return false;
-// }
-
-// int Database::DeleteDate(const Date &date)
-// {
-//     int event_number = 0;
-//     if (_date_and_events.count(date))
-//     {
-//         event_number = _date_and_events.at(date).size();
-//         _date_and_events.erase(date);
-//     }
-//     return event_number;
-// }
-
-// void Database::Find(const Date &date) const
-// {
-//     try
-//     {
-//         for (const auto &event : _date_and_events.at(date))
-//         {
-//             cout << event << endl;
-//         }
-//     }
-//     catch (const std::exception &e)
-//     {
-//         cout << e.what() << endl;
-//     }
-// }
-
-// void Database::Print(istream &is) const
-// {
-//     for (const auto &[key, value] : _date_and_events)
-//     {
-//         for (const auto &event : value)
-//         {
-//             is << setfill('0') << setw(4) << key.year << "-"
-//                << setw(2) << key.mounth << "-"
-//                << setw(2) << key.day << " "
-//                << event << endl;
-//         }
-//     }
-// }
+string Database::MakeStr(const Date &date, const string &event) const
+{
+    stringstream ss{};
+    ss << date << " " << event;
+    return ss.str();
+}

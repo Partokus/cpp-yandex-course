@@ -1,6 +1,7 @@
 #include "date.h"
 #include <limits>
 #include <tuple>
+#include <sstream>
 
 using namespace std;
 
@@ -107,9 +108,9 @@ bool operator==(const Date &lhs, const Date &rhs)
 
 ostream &operator<<(ostream &os, const Date &date)
 {
-    cout << setfill('0')
-         << setw(4) << date.year << "-"
-         << setw(2) << date.mounth << "-"
-         << setw(2) << date.day;
+    os << setfill('0')
+       << setw(4) << date.year << "-"
+       << setw(2) << date.mounth << "-"
+       << setw(2) << date.day;
     return os;
 }

@@ -2,6 +2,7 @@
 #include "token.h"
 
 #include <map>
+
 using namespace std;
 
 template <class It>
