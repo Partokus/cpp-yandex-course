@@ -97,13 +97,13 @@ void TestParseDate()
         istringstream ss("2000-02-05");
         const auto date = ParseDate(ss);
         const Date date_ref = {2000, 2, 5};
-        AssertEqual(vector<int>{date.year, date.mounth, date.day}, vector<int>{date_ref.year, date_ref.mounth, date_ref.day}, "ParseDate 0");
+        AssertEqual(vector<int>{date.year, date.month, date.day}, vector<int>{date_ref.year, date_ref.month, date_ref.day}, "ParseDate 0");
     }
     {
         istringstream ss("0-1-2");
         const auto date = ParseDate(ss);
         const Date date_ref = {0, 1, 2};
-        AssertEqual(vector<int>{date.year, date.mounth, date.day}, vector<int>{date_ref.year, date_ref.mounth, date_ref.day}, "ParseDate 1");
+        AssertEqual(vector<int>{date.year, date.month, date.day}, vector<int>{date_ref.year, date_ref.month, date_ref.day}, "ParseDate 1");
     }
 }
 
