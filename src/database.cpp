@@ -19,20 +19,19 @@ unsigned int Database::RemoveIf(const Predicate &predicate)
 
     for (auto it = _date_and_events.begin(); it != _date_and_events.cend();)
     {
-        auto it_begin_remove = remove_if(_date_and_events[it->first].begin(), _date_and_events[it->first].end(), [&predicate, &it](const string &event)
+        auto it_begin_remove = remove_if(it->second.begin(), it->second.end(), [&predicate, &it](const string &event)
         {
             return predicate(it->first, event);
         });
         removed_count += it->second.cend() - it_begin_remove;
-        it->second.erase(it_begin_remove, it->second.end());
-
-        if (_date_and_events[it->first].empty())
+        if (removed_count != it->second.size())
         {
-            _date_and_events.erase((it++)->first);
+            it->second.erase(it_begin_remove, it->second.end());
+            ++it;
         }
         else
         {
-            ++it;
+            _date_and_events.erase(it++);
         }
     }
     return removed_count;
