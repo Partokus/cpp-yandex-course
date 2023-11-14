@@ -22,7 +22,7 @@ Date ParseDate(istream &is)
     ss_date >> date.year;
     checkOverflow(ss_date);
     ensureSymbol(ss_date, date_str);
-    ss_date >> date.mounth;
+    ss_date >> date.month;
     checkOverflow(ss_date);
     ensureSymbol(ss_date, date_str);
     ss_date >> date.day;
@@ -59,15 +59,15 @@ void checkOverflow(istringstream &ss)
 
 void isDateValid(const Date &date)
 {
-    static constexpr int MinMounth = 1;
-    static constexpr int MaxMounth = 12;
+    static constexpr int Minmonth = 1;
+    static constexpr int Maxmonth = 12;
 
     static constexpr int MinDay = 1;
     static constexpr int MaxDay = 31;
 
-    if (date.mounth < MinMounth or date.mounth > MaxMounth)
+    if (date.month < Minmonth or date.month > Maxmonth)
     {
-        throw runtime_error("Month value is invalid: " + to_string(date.mounth));
+        throw runtime_error("Month value is invalid: " + to_string(date.month));
     }
 
     if (date.day < MinDay or date.day > MaxDay)
@@ -78,39 +78,19 @@ void isDateValid(const Date &date)
 
 bool operator<(const Date &lhs, const Date &rhs)
 {
-    if (lhs.year < rhs.year)
-    {
-        return true;
-    }
-    if (lhs.year != rhs.year)
-    {
-        return false;
-    }
-    if (lhs.mounth < rhs.mounth)
-    {
-        return true;
-    }
-    if (lhs.mounth != rhs.mounth)
-    {
-        return false;
-    }
-    if (lhs.day < rhs.day)
-    {
-        return true;
-    }
-    return false;
+    return make_tuple(lhs.year, lhs.month, lhs.day) < make_tuple(rhs.year, rhs.month, rhs.day);
 }
 
 bool operator==(const Date &lhs, const Date &rhs)
 {
-    return make_tuple(lhs.year, lhs.mounth, lhs.day) == make_tuple(rhs.year, rhs.mounth, rhs.day);
+    return make_tuple(lhs.year, lhs.month, lhs.day) == make_tuple(rhs.year, rhs.month, rhs.day);
 }
 
 ostream &operator<<(ostream &os, const Date &date)
 {
     os << setfill('0')
        << setw(4) << date.year << "-"
-       << setw(2) << date.mounth << "-"
+       << setw(2) << date.month << "-"
        << setw(2) << date.day;
     return os;
 }
