@@ -61,7 +61,7 @@ string Database::Last(const Date &date) const
     }
     const auto it = prev(_date_and_events.upper_bound(date));
     const auto &[date_result, events] = *it;
-    return MakeStr(date_result, *events.rbegin());
+    return MakeStr(date_result, *events.crbegin());
 }
 
 void Database::Print(ostream &os) const
