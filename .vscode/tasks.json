@@ -56,27 +56,6 @@
             }
         },
         {
-            "label": "W-Clean",
-            "type": "shell",
-            "presentation": {
-                "clear": true
-            },
-            "group": "build",
-            "command": "ninja.exe",
-            "args": [
-                "-t",
-                "clean"
-            ],
-            "options": {
-                "cwd": "${workspaceRoot}/build-win",
-                "statusbar": {
-                    "label": "$(circle-large-outline) W-Clean",
-                    "color": "#A463D6",
-                    "tooltip": "meson compile -C build-win --clean"
-                }
-            }
-        },
-        {
             "label": "W-Delete",
             "type": "shell",
             "presentation": {
@@ -103,7 +82,7 @@
             "options": {
                 "statusbar": {
                     "label": "$(debug-start) Run",
-                    "color": "#1094cd",
+                    "color": "#4fbeee",
                     "tooltip": "cmd /c build.dat"
                 }
             },
