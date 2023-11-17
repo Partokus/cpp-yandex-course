@@ -4,6 +4,8 @@
 # White list
 !/src/**
 !/info/**
+!/white_works/**
+!/yellow_works/**
 !/.vscode/**
 !/meson.build
 
