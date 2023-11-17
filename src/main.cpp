@@ -14,9 +14,12 @@ void TestAll();
 
 string ParseEvent(istream &is)
 {
-    string str{};
-    getline(is, str);
-    const string event(str, str.find_first_not_of(' '));
+    while (isspace(is.peek()))
+    {
+        is.ignore(1);
+    }
+    string event{};
+    getline(is, event);
     return event;
 }
 

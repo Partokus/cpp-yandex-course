@@ -6,10 +6,10 @@ using namespace std;
 
 void Database::Add(const Date &date, const string &event)
 {
-    auto &events = _date_and_events[date];
-    if (find(events.cbegin(), events.cend(), event) == events.cend())
+    if (not _for_check_event_exist[date].count(event))
     {
-        events.push_back(event);
+        _date_and_events[date].push_back(event);
+        _for_check_event_exist[date].insert(event);
     }
 }
 
@@ -19,19 +19,31 @@ unsigned int Database::RemoveIf(const Predicate &predicate)
 
     for (auto it = _date_and_events.begin(); it != _date_and_events.cend();)
     {
-        auto it_begin_remove = remove_if(it->second.begin(), it->second.end(), [&predicate, &it](const string &event)
+        auto &[date, events] = *it;
+
+        for (auto it_event = events.begin(); it_event != events.end();)
         {
-            return predicate(it->first, event);
-        });
-        removed_count += it->second.cend() - it_begin_remove;
-        if (removed_count != it->second.size())
+            const auto &event = *it_event;
+
+            if (predicate(date, event))
+            {
+                _for_check_event_exist[date].erase(event);
+                events.erase(it_event);
+                ++removed_count;
+            }
+            else
+            {
+                ++it_event;
+            }
+        }
+
+        if (events.empty())
         {
-            it->second.erase(it_begin_remove, it->second.end());
-            ++it;
+            _date_and_events.erase(it++);
         }
         else
         {
-            _date_and_events.erase(it++);
+            ++it;
         }
     }
     return removed_count;
@@ -60,8 +72,11 @@ string Database::Last(const Date &date) const
         throw std::invalid_argument("No entries");
     }
     const auto it = prev(_date_and_events.upper_bound(date));
+
     const auto &[date_result, events] = *it;
-    return MakeStr(date_result, *events.crbegin());
+    const auto &event_result = *events.crbegin();
+
+    return MakeStr(date_result, event_result);
 }
 
 void Database::Print(ostream &os) const

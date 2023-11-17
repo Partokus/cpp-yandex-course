@@ -5,6 +5,7 @@
 #include <string>
 #include <functional>
 #include <vector>
+#include <set>
 
 #include "date.h"
 
@@ -20,6 +21,7 @@ public:
     std::string Last(const Date &date) const;
 private:
     std::map<Date, std::vector<std::string>> _date_and_events{};
+    std::map<Date, std::set<std::string>> _for_check_event_exist{};
 
     std::string MakeStr(const Date &date, const std::string &event) const;
 };

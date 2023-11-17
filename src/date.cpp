@@ -78,12 +78,12 @@ void isDateValid(const Date &date)
 
 bool operator<(const Date &lhs, const Date &rhs)
 {
-    return make_tuple(lhs.year, lhs.month, lhs.day) < make_tuple(rhs.year, rhs.month, rhs.day);
+    return tie(lhs.year, lhs.month, lhs.day) < tie(rhs.year, rhs.month, rhs.day);
 }
 
 bool operator==(const Date &lhs, const Date &rhs)
 {
-    return make_tuple(lhs.year, lhs.month, lhs.day) == make_tuple(rhs.year, rhs.month, rhs.day);
+    return tie(lhs.year, lhs.month, lhs.day) == tie(rhs.year, rhs.month, rhs.day);
 }
 
 ostream &operator<<(ostream &os, const Date &date)
