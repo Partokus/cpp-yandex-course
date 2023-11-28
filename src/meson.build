@@ -17,9 +17,9 @@ inc = include_directories(
 )
 
 src = [
-    'main.cpp',
+    # 'main.cpp',
     'tests/test_runner.cpp',
-    'tests/test_asserts.cpp'
+    'update_field.cpp',
 ]
 
 if host_machine.system() == 'windows'
