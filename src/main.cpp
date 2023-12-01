@@ -2,8 +2,6 @@
 
 #include <string>
 #include <vector>
-#include <list>
-#include <forward_list>
 #include <numeric>
 #include <iterator>
 #include <algorithm>
@@ -12,24 +10,20 @@ void TestAll();
 
 using namespace std;
 
-#define PRINT_VALUES(out, x, y) ((out) << (x) << endl << (y) << endl)
+#define TOKENPASTE(x, y) x ## y
+#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
+#define UNIQ_ID TOKENPASTE2(uniq_id, __LINE__)
 
 int main()
 {
-    TestAll();
-
-    return 0;
-}
-
-void TestPrintValue()
-{
-    ostringstream output;
-    PRINT_VALUES(output, 5, "red belt");
-    ASSERT_EQUAL(output.str(), "5\nred belt\n");
+    int UNIQ_ID = 0;
+    string UNIQ_ID = "hello";
+    vector<string> UNIQ_ID = {"hello", "world"};
+    vector<int> UNIQ_ID = {1, 2, 3, 4};
 }
 
 void TestAll()
 {
-    TestRunner tr;
-    RUN_TEST(tr, TestPrintValue);
+    // TestRunner tr;
+    // RUN_TEST(tr, TestPrintValue);
 }
