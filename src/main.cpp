@@ -1,85 +1,98 @@
-#include "test_runner.h"
-
-#include <string>
 #include <vector>
-#include <numeric>
-#include <iterator>
-#include <algorithm>
-
-void TestAll();
+#include <stdexcept>
+#include <iostream>
 
 using namespace std;
 
 template <class T>
-class Table
+class Deque
 {
 public:
-    Table(size_t row_count, size_t column_count)
-        : _row_and_column(row_count)
+    void PushFront(const T &value)
     {
-        for (auto &column : _row_and_column)
-        {
-            column.resize(column_count);
-        }
+        _front.push_back(value);
     }
 
-    vector<T> &operator[](size_t index)
+    void PushBack(const T &value)
     {
-        return _row_and_column[index];
+        _back.push_back(value);
     }
 
-    const vector<T> &operator[](size_t index) const
+    bool Empty() const
     {
-        return _row_and_column.at(index);
+        return _front.empty() and _back.empty();
     }
 
-    std::pair<size_t, size_t> Size() const
+    size_t Size() const
     {
-        if (_row_and_column.empty())
-        {
-            return {0U, 0U};
-        }
-        else if (_row_and_column.at(0).empty())
-        {
-            return {_row_and_column.size(), 0U};
-        }
-        return {_row_and_column.size(), _row_and_column.at(0).size()};
+        return _front.size() + _back.size();
     }
 
-    void Resize(size_t row_count, size_t column_count)
+    T &operator[](size_t index)
     {
-        _row_and_column.resize(row_count);
-        for (auto &column : _row_and_column)
-        {
-            column.resize(column_count);
-        }
+        return Elem(index);
+    }
+
+    const T &operator[](size_t index) const
+    {
+        return Elem(index);
+    }
+
+    T &At(size_t index)
+    {
+        check(index);
+        return Elem(index);
+    }
+
+    const T &At(size_t index) const
+    {
+        check(index);
+        return Elem(index);
+    }
+
+    T &Front()
+    {
+        return _front.empty() ? _back.front() : _front.back();
+    }
+
+    const T &Front() const
+    {
+        return _front.empty() ? _back.front() : _front.back();
+    }
+
+    T &Back()
+    {
+        return _back.empty() ? _front.front() : _back.back();
+    }
+
+    const T &Back() const
+    {
+        return _back.empty() ? _front.front() : _back.back();
     }
 
 private:
-    vector<vector<T>> _row_and_column;
-};
+    vector<T> _front{};
+    vector<T> _back{};
 
-void TestTable()
-{
-    Table<int> t(1, 1);
-    ASSERT_EQUAL(t.Size().first, 1u);
-    ASSERT_EQUAL(t.Size().second, 1u);
-    t[0][0] = 42;
-    ASSERT_EQUAL(t[0][0], 42);
-    t.Resize(3, 4);
-    ASSERT_EQUAL(t.Size().first, 3u);
-    ASSERT_EQUAL(t.Size().second, 4u);
-}
+    T &Elem(size_t index)
+    {
+        if (index < _front.size())
+        {
+            return _front[_front.size() - 1 - index];
+        }
+        return _back[index - _front.size()];
+    }
+
+    void check(size_t index)
+    {
+        if (index >= Size())
+        {
+            throw out_of_range("Out of range");
+        }
+    }
+};
 
 int main()
 {
-    TestAll();
-
     return 0;
-}
-
-void TestAll()
-{
-    TestRunner tr;
-    RUN_TEST(tr, TestTable);
 }
