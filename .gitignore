@@ -6,6 +6,7 @@
 !/info/**
 !/white_works/**
 !/yellow_works/**
+!/red_works/**
 !/.vscode/**
 !/meson.build
 
