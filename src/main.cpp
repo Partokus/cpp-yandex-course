@@ -4,40 +4,90 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cmath>
 
 using namespace std;
 
-// Реализуйте шаблон класса Paginator
-
-template <typename Iterator>
-class Paginator
+template <class Iterator>
+class IteratorRange
 {
 public:
-    Paginator(Iterator begin, Iterator end, size_t page_size)
+    IteratorRange(Iterator begin, Iterator end)
         : _begin(begin),
-          _end(end),
-          _page_size(page_size)
+          _end(end)
     {
-        // TODO: std::ceil
     }
 
-    size_t Size() const
+    Iterator begin() const
     {
-        return _pages_count;
+        return _begin;
+    }
+
+    Iterator end() const
+    {
+        return _end;
+    }
+
+    size_t size() const
+    {
+        return _end - _begin;
     }
 
 private:
-    Iterator _begin;
-    Iterator _end;
-    size_t _page_size;
+    Iterator _begin{};
+    Iterator _end{};
+};
 
-    vector<typename Iterator::value_type>
+template <class Iterator>
+class Paginator
+{
+public:
+    using Page = IteratorRange<Iterator>;
+
+    Paginator(Iterator begin, Iterator end, size_t page_size)
+    {
+        _pages.reserve(std::ceil(static_cast<double>(end - begin) / page_size));
+
+        Iterator it = begin;
+        const size_t last_page_num = _pages.capacity() - 1;
+
+        for (size_t page_num = 0; page_num < _pages.capacity(); ++page_num)
+        {
+            if (page_num != last_page_num)
+            {
+                _pages.push_back({it, it + page_size});
+                it += page_size;
+            }
+            else
+            {
+                _pages.push_back({it, end});
+            }
+        }
+    }
+
+    typename vector<Page>::iterator begin()
+    {
+        return _pages.begin();
+    }
+
+    typename vector<Page>::iterator end()
+    {
+        return _pages.end();
+    }
+
+    size_t size() const
+    {
+        return _pages.size();
+    }
+
+private:
+    vector<Page> _pages{};
 };
 
 template <typename C>
-? ? ? Paginate(C &c, size_t page_size)
+auto Paginate(C &c, size_t page_size)
 {
-    // Реализуйте этот шаблон функции
+    return Paginator(c.begin(), c.end(), page_size);
 }
 
 void TestPageCounts()
