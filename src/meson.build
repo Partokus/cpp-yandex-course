@@ -13,7 +13,8 @@ dep = [
 
 inc = include_directories(
     '.',
-    'tests'
+    'tests',
+    'profile'
 )
 
 src = [
