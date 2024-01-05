@@ -5,6 +5,8 @@
 #include <map>
 #include <utility>
 #include <profile.h>
+#include <numeric>
+#include <test_runner.h>
 
 using namespace std;
 
@@ -12,126 +14,180 @@ class ReadingManager
 {
 public:
     ReadingManager()
-        : user_page_counts_(MAX_USER_COUNT_ + 1, 0),
-          sorted_users_(),
-          user_positions_(MAX_USER_COUNT_ + 1, -1)
+        : _page_count_users_count(MaxPagesCount + 1),
+          _users_behind_count(MaxPagesCount + 1)
     {
     }
 
     void Read(int user_id, int page_count)
     {
-        if (not user_id_to_page_count.count(user_id))
+        if (not _users_page_count.count(user_id))
         {
-            user_id_to_page_count[user_id] = page_count;
-            page_count_to_user_ids[page_count].insert(user_id);
+            _users_page_count[user_id] = page_count;
+            ++_page_count_users_count[page_count];
         }
         else
         {
-            const int user_page_count = user_id_to_page_count[user_id];
-
-            page_count_to_user_ids[user_page_count].erase(user_id);
-            if (page_count_to_user_ids[user_page_count].empty())
-            {
-                page_count_to_user_ids.erase(user_page_count);
-            }
-
-            user_id_to_page_count[user_id] = page_count;
-            page_count_to_user_ids[page_count].insert(user_id);
+            const int user_page_count = _users_page_count.at(user_id);
+            --_page_count_users_count[user_page_count];
+            ++_page_count_users_count[page_count];
+            _users_page_count[user_id] = page_count;
         }
+
+        _is_partial_sum_done = false;
     }
 
-    double Cheer(int user_id) const
+    double Cheer(int user_id)
     {
-        if (not user_id_to_page_count.count(user_id))
+        if (not _users_page_count.count(user_id))
         {
-            return 0;
-        }
-        const int user_count = user_id_to_page_count.size();
-        if (user_count == 1)
-        {
-            return 1;
+          return 0.0;
         }
 
-        const int page_count = user_id_to_page_count.at(user_id);
-        int position = user_positions_[user_id];
+        const int users_count = _users_page_count.size();
 
-        while (position < user_count &&
-               user_page_counts_[sorted_users_[position]] == page_count)
+        if (users_count == 1)
         {
-            ++position;
+          return 1.0;
         }
-        if (position == user_count)
+
+        const int user_page_count = _users_page_count.at(user_id);
+
+        if (not _is_partial_sum_done)
         {
-            return 0.;
+            partial_sum(_page_count_users_count.begin(), _page_count_users_count.end(), _users_behind_count.begin());
+            _is_partial_sum_done = true;
         }
-        // По умолчанию деление целочисленное, поэтому
-        // нужно привести числитель к типу double.
-        // Простой способ сделать это — умножить его на 1.0.
-        return static_cast<double>(user_count - position) / (user_count - 1);
+
+        const int users_behind_count = _users_behind_count[user_page_count] - _page_count_users_count[user_page_count];
+
+        return static_cast<double>(users_behind_count) / (users_count - 1);
     }
 
 private:
-    // Статическое поле не принадлежит какому-то конкретному
-    // объекту класса. По сути это глобальная переменная,
-    // в данном случае константная.
-    // Будь она публичной, к ней можно было бы обратиться снаружи
-    // следующим образом: ReadingManager::MAX_USER_COUNT.
-    static const int MAX_USER_COUNT_ = 100'000;
+    static constexpr int MaxPagesCount = 1'000;
 
-    map<int, set<int>> page_count_to_user_ids{};
-    map<int, int> user_id_to_page_count{};
-    vector<int> user_page_counts_;
-    vector<int> sorted_users_;   // отсортированы по убыванию количества страниц
-    vector<int> user_positions_; // позиции в векторе sorted_users_
+    map<int, int> _users_page_count{};     // v[user] = page_count
+    vector<int> _page_count_users_count{}; // сколько пользователей у конкретного количества страниц v[page_count] = users_count. Вектор для аккумуляции
+    vector<int> _users_behind_count{};     // количество пользователей позади
+    bool _is_partial_sum_done = false;
 };
+
+void TestReadManager()
+{
+    {
+        ReadingManager manager;
+        manager.Read(1, 1);
+        manager.Read(2, 2);
+        manager.Read(3, 3);
+        ASSERT_EQUAL(manager.Cheer(3), 1.0);
+        ASSERT_EQUAL(manager.Cheer(2), 0.5);
+        ASSERT_EQUAL(manager.Cheer(1), 0.0);
+        manager.Read(4, 4);
+        ASSERT(manager.Cheer(3) <= 0.666668 and manager.Cheer(3) >= 0.666666);
+        ASSERT(manager.Cheer(2) <= 0.333334 and manager.Cheer(2) >= 0.333332);
+        ASSERT_EQUAL(manager.Cheer(1), 0.0);
+        manager.Read(5, 5);
+        ASSERT_EQUAL(manager.Cheer(1), 0.0);
+        ASSERT_EQUAL(manager.Cheer(2), 0.25);
+        ASSERT_EQUAL(manager.Cheer(3), 0.5);
+        ASSERT_EQUAL(manager.Cheer(4), 0.75);
+        ASSERT_EQUAL(manager.Cheer(5), 1.0);
+    }
+    {
+        ReadingManager manager;
+        manager.Read(1, 1);
+        manager.Read(2, 2);
+        manager.Read(3, 3);
+        ASSERT_EQUAL(manager.Cheer(3), 1.0);
+        ASSERT_EQUAL(manager.Cheer(2), 0.5);
+        ASSERT_EQUAL(manager.Cheer(1), 0.0);
+        manager.Read(4, 1);
+        manager.Read(1, 4);
+        ASSERT(manager.Cheer(3) <= 0.666668 and manager.Cheer(3) >= 0.666666);
+        ASSERT(manager.Cheer(2) <= 0.333334 and manager.Cheer(2) >= 0.333332);
+        ASSERT_EQUAL(manager.Cheer(1), 1.0);
+        manager.Read(5, 5);
+        ASSERT_EQUAL(manager.Cheer(1), 0.75);
+        ASSERT_EQUAL(manager.Cheer(2), 0.25);
+        ASSERT_EQUAL(manager.Cheer(3), 0.5);
+        ASSERT_EQUAL(manager.Cheer(4), 0.0);
+        ASSERT_EQUAL(manager.Cheer(5), 1.0);
+    }
+}
+
+void TestAll();
 
 int main()
 {
+    TestAll();
+    // Profile();
+
     // Для ускорения чтения данных отключается синхронизация
     // cin и cout с stdio,
     // а также выполняется отвязка cin от cout
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
+    ReadingManager manager{};
+
+    int query_count = 0;
+    cin >> query_count;
+
+    for (int query_id = 0; query_id < query_count; ++query_id)
+    {
+        string query_type{};
+        cin >> query_type;
+        int user_id = 0;
+        cin >> user_id;
+
+        if (query_type == "READ")
+        {
+            int page_count = 0;
+            cin >> page_count;
+            manager.Read(user_id, page_count);
+        }
+        else if (query_type == "CHEER")
+        {
+            cout << setprecision(6) << manager.Cheer(user_id) << '\n';
+        }
+    }
+    return 0;
+}
+
+void TestAll()
+{
+    TestRunner tr{};
+    RUN_TEST(tr, TestReadManager);
+}
+
+void Profile()
+{
     ReadingManager manager;
 
     int page_count = 0;
     int page_increment_period = 100;
     int page_increment_counter = 0;
 
-    for (int i = 99'500; i > 0; --i)
+    LOG_DURATION("Total");
     {
         LOG_DURATION("Read");
-        manager.Read(i, page_count);
-        if (page_increment_counter++ == page_increment_period)
+        for (int i = 0; i < 20'000; ++i)
         {
-            ++page_count;
-            page_increment_counter = 0;
+
+            manager.Read(i, page_count);
+            if (page_increment_counter++ == page_increment_period)
+            {
+                ++page_count;
+                page_increment_counter = 0;
+            }
         }
     }
-
-    return 0;
-
-    int query_count;
-    cin >> query_count;
-
-    for (int query_id = 0; query_id < query_count; ++query_id)
     {
-        string query_type;
-        cin >> query_type;
-        int user_id;
-        cin >> user_id;
-
-        if (query_type == "READ")
-        {
-            int page_count;
-            cin >> page_count;
-            manager.Read(user_id, page_count);
-        }
-        else if (query_type == "CHEER")
-        {
-            cout << setprecision(6) << manager.Cheer(user_id) << "\n";
-        }
+      LOG_DURATION("Cheer");
+      for (int i = 0; i < 20'000; ++i)
+      {
+        manager.Cheer(i);
+      }
     }
-    return 0;
 }
