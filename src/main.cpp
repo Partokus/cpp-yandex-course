@@ -3,133 +3,162 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <stack>
 #include <utility>
+#include <deque>
 #include <profile.h>
 #include <numeric>
 #include <test_runner.h>
 
 using namespace std;
 
-class ReadingManager
+void TestAll();
+void Profile();
+
+class HotelReservationsManager
 {
 public:
-    ReadingManager()
-        : _page_count_users_count(MaxPagesCount + 1),
-          _users_behind_count(MaxPagesCount + 1)
+    void Book(int64_t time, const string &hotel_name, unsigned int client_id, unsigned int rooms_count)
     {
+        _current_time = time;
+
+        HotelInfo last_hotel_info{};
+
+        if (not _hotels_books[hotel_name].empty())
+        {
+            last_hotel_info = _hotels_books[hotel_name].rbegin()->second;
+        }
+
+        HotelInfo &hotel_info = _hotels_books[hotel_name][time];
+
+        hotel_info.reservation_counts = last_hotel_info.reservation_counts + 1;
+        hotel_info.room_count = last_hotel_info.room_count + rooms_count;
+        hotel_info.client_count = last_hotel_info.client_count;
+
+        if (not DidClientReserveDuringTheDay(time, hotel_name, client_id))
+        {
+            ++hotel_info.client_count;
+        }
+
+        _hotels_clients_timings[hotel_name][client_id].push_back(time);
     }
 
-    void Read(int user_id, int page_count)
+    unsigned int Clients(const string &hotel_name)
     {
-        if (not _users_page_count.count(user_id))
+        if (not _hotels_books.count(hotel_name))
         {
-            _users_page_count[user_id] = page_count;
-            ++_page_count_users_count[page_count];
-        }
-        else
-        {
-            const int user_page_count = _users_page_count.at(user_id);
-            --_page_count_users_count[user_page_count];
-            ++_page_count_users_count[page_count];
-            _users_page_count[user_id] = page_count;
+            return 0U;
         }
 
-        _is_partial_sum_done = false;
+        auto &hotel_book = _hotels_books[hotel_name];
+
+        // находим нижний диапазон времени
+        int64_t time_day_back = _current_time - CorrectionForDay;
+        auto it_bottom_time_range = hotel_book.lower_bound(time_day_back);
+
+        // если за последние сутки не найдено записей
+        if (it_bottom_time_range == hotel_book.cend())
+        {
+            return 0U;
+        }
+
+        // находим верхний диапазон времени
+        auto it_top_time_range = hotel_book.rbegin();
+        HotelInfo &top_hotel_info = it_top_time_range->second;
+
+        if (it_bottom_time_range == hotel_book.cbegin())
+        {
+            return top_hotel_info.client_count;
+        }
+
+        --it_bottom_time_range;
+        HotelInfo &bottom_hotel_info = it_bottom_time_range->second;
+
+        return top_hotel_info.client_count - bottom_hotel_info.client_count + 1;
+        unsigned int day_reservation_count = top_hotel_info.reservation_counts - bottom_hotel_info.reservation_counts;
+        unsigned int day_repeated_reservation_count = day_reservation_count - (top_hotel_info.client_count - bottom_hotel_info.client_count);
+        return day_reservation_count - day_repeated_reservation_count;
     }
 
-    double Cheer(int user_id)
+    unsigned int Rooms(const string &hotel_name)
     {
-        if (not _users_page_count.count(user_id))
+        if (not _hotels_books.count(hotel_name))
         {
-          return 0.0;
+            return 0U;
         }
 
-        const int users_count = _users_page_count.size();
+        auto &hotel_book = _hotels_books[hotel_name];
 
-        if (users_count == 1)
+        // находим нижний диапазон времени
+        int64_t time_day_back = _current_time - CorrectionForDay;
+        auto it_bottom_time_range = hotel_book.lower_bound(time_day_back);
+
+        // если за последние сутки не найдено записей
+        if (it_bottom_time_range == hotel_book.cend())
         {
-          return 1.0;
+            return 0U;
         }
 
-        const int user_page_count = _users_page_count.at(user_id);
+        // находим верхний диапазон времени
+        auto it_top_time_range = hotel_book.rbegin();
 
-        if (not _is_partial_sum_done)
+        if (it_bottom_time_range == hotel_book.cbegin())
         {
-            partial_sum(_page_count_users_count.begin(), _page_count_users_count.end(), _users_behind_count.begin());
-            _is_partial_sum_done = true;
+            return it_top_time_range->second.room_count;
         }
 
-        const int users_behind_count = _users_behind_count[user_page_count] - _page_count_users_count[user_page_count];
-
-        return static_cast<double>(users_behind_count) / (users_count - 1);
+        --it_bottom_time_range;
+        return it_top_time_range->second.room_count - it_bottom_time_range->second.room_count;
     }
 
 private:
-    static constexpr int MaxPagesCount = 1'000;
+    struct HotelInfo
+    {
+        unsigned int reservation_counts = 0; // количество резерваций комнат для накопления
+        unsigned int client_count = 0;       // количество клиентов для накопления
+        unsigned int room_count = 0;         // количество комнат для накопления
+    };
 
-    map<int, int> _users_page_count{};     // v[user] = page_count
-    vector<int> _page_count_users_count{}; // сколько пользователей у конкретного количества страниц v[page_count] = users_count. Вектор для аккумуляции
-    vector<int> _users_behind_count{};     // количество пользователей позади
-    bool _is_partial_sum_done = false;
+    map<string, map<int64_t, HotelInfo>> _hotels_books{}; // <hotel_name, <time, <clients_count, rooms_count>>>
+    map<string, map<unsigned int, vector<int64_t>>> _hotels_clients_timings{};
+
+    static constexpr int64_t CorrectionForDay = 86400 - 1;
+    int64_t _current_time = 0;
+
+    bool DidClientReserveDuringTheDay(int64_t time, const string &hotel_name, unsigned int client_id) const
+    {
+        if (not _hotels_clients_timings.count(hotel_name) or not _hotels_clients_timings.at(hotel_name).count(client_id))
+        {
+            return false;
+        }
+
+        const auto &client_timing = _hotels_clients_timings.at(hotel_name).at(client_id);
+
+        // находим нижний диапазон времени
+        const int64_t time_day_back = time - CorrectionForDay;
+        const auto it_bottom_time_range = lower_bound(client_timing.cbegin(), client_timing.cend(), time_day_back);
+
+        // если за последние сутки не найдено записей
+        if (it_bottom_time_range == client_timing.cend())
+        {
+            return false;
+        }
+        return true;
+    }
 };
-
-void TestReadManager()
-{
-    {
-        ReadingManager manager;
-        manager.Read(1, 1);
-        manager.Read(2, 2);
-        manager.Read(3, 3);
-        ASSERT_EQUAL(manager.Cheer(3), 1.0);
-        ASSERT_EQUAL(manager.Cheer(2), 0.5);
-        ASSERT_EQUAL(manager.Cheer(1), 0.0);
-        manager.Read(4, 4);
-        ASSERT(manager.Cheer(3) <= 0.666668 and manager.Cheer(3) >= 0.666666);
-        ASSERT(manager.Cheer(2) <= 0.333334 and manager.Cheer(2) >= 0.333332);
-        ASSERT_EQUAL(manager.Cheer(1), 0.0);
-        manager.Read(5, 5);
-        ASSERT_EQUAL(manager.Cheer(1), 0.0);
-        ASSERT_EQUAL(manager.Cheer(2), 0.25);
-        ASSERT_EQUAL(manager.Cheer(3), 0.5);
-        ASSERT_EQUAL(manager.Cheer(4), 0.75);
-        ASSERT_EQUAL(manager.Cheer(5), 1.0);
-    }
-    {
-        ReadingManager manager;
-        manager.Read(1, 1);
-        manager.Read(2, 2);
-        manager.Read(3, 3);
-        ASSERT_EQUAL(manager.Cheer(3), 1.0);
-        ASSERT_EQUAL(manager.Cheer(2), 0.5);
-        ASSERT_EQUAL(manager.Cheer(1), 0.0);
-        manager.Read(4, 1);
-        manager.Read(1, 4);
-        ASSERT(manager.Cheer(3) <= 0.666668 and manager.Cheer(3) >= 0.666666);
-        ASSERT(manager.Cheer(2) <= 0.333334 and manager.Cheer(2) >= 0.333332);
-        ASSERT_EQUAL(manager.Cheer(1), 1.0);
-        manager.Read(5, 5);
-        ASSERT_EQUAL(manager.Cheer(1), 0.75);
-        ASSERT_EQUAL(manager.Cheer(2), 0.25);
-        ASSERT_EQUAL(manager.Cheer(3), 0.5);
-        ASSERT_EQUAL(manager.Cheer(4), 0.0);
-        ASSERT_EQUAL(manager.Cheer(5), 1.0);
-    }
-}
-
-void TestAll();
 
 int main()
 {
     TestAll();
-    // Profile();
+    Profile();
 
-    // Для ускорения чтения данных отключается синхронизация
+    // для ускорения чтения данных отключается синхронизация
     // cin и cout с stdio,
     // а также выполняется отвязка cin от cout
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
-    ReadingManager manager{};
+    HotelReservationsManager manager{};
 
     int query_count = 0;
     cin >> query_count;
@@ -138,18 +167,37 @@ int main()
     {
         string query_type{};
         cin >> query_type;
-        int user_id = 0;
-        cin >> user_id;
 
-        if (query_type == "READ")
+        string hotel_name{};
+
+        try
         {
-            int page_count = 0;
-            cin >> page_count;
-            manager.Read(user_id, page_count);
+            if (query_type == "BOOK")
+            {
+                int64_t time = 0;
+                unsigned int client_id = 0;
+                unsigned int rooms_count = 0;
+
+                cin >> time >> hotel_name >> client_id >> rooms_count;
+
+                manager.Book(time, hotel_name, client_id, rooms_count);
+            }
+            else if (query_type == "CLIENTS")
+            {
+                cin >> hotel_name;
+
+                cout << manager.Clients(hotel_name) << endl;
+            }
+            else if (query_type == "ROOMS")
+            {
+                cin >> hotel_name;
+
+                cout << manager.Rooms(hotel_name) << endl;
+            }
         }
-        else if (query_type == "CHEER")
+        catch (const std::exception &e)
         {
-            cout << setprecision(6) << manager.Cheer(user_id) << '\n';
+            std::cerr << e.what() << '\n';
         }
     }
     return 0;
@@ -158,36 +206,13 @@ int main()
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestReadManager);
+    // RUN_TEST(tr, TestReadManager);
 }
 
 void Profile()
 {
-    ReadingManager manager;
-
-    int page_count = 0;
-    int page_increment_period = 100;
-    int page_increment_counter = 0;
-
-    LOG_DURATION("Total");
-    {
-        LOG_DURATION("Read");
-        for (int i = 0; i < 20'000; ++i)
-        {
-
-            manager.Read(i, page_count);
-            if (page_increment_counter++ == page_increment_period)
-            {
-                ++page_count;
-                page_increment_counter = 0;
-            }
-        }
-    }
-    {
-      LOG_DURATION("Cheer");
-      for (int i = 0; i < 20'000; ++i)
-      {
-        manager.Cheer(i);
-      }
-    }
 }
+
+
+// new_client_count = top_client - bottom_client
+// client_count = reservation_count - new_client_count
