@@ -1,12 +1,13 @@
-# Ignore all subdirectories
-/*/*
+# # Ignore all subdirectories
+# /*/*
 
-# White list
-!/src/**
-!/info/**
-!/white_works/**
-!/yellow_works/**
-!/red_works/**
-!/.vscode/**
-!/meson.build
+# # White list
+# !/src/**
+# !/info/**
+# !/white_works/**
+# !/yellow_works/**
+# !/red_works/**
+# !/materials/**
+# !/.vscode/**
+# !/meson.build
 
