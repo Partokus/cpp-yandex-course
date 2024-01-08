@@ -42,21 +42,21 @@ private:
         unsigned int room_count = 0;
     };
 
-    struct Booking
+    struct HotelInfo
     {
         queue<ClientInfo> client_info{};
         map<unsigned int, unsigned int> clients_reservations_counts{};
         unsigned int room_count = 0;
     };
 
-    map<string, Booking> _hotels{};
+    map<string, HotelInfo> _hotels{};
 
     static constexpr int64_t SecondsInDay = 86400;
     int64_t _current_time = 0;
 
     void PopOutdatedInfo(const string &hotel_name)
     {
-        Booking &hotel = _hotels[hotel_name];
+        HotelInfo &hotel = _hotels[hotel_name];
 
         int64_t dayback_time = _current_time - SecondsInDay;
 
