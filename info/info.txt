@@ -327,10 +327,9 @@ delete не только освобождает память, но и вызыв
 Пары методов begin и end для контейнера:
 T *begin() { return data; }
 T *end() { return _end; }
-const T *begin() { return data; }
-const T *end() { return _end; }
+const T *begin() const { return data; }
+const T *end() const { return _end; }
 
-
-
-
-
+const T *ptr - Указатель на константу
+T *const ptr - Константный указатель
+const T *const ptr - Константный указатель на константу
