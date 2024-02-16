@@ -387,3 +387,22 @@ shrink_to_fit позволяет сэкономить память, получи
 На практике списки нужны редко
 Ещё реже нужен контейнер forward_list - список, позволяющий итерироваться
 только вперёд
+
+string_view позволяет сослаться на диапазон символов, не владея им
+Позиции более уместны при работе со string и string_view, чем итераторы
+Методы remove_prefix и remove_suffix позволяют удобно итерироваться по string_view
+
+Итерирование с remove_prefix:
+while (true)
+{
+    size_t space = str.find(' ');
+    result.push_back(str.substr(0, space));
+    if (space == str.npos)
+    {
+        break;
+    }
+    else
+    {
+        str.remove_prefix(space + 1);
+    }
+}
