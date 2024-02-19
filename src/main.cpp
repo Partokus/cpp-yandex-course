@@ -15,84 +15,65 @@ using namespace std;
 void TestAll();
 void Profile();
 
-// TAirport should be enum with sequential items and last item TAirport::Last_
-template <typename TAirport>
-class AirportCounter
+class Editor
 {
 public:
-    // конструктор по умолчанию: список элементов пока пуст
-    AirportCounter() = default;
-
-    // конструктор от диапазона элементов типа TAirport
-    template <typename TIterator>
-    AirportCounter(TIterator begin, TIterator end)
+    Editor()
     {
-        for (TIterator it = begin; it != end; ++it)
+        _text.reserve(MaxSymbolCount);
+        _copy_buf.reserve(MaxSymbolCount);
+    }
+
+    void Left()
+    {
+        if (_cursor != 0U)
         {
-            ++ElemsCountRef(*it);
+            --_cursor;
         }
     }
 
-    // получить количество элементов, равных данному
-    size_t Get(TAirport airport) const
+    void Right()
     {
-        return ElemsCountRef(airport);
-    }
-
-    // добавить данный элемент
-    void Insert(TAirport airport)
-    {
-        ++ElemsCountRef(airport);
-    }
-
-    // удалить одно вхождение данного элемента
-    void EraseOne(TAirport airport)
-    {
-        if (ElemsCountRef(airport) != 0U)
+        if (_cursor != _text.size())
         {
-            --ElemsCountRef(airport);
+            ++_cursor;
         }
     }
 
-    // удалить все вхождения данного элемента
-    void EraseAll(TAirport airport)
+    void Insert(char token)
     {
-        ElemsCountRef(airport) = 0U;
+        _text.insert(_cursor, &token, 1);
+        ++_cursor;
     }
 
-    using Item = pair<TAirport, size_t>;
-    using Items = std::array<Item, static_cast<size_t>(TAirport::Last_)>;
-
-    // получить некоторый объект, по которому можно проитерироваться,
-    // получив набор объектов типа Item - пар (аэропорт, количество),
-    // упорядоченных по аэропорту
-    Items GetItems() const
+    void Cut(size_t tokens = 1)
     {
-        return _airports_elems_count;
+        Copy(tokens);
+        _text.erase(_cursor, tokens);
+    }
+
+    void Copy(size_t tokens = 1)
+    {
+        _copy_buf = _text.substr(_cursor, tokens);
+    }
+
+    void Paste()
+    {
+        _text.insert(_cursor, _copy_buf);
+        _cursor += _copy_buf.size();
+    }
+
+    string GetText() const
+    {
+        return _text;
     }
 
 private:
-    Items _airports_elems_count = Fill();
+    size_t _cursor = 0U;
+    string _text;
+    string _copy_buf;
 
-    constexpr Items Fill()
-    {
-        Items arr;
-        for (size_t i = 0; i < static_cast<size_t>(TAirport::Last_); ++i)
-        {
-            arr[i].first = static_cast<TAirport>(i);
-        }
-        return arr;
-    }
-
-    size_t &ElemsCountRef(TAirport airport)
-    {
-        return _airports_elems_count[static_cast<size_t>(airport)].second;
-    }
-
-    const size_t &ElemsCountRef(TAirport airport) const
-    {
-        return _airports_elems_count[static_cast<size_t>(airport)].second;
-    }
+    static constexpr size_t MaxSymbolCount = 10'000'000U;
 };
 
 int main()
@@ -102,180 +83,126 @@ int main()
     return 0;
 }
 
-void TestMoscow()
+void TypeText(Editor &editor, const string &text)
 {
-    enum class MoscowAirport
+    for (char c : text)
     {
-        VKO,
-        SVO,
-        DME,
-        ZIA,
-        Last_
-    };
-
-    const vector<MoscowAirport> airports = {
-        MoscowAirport::SVO,
-        MoscowAirport::VKO,
-        MoscowAirport::ZIA,
-        MoscowAirport::SVO,
-    };
-    AirportCounter<MoscowAirport> airport_counter(begin(airports), end(airports));
-
-    ASSERT_EQUAL(airport_counter.Get(MoscowAirport::VKO), 1);
-    ASSERT_EQUAL(airport_counter.Get(MoscowAirport::SVO), 2);
-    ASSERT_EQUAL(airport_counter.Get(MoscowAirport::DME), 0);
-    ASSERT_EQUAL(airport_counter.Get(MoscowAirport::ZIA), 1);
-
-    using Item = AirportCounter<MoscowAirport>::Item;
-    vector<Item> items;
-    for (const auto &item : airport_counter.GetItems())
-    {
-        items.push_back(item);
+        editor.Insert(c);
     }
-    ASSERT_EQUAL(items.size(), 4);
-
-#define ASSERT_EQUAL_ITEM(idx, expected_enum, expected_count)                                                   \
-    do                                                                                                          \
-    {                                                                                                           \
-        ASSERT_EQUAL(static_cast<size_t>(items[idx].first), static_cast<size_t>(MoscowAirport::expected_enum)); \
-        ASSERT_EQUAL(items[idx].second, expected_count);                                                        \
-    } while (false)
-
-    ASSERT_EQUAL_ITEM(0, VKO, 1);
-    ASSERT_EQUAL_ITEM(1, SVO, 2);
-    ASSERT_EQUAL_ITEM(2, DME, 0);
-    ASSERT_EQUAL_ITEM(3, ZIA, 1);
-
-    airport_counter.Insert(MoscowAirport::VKO);
-    ASSERT_EQUAL(airport_counter.Get(MoscowAirport::VKO), 2);
-
-    airport_counter.EraseOne(MoscowAirport::SVO);
-    ASSERT_EQUAL(airport_counter.Get(MoscowAirport::SVO), 1);
-
-    airport_counter.EraseAll(MoscowAirport::VKO);
-    ASSERT_EQUAL(airport_counter.Get(MoscowAirport::VKO), 0);
 }
 
-enum class SmallCountryAirports
+void TestEditing()
 {
-    Airport_1,
-    Airport_2,
-    Airport_3,
-    Airport_4,
-    Airport_5,
-    Airport_6,
-    Airport_7,
-    Airport_8,
-    Airport_9,
-    Airport_10,
-    Airport_11,
-    Airport_12,
-    Airport_13,
-    Airport_14,
-    Airport_15,
-    Last_
-};
-
-void TestManyConstructions()
-{
-    default_random_engine rnd(20180623);
-    uniform_int_distribution<size_t> gen_airport(
-        0, static_cast<size_t>(SmallCountryAirports::Last_) - 1);
-
-    array<SmallCountryAirports, 2> airports;
-    for (auto &x : airports)
     {
-        x = static_cast<SmallCountryAirports>(gen_airport(rnd));
-    }
+        Editor editor{};
 
-    uint64_t total = 0;
-    for (int step = 0; step < 100'000'000; ++step)
-    {
-        AirportCounter<SmallCountryAirports> counter(begin(airports), end(airports));
-        total += counter.Get(SmallCountryAirports::Airport_1);
-    }
-    // Assert to use variable total so that compiler doesn't optimize it out
-    ASSERT(total < 1000);
-}
+        string hello = "hello, world";
 
-enum class SmallTownAirports
-{
-    Airport_1,
-    Airport_2,
-    Last_
-};
-
-void TestManyGetItems()
-{
-    default_random_engine rnd(20180701);
-    uniform_int_distribution<size_t> gen_airport(
-        0, static_cast<size_t>(SmallTownAirports::Last_) - 1);
-
-    array<SmallTownAirports, 2> airports;
-    for (auto &x : airports)
-    {
-        x = static_cast<SmallTownAirports>(gen_airport(rnd));
-    }
-
-    uint64_t total = 0;
-    for (int step = 0; step < 100'000'000; ++step)
-    {
-        AirportCounter<SmallTownAirports> counter(begin(airports), end(airports));
-        total += counter.Get(SmallTownAirports::Airport_1);
-        for (const auto [airport, count] : counter.GetItems())
+        for (const auto &i : hello)
         {
-            total += count;
-        }
-    }
-    // Assert to use variable total so that compiler doesn't optimize it out
-    ASSERT(total > 0);
-}
-
-void TestMostPopularAirport()
-{
-    default_random_engine rnd(20180624);
-    uniform_int_distribution<size_t> gen_airport(
-        0, static_cast<size_t>(SmallCountryAirports::Last_) - 1);
-
-    array<pair<SmallCountryAirports, SmallCountryAirports>, 1000> dayly_flight_report;
-    for (auto &x : dayly_flight_report)
-    {
-        x = {
-            static_cast<SmallCountryAirports>(gen_airport(rnd)),
-            static_cast<SmallCountryAirports>(gen_airport(rnd))};
-    }
-
-    const int days_to_explore = 365 * 500;
-
-    vector<SmallCountryAirports> most_popular(days_to_explore);
-
-    for (int day = 0; day < days_to_explore; ++day)
-    {
-        AirportCounter<SmallCountryAirports> counter;
-        for (const auto &[source, dest] : dayly_flight_report)
-        {
-            counter.Insert(source);
-            counter.Insert(dest);
+            editor.Insert(i);
         }
 
-        const auto items = counter.GetItems();
-        most_popular[day] = max_element(begin(items), end(items), [](auto lhs, auto rhs)
-                                        { return lhs.second < rhs.second; })
-                                ->first;
+        editor.Copy(50);
+        editor.Paste();
+
+        ASSERT_EQUAL(editor.GetText(), "hello, world");
+    }
+    {
+        Editor editor;
+
+        const size_t text_len = 12;
+        const size_t first_part_len = 7;
+        TypeText(editor, "hello, world");
+        for (size_t i = 0; i < text_len; ++i)
+        {
+            editor.Left();
+        }
+        editor.Cut(first_part_len);
+        for (size_t i = 0; i < text_len - first_part_len; ++i)
+        {
+            editor.Right();
+        }
+        TypeText(editor, ", ");
+        editor.Paste();
+        editor.Left();
+        editor.Left();
+        editor.Cut(3);
+
+        ASSERT_EQUAL(editor.GetText(), "world, hello");
+    }
+    {
+        Editor editor;
+
+        TypeText(editor, "misprnit");
+        editor.Left();
+        editor.Left();
+        editor.Left();
+        editor.Cut(1);
+        editor.Right();
+        editor.Paste();
+
+        ASSERT_EQUAL(editor.GetText(), "misprint");
+    }
+}
+
+void TestReverse()
+{
+    Editor editor;
+
+    const string text = "esreveR";
+    for (char c : text)
+    {
+        editor.Insert(c);
+        editor.Left();
     }
 
-    ASSERT(all_of(begin(most_popular), end(most_popular), [&](SmallCountryAirports a)
-                  { return a == most_popular.front(); }));
+    ASSERT_EQUAL(editor.GetText(), "Reverse");
+}
+
+void TestNoText()
+{
+    Editor editor;
+    ASSERT_EQUAL(editor.GetText(), "");
+
+    editor.Left();
+    editor.Left();
+    editor.Right();
+    editor.Right();
+    editor.Copy(0);
+    editor.Cut(0);
+    editor.Paste();
+
+    ASSERT_EQUAL(editor.GetText(), "");
+}
+
+void TestEmptyBuffer()
+{
+    Editor editor;
+
+    editor.Paste();
+    TypeText(editor, "example");
+    editor.Left();
+    editor.Left();
+    editor.Paste();
+    editor.Right();
+    editor.Paste();
+    editor.Copy(0);
+    editor.Paste();
+    editor.Left();
+    editor.Cut(0);
+    editor.Paste();
+
+    ASSERT_EQUAL(editor.GetText(), "example");
 }
 
 void TestAll()
 {
     TestRunner tr{};
-    LOG_DURATION("Total tests duration");
-    RUN_TEST(tr, TestMoscow);
-    RUN_TEST(tr, TestManyConstructions);
-    RUN_TEST(tr, TestManyGetItems);
-    RUN_TEST(tr, TestMostPopularAirport);
+    RUN_TEST(tr, TestEditing);
+    RUN_TEST(tr, TestReverse);
+    RUN_TEST(tr, TestNoText);
+    RUN_TEST(tr, TestEmptyBuffer);
 }
 
 void Profile()
