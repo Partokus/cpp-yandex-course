@@ -1,13 +1,15 @@
 #include <algorithm>
 
+using namespace std;
+
 template <typename T>
 class SimpleVector
 {
 public:
     SimpleVector() = default;
-    explicit SimpleVector(size_t size); // default ctor
+    explicit SimpleVector(size_t size);               // default ctor
     explicit SimpleVector(const SimpleVector &other); // copy ctor
-    void operator=(const SimpleVector &other); // copy assignment ctor
+    void operator=(const SimpleVector &other);        // copy assignment ctor
     ~SimpleVector();
 
     T &operator[](size_t index);
@@ -40,30 +42,34 @@ SimpleVector<T>::SimpleVector(size_t size)
 
 template <typename T>
 SimpleVector<T>::SimpleVector(const SimpleVector<T> &other)
-    : _data(new T[other.Capacity()]),
-      _size(other.Size()),
-      _capacity(other.Capacity())
+    : _data(new T[other._capacity]),
+      _size(other._size),
+      _capacity(other._capacity)
 {
-    std::copy(other.cbegin(), other.cend(), begin());
+    copy(other.begin(), other.end(), begin());
 }
 
 template <typename T>
 void SimpleVector<T>::operator=(const SimpleVector<T> &other)
 {
-    if (_capacity == 0U)
+    if (_capacity >= other._capacity)
     {
-        _data = new T[other.Size()];
-        _capacity = other.Size();
+        // У нас достаточно памяти - просто копируем элементы
+        copy(other.begin(), other.end(), begin());
+        _size = other._size;
     }
-    else if (_capacity < other.Size())
+    else
     {
-        this->SimpleVector<T>::~SimpleVector<T>();
-        _data = new T[other.Size()];
-        _capacity = other.Size();
+        // Это так называемая идиома copy-and-swap. Мы создаём временный вектор с помощью
+        // конструктора копирования, а затем обмениваем его поля со своими. Так мы достигаем
+        // двух целей:
+        //  - избегаем дублирования кода в конструкторе копирования и операторе присваивания
+        //  - обеспечиваем согласованное поведение конструктора копирования и оператора присваивания
+        SimpleVector<T> tmp(other);
+        swap(tmp._data, _data);
+        swap(tmp._size, _size);
+        swap(tmp._capacity, _capacity);
     }
-    std::copy(other.begin(), other.end(), begin());
-    _size = other.Size();
-    _end = _data + _size;
 }
 
 template <typename T>
@@ -75,11 +81,11 @@ SimpleVector<T>::~SimpleVector()
 template <typename T>
 T *SimpleVector<T>::begin() { return _data; }
 template <typename T>
-T *SimpleVector<T>::end() { return _end; }
+T *SimpleVector<T>::end() { return _data + _size; }
 template <typename T>
 const T *SimpleVector<T>::begin() const { return _data; }
 template <typename T>
-const T *SimpleVector<T>::end() const { return _end; }
+const T *SimpleVector<T>::end() const { return _data + _size; }
 
 template <typename T>
 T &SimpleVector<T>::operator[](size_t index)
@@ -106,12 +112,11 @@ void SimpleVector<T>::PushBack(const T &value)
         {
             _capacity *= 2U;
             T *new_data = new T[_capacity];
-            std::copy(_data, _end, new_data);
+            copy(_data, _data + _size, new_data);
             delete[] _data;
             _data = new_data;
         }
     }
     _data[_size] = value;
     ++_size;
-    _end = _data + _size;
 }
