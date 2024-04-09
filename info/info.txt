@@ -425,3 +425,24 @@ while (true)
 Если у объекта много данных на стеке, перемещение не поможет или поможет плохо
 Вызов move для константного объекта бесполезен. Следите за константностью
 перемещаемого объекта
+
+Копирование и присваивание для собственнных типов:
+- при необходимости компилятор сам генерирует конструктор копирования и присваивания,
+которые просто копируют все поля
+- нужно писать собственные конструкторы копирования и присваивания для типов, которые управляют памятью, например, SimpleVector
+
+class Logger
+{
+    Logger() { cout << "Default ctor\n"; }
+    Logger(const Logger &) { cout << "Copy ctor\n"; }
+    void operator=(const Logger &) { cout << "Copy assignment ctor\n"; }
+}
+
+template <typename T>
+SimpleVector<T>::SimpleVector(const SimpleVector<T> &other)
+    : data(new T[other.capacity]),
+      size(other.size),
+      capacity(other.capacity)
+{
+    copy(other.cbegin(), other.cend(), begin());
+}
