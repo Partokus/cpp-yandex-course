@@ -120,3 +120,17 @@ void SimpleVector<T>::PushBack(const T &value)
     _data[_size] = value;
     ++_size;
 }
+
+// void TestCopyAssignment()
+// {
+//     SimpleVector<int> numbers(10);
+//     iota(numbers.begin(), numbers.end(), 1);
+
+//     SimpleVector<int> dest;
+//     ASSERT_EQUAL(dest.Size(), 0u);
+
+//     dest = numbers;
+//     ASSERT_EQUAL(dest.Size(), numbers.Size());
+//     ASSERT(dest.Capacity() >= dest.Size());
+//     ASSERT(equal(dest.begin(), dest.end(), numbers.begin()));
+// }
