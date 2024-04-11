@@ -446,3 +446,46 @@ SimpleVector<T>::SimpleVector(const SimpleVector<T> &other)
 {
     copy(other.cbegin(), other.cend(), begin());
 }
+
+Конструктор перемещения:
+vector<int> source = /* ... */;
+vector<int> target = move(source);
+vector<int> target2(move(target));
+
+vector<vector<int>> vectors;
+vectors.push_back(vector<int>(5));
+Во всех случаях вызывается конструктор перемещения
+(move constructor)
+
+Оператор перемещающего присваивания:
+vector<int> source = /* ... */;
+vector<int> target = /* ... */;
+target = move(source);
+target = vector<int>(5);
+В обоих случаях вызывается оператор перемещающего присваивания
+(move assignment operator)
+
+rvalue-ссылки
+Перегрузка по rvalue-ссылке - способ отличить временный объект от постоянного
+target = source;         // вызывается operator=(const vector<int> &)
+target = vector<int>(5); // вызывается operator=(vector<int> &&)
+target = move(source);   // вызывается operator=(vector<int> &&)
+
+Если метод должен принять объект и положить его в контейнер,
+принимайте параметр по значению:
+void Objects::Add(Object object)
+{
+    data.insert(move(object));
+}
+Временный объект перместится в object, а оттуда - в контейнер (два перемещения)
+Постоянный объект скопируется в object, а оттуда переместится в контейнер
+
+Перемещение в push_back
+vector<T>::push_back(const T&)
+вызывает T::T(const T &), копируя свой аргумент
+vector<T>::push_back(T &&)
+вызывает T::T(T&&), перемещая свой аргумент
+
+Перемещение в методах контейнеров
+Если одна из версий метода принимает rvalue-ссылку,
+метод умеет перемещать свой аргумент
