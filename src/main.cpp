@@ -6,42 +6,12 @@
 #include <algorithm>
 #include <iterator>
 #include <numeric>
+#include <simple_vector.h>
 
 using namespace std;
 
 void TestAll();
 void Profile();
-
-// Объявляем Sentence<Token> для произвольного типа Token
-// синонимом vector<Token>.
-// Благодаря этому в качестве возвращаемого значения
-// функции можно указать не малопонятный вектор векторов,
-// а вектор предложений — vector<Sentence<Token>>.
-template <typename Token>
-using Sentence = vector<Token>;
-
-// Класс Token имеет метод bool IsEndSentencePunctuation() const
-template <typename Token>
-vector<Sentence<Token>> SplitIntoSentences(vector<Token> tokens)
-{
-    vector<Sentence<Token>> result(1U);
-    result.reserve(tokens.size());
-
-    for (auto it = tokens.begin(); it != tokens.end(); ++it)
-    {
-        Sentence<Token> &sentence = result.back();
-
-        if (it->IsEndSentencePunctuation() and next(it) != tokens.end() and not next(it)->IsEndSentencePunctuation())
-        {
-            result.push_back({});
-        }
-
-        sentence.push_back(move(*it));
-    }
-
-    result.shrink_to_fit();
-    return result;
-}
 
 int main()
 {
@@ -50,51 +20,69 @@ int main()
     return 0;
 }
 
-struct TestToken
+void TestConstruction()
 {
-    string data;
-    bool is_end_sentence_punctuation = false;
+    SimpleVector<int> empty;
+    ASSERT_EQUAL(empty.Size(), 0u);
+    ASSERT_EQUAL(empty.Capacity(), 0u);
+    ASSERT(empty.begin() == empty.end());
 
-    bool IsEndSentencePunctuation() const
+    SimpleVector<string> five_strings(5);
+    ASSERT_EQUAL(five_strings.Size(), 5u);
+    ASSERT(five_strings.Size() <= five_strings.Capacity());
+    for (auto &item : five_strings)
     {
-        return is_end_sentence_punctuation;
+        ASSERT(item.empty());
     }
-    bool operator==(const TestToken &other) const
-    {
-        return data == other.data && is_end_sentence_punctuation == other.is_end_sentence_punctuation;
-    }
-};
-
-ostream &operator<<(ostream &stream, const TestToken &token)
-{
-    return stream << token.data;
+    five_strings[2] = "Hello";
+    ASSERT_EQUAL(five_strings[2], "Hello");
 }
 
-// Тест содержит копирования объектов класса TestToken.
-// Для проверки отсутствия копирований в функции SplitIntoSentences
-// необходимо написать отдельный тест.
-void TestSplitting()
+void TestPushBack()
 {
-    ASSERT_EQUAL(
-        SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!"}})),
-        vector<Sentence<TestToken>>({{{"Split"}, {"into"}, {"sentences"}, {"!"}}}));
+    SimpleVector<int> v;
+    for (int i = 10; i >= 1; --i)
+    {
+        v.PushBack(int{i});
+        ASSERT(v.Size() <= v.Capacity());
+    }
+    sort(begin(v), end(v));
 
-    ASSERT_EQUAL(
-        SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!", true}})),
-        vector<Sentence<TestToken>>({{{"Split"}, {"into"}, {"sentences"}, {"!", true}}}));
+    const vector<int> expected = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    ASSERT(equal(begin(v), end(v), begin(expected)));
+}
 
-    ASSERT_EQUAL(
-        SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!", true}, {"!", true}, {"Without"}, {"copies"}, {".", true}})),
-        vector<Sentence<TestToken>>({
-            {{"Split"}, {"into"}, {"sentences"}, {"!", true}, {"!", true}},
-            {{"Without"}, {"copies"}, {".", true}},
-        }));
+class StringNonCopyable : public string
+{
+public:
+    using string::string;
+    StringNonCopyable(string &&other) : string(move(other)) {}
+    StringNonCopyable(const StringNonCopyable &) = delete;
+    StringNonCopyable(StringNonCopyable &&) = default;
+    StringNonCopyable &operator=(const StringNonCopyable &) = delete;
+    StringNonCopyable &operator=(StringNonCopyable &&) = default;
+};
+
+void TestNoCopy()
+{
+    SimpleVector<StringNonCopyable> strings;
+    static const int SIZE = 10;
+    for (int i = 0; i < SIZE; ++i)
+    {
+        strings.PushBack(StringNonCopyable(to_string(i)));
+    }
+    for (int i = 0; i < SIZE; ++i)
+    {
+        ASSERT_EQUAL(strings[i], to_string(i));
+    }
 }
 
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestSplitting);
+    RUN_TEST(tr, TestConstruction);
+    RUN_TEST(tr, TestPushBack);
+    RUN_TEST(tr, TestNoCopy);
 }
 
 void Profile()
