@@ -433,10 +433,13 @@ while (true)
 
 class Logger
 {
+public:
     Logger() { cout << "Default ctor\n"; }
     Logger(const Logger &) { cout << "Copy ctor\n"; }
     void operator=(const Logger &) { cout << "Copy assignment ctor\n"; }
-}
+    Logger(Logger &&) { cout << "Move ctor\n"; }
+    void operator=(Logger &&) { cout << "Move assignment ctor\n"; }
+};
 
 template <typename T>
 SimpleVector<T>::SimpleVector(const SimpleVector<T> &other)
