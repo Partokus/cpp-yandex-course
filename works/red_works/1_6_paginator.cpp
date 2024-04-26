@@ -18,6 +18,16 @@ public:
     {
     }
 
+    Iterator begin()
+    {
+        return _begin;
+    }
+
+    Iterator end()
+    {
+        return _end;
+    }
+
     Iterator begin() const
     {
         return _begin;
@@ -71,6 +81,16 @@ public:
     }
 
     typename vector<Page>::iterator end()
+    {
+        return _pages.end();
+    }
+
+    typename vector<Page>::iterator begin() const
+    {
+        return _pages.begin();
+    }
+
+    typename vector<Page>::iterator end() const
     {
         return _pages.end();
     }
