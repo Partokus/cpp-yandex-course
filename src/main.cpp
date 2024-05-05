@@ -66,7 +66,7 @@ Stats ExploreKeyWordsSingleThread(const set<string> &key_words, istream &input)
 {
     Stats result{};
 
-    set<string_view> key_words_str(key_words.cbegin(), key_words.cend());
+    set<string_view> key_words_sv(key_words.cbegin(), key_words.cend());
 
     static mutex mutex;
     string line;
@@ -81,7 +81,7 @@ Stats ExploreKeyWordsSingleThread(const set<string> &key_words, istream &input)
         }
         mutex.unlock();
 
-        result += ExploreLine(key_words_str, line);
+        result += ExploreLine(key_words_sv, line);
     }
 
     return result;
