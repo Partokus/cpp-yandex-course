@@ -20,6 +20,8 @@ inc = include_directories(
 src = [
     'main.cpp',
     'tests/test_runner.cpp',
+    'parse.cpp',
+    'search_server.cpp'
 ]
 
 if host_machine.system() == 'windows'
