@@ -11,6 +11,8 @@
 #include <random>
 #include <thread>
 
+#include <fstream>
+
 #include <search_server.h>
 #include <parse.h>
 
@@ -220,6 +222,119 @@ void TestAll()
     RUN_TEST(tr, TestBasicSearch);
 }
 
+void CreateDocumentsAndQueriesFiles()
+{
+    constexpr size_t DocsCount = 10'000U;             // Количество документов. 50'000 max
+    constexpr size_t OneDocWordsCount = 100U;         // 1000 max
+    constexpr size_t DocsDifferentWordsCount = 1000U; // 10'000 max
+    constexpr size_t WordLenght = 10U;                // 100 max
+
+    constexpr size_t QueriesCount = 500U;             // 500'000 max
+    constexpr size_t OneQueryDifferentWordsCount = 10U; // 10 max
+
+    constexpr size_t MaxSpacesBtwTwoWordsCount = 10U;
+
+    ofstream docs_ostream("docs.txt");
+    ofstream queries_ostream("queries.txt");
+
+    // создаём набор различных слов
+    set<string> different_words;
+    while (different_words.size() != DocsDifferentWordsCount)
+    {
+        // создаём слово
+        string word;
+        while (word.size() < WordLenght)
+        {
+            word += to_string(rand());
+        }
+        while (word.size() != WordLenght)
+        {
+            word.pop_back();
+        }
+
+        different_words.insert(word);
+    }
+    vector<string> words(different_words.begin(), different_words.end());
+    different_words.clear();
+
+    // создаём документы
+    vector<string> docs(DocsCount);
+    for (auto &doc : docs)
+    {
+        // заполняем документ словами с различным
+        // количеством пробелов между ними
+        for (size_t i = 0U; i < OneDocWordsCount; ++i)
+        {
+            const size_t word_index = rand() % DocsDifferentWordsCount;
+
+            doc += words[word_index];
+
+            if (i != OneDocWordsCount - 1)
+            {
+                const size_t spaces_btw_two_words_count = rand() % MaxSpacesBtwTwoWordsCount;
+                const string spaces = string(spaces_btw_two_words_count, ' ');
+
+                doc += spaces;
+            }
+        }
+
+        docs_ostream << doc << '\n';
+    }
+
+    // создаём запросы
+    vector<string> queries(QueriesCount);
+    for (auto &query : queries)
+    {
+        // заполняем запросы уникальными словами с различным
+        // количеством пробелов между ними
+        for (size_t i = 0U; i < OneQueryDifferentWordsCount; ++i)
+        {
+            const size_t word_index = rand() % DocsDifferentWordsCount;
+
+            const size_t spaces_btw_two_words_count = rand() % MaxSpacesBtwTwoWordsCount;
+            const string spaces = string(spaces_btw_two_words_count, ' ');
+
+            // подтверждаем уникальность слова
+            if (query.find(words[word_index]) != query.npos)
+            {
+                --i;
+                continue;
+            }
+
+            query += words[word_index];
+
+            if (i != OneQueryDifferentWordsCount - 1)
+            {
+                const size_t spaces_btw_two_words_count = rand() % MaxSpacesBtwTwoWordsCount;
+                const string spaces = string(spaces_btw_two_words_count, ' ');
+
+                query += spaces;
+            }
+        }
+
+        queries_ostream << query << '\n';
+    }
+}
+
+void ProfileSearchServer(istream &document_input, istream &query_input, ostream& search_results_output)
+{
+    LOG_DURATION("SearchServer");
+    SearchServer srv(document_input);
+    srv.AddQueriesStream(query_input, search_results_output);
+}
+
 void Profile()
 {
+    // CreateDocumentsAndQueriesFiles();
+
+    ifstream docs_file("docs.txt");
+    ifstream queries_file("queries.txt");
+    ofstream search_results_output("search_results_output.txt");
+
+    if (not docs_file or not queries_file)
+    {
+        throw runtime_error("Didn't open file");
+    }
+
+    ProfileSearchServer(docs_file, queries_file, search_results_output);
 }

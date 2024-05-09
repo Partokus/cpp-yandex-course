@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <istream>
 #include <ostream>
 #include <set>
@@ -7,29 +8,42 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <mutex>
+
 using namespace std;
 
-class InvertedIndex {
+class SearchServer
+{
 public:
-  void Add(const string& document);
-  list<size_t> Lookup(const string& word) const;
-
-  const string& GetDocument(size_t id) const {
-    return docs[id];
-  }
+    SearchServer() = default;
+    explicit SearchServer(istream &document_input);
+    void UpdateDocumentBase(istream &document_input);
+    void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
 private:
-  map<string, list<size_t>> index;
-  vector<string> docs;
-};
+    using Word = string;
+    using WordEnters = size_t;
+    using Doc = map<Word, WordEnters>;
+    vector<Doc> _docs; // map<слово, кол-во вхождение>
 
-class SearchServer {
-public:
-  SearchServer() = default;
-  explicit SearchServer(istream& document_input);
-  void UpdateDocumentBase(istream& document_input);
-  void AddQueriesStream(istream& query_input, ostream& search_results_output);
+    void AddQueriesStreamSingleThread(istream &query_input, ostream &search_results_output);
 
-private:
-  InvertedIndex index;
+    using DocId = size_t;
+    using HitCount = size_t;
+    map<DocId, HitCount> LookUp(const vector<string> &query_words)
+    {
+        map<DocId, HitCount> result;
+
+        for (DocId doc_id = 0U; doc_id < _docs.size(); ++doc_id)
+        {
+            for (const auto &word : query_words)
+            {
+                if (auto it = _docs[doc_id].find(word); it != _docs[doc_id].end())
+                {
+                    result[doc_id] += it->second;
+                }
+            }
+        }
+        return move(result);
+    }
 };
