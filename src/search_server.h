@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <istream>
 #include <ostream>
 #include <set>
@@ -12,38 +11,62 @@
 
 using namespace std;
 
+class InvertedIndex
+{
+public:
+  void Add(string document);
+  const vector<size_t> &Lookup(const string &word) const;
+
+private:
+  map<string, vector<size_t>> index;
+  size_t next_doc_id = 0U;
+};
+
+template <typename T>
+class Synchronized
+{
+public:
+    explicit Synchronized(T initial = T());
+
+    struct Access
+    {
+        T &ref_to_value;
+        lock_guard<mutex> guard;
+    };
+
+    Access GetAccess();
+
+private:
+    T _value;
+    mutex _m;
+};
+
+template <typename T>
+Synchronized<T>::Synchronized(T initial)
+    : _value(move(initial))
+{
+}
+
+template <typename T>
+typename Synchronized<T>::Access Synchronized<T>::GetAccess()
+{
+    return {_value, lock_guard(_m)};
+}
+
 class SearchServer
 {
 public:
-    SearchServer() = default;
-    explicit SearchServer(istream &document_input);
-    void UpdateDocumentBase(istream &document_input);
-    void AddQueriesStream(istream &query_input, ostream &search_results_output);
+  SearchServer() = default;
+  explicit SearchServer(istream &document_input);
+  void UpdateDocumentBase(istream &document_input);
+  void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
 private:
-    using Word = string;
-    using WordEnters = size_t;
-    using Doc = map<Word, WordEnters>;
-    vector<Doc> _docs; // map<слово, кол-во вхождение>
+  InvertedIndex index;
+  mutex _m_getline;
 
-    void AddQueriesStreamSingleThread(istream &query_input, ostream &search_results_output);
+  Synchronized<map<size_t, string>> _search_results; // first is id
+  size_t _next_search_result_id = 0U;
 
-    using DocId = size_t;
-    using HitCount = size_t;
-    map<DocId, HitCount> LookUp(const vector<string> &query_words)
-    {
-        map<DocId, HitCount> result;
-
-        for (DocId doc_id = 0U; doc_id < _docs.size(); ++doc_id)
-        {
-            for (const auto &word : query_words)
-            {
-                if (auto it = _docs[doc_id].find(word); it != _docs[doc_id].end())
-                {
-                    result[doc_id] += it->second;
-                }
-            }
-        }
-        return move(result);
-    }
+  void AddQueriesStreamSingleThread(istream &query_input);
 };
