@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.json": "cpp",
         "stm32f7xx_hal_def.h": "c",
         "stm32f767xx.h": "c",
         "atomic": "cpp",
@@ -97,7 +98,8 @@
         "strstream": "cpp",
         "complex": "cpp",
         "unordered_set": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "execution": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

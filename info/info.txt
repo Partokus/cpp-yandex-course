@@ -394,11 +394,11 @@ string_view позволяет сослаться на диапазон симв
 
 Итерирование с remove_prefix:
 string_view str = ...;
-vector<string_view> words;
+vector<string_view> result;
 while (true)
 {
     size_t space = str.find(' ');
-    words.push_back(str.substr(0, space));
+    result.push_back(str.substr(0, space));
     if (space == str.npos)
     {
         break;

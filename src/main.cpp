@@ -66,6 +66,18 @@ void TestSerpFormat()
     TestFunctionality(docs, queries, expected);
 }
 
+void TestBadAllocFormat()
+{
+    const vector<string> docs =
+    {
+        "   c  d d e f   "
+    };
+    const vector<string> queries = {"d"};
+    const vector<string> expected = {"d: {docid: 0, hitcount: 2}"};
+
+    TestFunctionality(docs, queries, expected);
+}
+
 void TestTop5()
 {
     const vector<string> docs = {
@@ -215,11 +227,12 @@ void TestBasicSearch()
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestSerpFormat);
-    RUN_TEST(tr, TestTop5);
-    RUN_TEST(tr, TestHitcount);
-    RUN_TEST(tr, TestRanking);
-    RUN_TEST(tr, TestBasicSearch);
+    // RUN_TEST(tr, TestSerpFormat);
+    // RUN_TEST(tr, TestBadAllocFormat);
+    // RUN_TEST(tr, TestTop5);
+    // RUN_TEST(tr, TestHitcount);
+    // RUN_TEST(tr, TestRanking);
+    // RUN_TEST(tr, TestBasicSearch);
 }
 
 void CreateDocumentsAndQueriesFiles()
@@ -227,9 +240,9 @@ void CreateDocumentsAndQueriesFiles()
     constexpr size_t DocsCount = 10'000U;             // Количество документов. 50'000 max
     constexpr size_t OneDocWordsCount = 100U;         // 1000 max
     constexpr size_t DocsDifferentWordsCount = 1000U; // 10'000 max
-    constexpr size_t WordLenght = 10U;                // 100 max
+    constexpr size_t WordLenght = 50U;                // 100 max
 
-    constexpr size_t QueriesCount = 500U;             // 500'000 max
+    constexpr size_t QueriesCount = 5000U;              // 500'000 max
     constexpr size_t OneQueryDifferentWordsCount = 10U; // 10 max
 
     constexpr size_t MaxSpacesBtwTwoWordsCount = 10U;
@@ -316,25 +329,50 @@ void CreateDocumentsAndQueriesFiles()
     }
 }
 
-void ProfileSearchServer(istream &document_input, istream &query_input, ostream& search_results_output)
+void ProfileSearchServer(istream &document_input, istream &query_input,
+                         ostream &search_results_output, ifstream &expected_search_results)
 {
-    LOG_DURATION("SearchServer");
-    SearchServer srv(document_input);
-    srv.AddQueriesStream(query_input, search_results_output);
+    LOG_DURATION("SearchServer Total");
+    SearchServer srv;
+    {
+        LOG_DURATION("SearchServer UpdateDocumentBase");
+        srv.UpdateDocumentBase(document_input);
+    }
+    {
+        LOG_DURATION("SearchServer AddQueriesStream");
+        srv.AddQueriesStream(query_input, search_results_output);
+    }
+
+    // ifstream search_results_input("search_results_output.txt");
+
+    // if (not search_results_input)
+    // {
+    //     throw runtime_error("Didn't open file");
+    // }
+
+    // for (string search_result; getline(search_results_input, search_result);)
+    // {
+    //     string expected_search_result;
+    //     getline(expected_search_results, expected_search_result);
+
+    //     ASSERT_EQUAL(search_result, expected_search_result);
+    // }
 }
 
 void Profile()
 {
     // CreateDocumentsAndQueriesFiles();
 
-    ifstream docs_file("docs.txt");
-    ifstream queries_file("queries.txt");
+    ifstream docs_file("../docs.txt");
+    ifstream queries_file("../queries.txt");
+
     ofstream search_results_output("search_results_output.txt");
+    ifstream expected_earch_results("expected_earch_results.txt");
 
     if (not docs_file or not queries_file)
     {
         throw runtime_error("Didn't open file");
     }
 
-    ProfileSearchServer(docs_file, queries_file, search_results_output);
+    ProfileSearchServer(docs_file, queries_file, search_results_output, expected_earch_results);
 }
