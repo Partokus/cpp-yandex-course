@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <istream>
 #include <ostream>
 #include <set>
@@ -11,15 +12,26 @@
 
 using namespace std;
 
+using DocIdHits = vector<size_t>;
+
 class InvertedIndex
 {
 public:
-  void Add(string document);
-  const vector<size_t> &Lookup(const string &word) const;
+    void Add(string document, size_t doc_id);
+    const DocIdHits &Lookup(const string &word) const;
 
-private:
-  map<string, vector<size_t>> index;
-  size_t next_doc_id = 0U;
+    
+    map<string, DocIdHits> index;
+
+    void operator+=(InvertedIndex &&other)
+    {
+        while (not other.index.empty())
+        {
+            auto node = other.index.extract(other.index.begin());
+            DocIdHits &doc_id_hits = index[move(node.key())];
+            doc_id_hits.insert(doc_id_hits.begin(), node.mapped().begin(), node.mapped().end());
+        }
+    }
 };
 
 template <typename T>
@@ -56,17 +68,22 @@ typename Synchronized<T>::Access Synchronized<T>::GetAccess()
 class SearchServer
 {
 public:
-  SearchServer() = default;
-  explicit SearchServer(istream &document_input);
-  void UpdateDocumentBase(istream &document_input);
-  void AddQueriesStream(istream &query_input, ostream &search_results_output);
+    SearchServer() = default;
+    explicit SearchServer(istream &document_input);
+    void UpdateDocumentBase(istream &document_input);
+    void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
 private:
-  InvertedIndex index;
-  mutex _m_getline;
+    InvertedIndex index;
+    mutex _m_getline;
 
-  Synchronized<map<size_t, string>> _search_results; // first is id
-  size_t _next_search_result_id = 0U;
+    size_t next_doc_id = 0U;
 
-  void AddQueriesStreamSingleThread(istream &query_input);
+    Synchronized<map<size_t, string>> _search_results; // first is search result id
+    size_t _next_search_result_id = 0U;
+
+    InvertedIndex UpdateDocumentBaseSingleThread(istream &document_input);
+    void AddQueriesStreamSingleThread(istream &query_input);
+
+    static constexpr size_t ThreadsCount = 4U;
 };

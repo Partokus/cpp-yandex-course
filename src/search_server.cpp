@@ -109,20 +109,46 @@ SearchServer::SearchServer(istream &document_input)
 
 void SearchServer::UpdateDocumentBase(istream &document_input)
 {
-    InvertedIndex new_index;
+    vector<future<InvertedIndex>> futures;
+    index.index.clear();
+    next_doc_id = 0U;
 
-    for (string current_document; getline(document_input, current_document);)
+    for (size_t i = 0; i < ThreadsCount; ++i)
     {
-        new_index.Add(move(current_document));
+        futures.push_back(async(
+            [&document_input, this]
+            {
+                return UpdateDocumentBaseSingleThread(document_input);
+            }));
     }
 
-    index = move(new_index);
+    for (auto &f : futures)
+    {
+        index += f.get();
+    }
+}
+
+InvertedIndex SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
+{
+    InvertedIndex new_index;
+
+    _m_getline.lock();
+    for (string current_document; getline(document_input, current_document);)
+    {
+        size_t doc_id = next_doc_id++;
+        _m_getline.unlock();
+
+        new_index.Add(move(current_document), doc_id);
+
+        _m_getline.lock();
+    }
+    _m_getline.unlock();
+
+    return new_index;
 }
 
 void SearchServer::AddQueriesStream(istream &query_input, ostream &search_results_output)
 {
-    static constexpr size_t ThreadsCount = 4U;
-
     vector<future<void>> futures;
 
     _search_results.GetAccess().ref_to_value.clear();
@@ -151,7 +177,6 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
 void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
 {
     _m_getline.lock();
-
     for (string current_query; getline(query_input, current_query);)
     {
         const size_t search_result_id = _next_search_result_id++;
@@ -201,16 +226,15 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
     _m_getline.unlock();
 }
 
-void InvertedIndex::Add(string document)
+void InvertedIndex::Add(string document, size_t doc_id)
 {
     for (auto &word : SplitIntoWords(document))
     {
-        index[string(word)].push_back(next_doc_id);
+        index[string(word)].push_back(doc_id);
     }
-    ++next_doc_id;
 }
 
-const vector<size_t> &InvertedIndex::Lookup(const string &word) const
+const DocIdHits &InvertedIndex::Lookup(const string &word) const
 {
     if (auto it = index.find(word); it != index.end())
     {
@@ -218,7 +242,7 @@ const vector<size_t> &InvertedIndex::Lookup(const string &word) const
     }
     else
     {
-        static vector<size_t> empty;
+        static DocIdHits empty;
         return empty;
     }
 }
