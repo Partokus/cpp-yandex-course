@@ -65,10 +65,41 @@ private:
     vector<Page> _pages{};
 };
 
-vector<string> SplitIntoWords(string line)
+vector<string_view> SplitIntoWords(string_view str)
 {
-    istringstream words_input(line);
-    return {istream_iterator<string>(words_input), istream_iterator<string>()};
+    vector<string_view> result;
+
+    if (str.empty())
+    {
+        return {};
+    }
+    else if (str[0] == ' ')
+    {
+        size_t not_space = str.find_first_not_of(' ');
+        str.remove_prefix(not_space);
+    }
+
+    while (true)
+    {
+        size_t space = str.find(' ');
+        result.push_back(str.substr(0, space));
+        if (space == str.npos)
+        {
+            break;
+        }
+        else
+        {
+            str.remove_prefix(space + 1);
+            // ищем лишние пробелы, так как их может быть больше одного
+            size_t not_space = str.find_first_not_of(' ');
+            if (not_space == str.npos)
+            {
+                break;
+            }
+            str.remove_prefix(not_space);
+        }
+    }
+    return result;
 }
 
 SearchServer::SearchServer(istream &document_input)
@@ -90,7 +121,7 @@ void SearchServer::UpdateDocumentBase(istream &document_input)
 
 void SearchServer::AddQueriesStream(istream &query_input, ostream &search_results_output)
 {
-    static constexpr size_t ThreadsCount = 1U;
+    static constexpr size_t ThreadsCount = 4U;
 
     vector<future<void>> futures;
 
@@ -132,7 +163,7 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
 
         for (const auto &word : words)
         {
-            for (const size_t docid : index.Lookup(word))
+            for (const size_t docid : index.Lookup(string(word)))
             {
                 ++docid_count[docid];
             }
@@ -172,9 +203,9 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
 
 void InvertedIndex::Add(string document)
 {
-    for (auto &word : SplitIntoWords(move(document)))
+    for (auto &word : SplitIntoWords(document))
     {
-        index[move(word)].push_back(next_doc_id);
+        index[string(word)].push_back(next_doc_id);
     }
     ++next_doc_id;
 }
