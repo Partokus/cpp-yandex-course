@@ -1,5 +1,6 @@
 #include "search_server.h"
 #include "iterator_range.h"
+#include <profile.h>
 
 #include <algorithm>
 #include <iterator>
@@ -179,38 +180,55 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
     _m_getline.lock();
     for (string current_query; getline(query_input, current_query);)
     {
+        // LOG_DURATION("Go");
         const size_t search_result_id = _next_search_result_id++;
         _m_getline.unlock();
 
-        const auto words = SplitIntoWords(current_query);
+        vector<string_view> words;
+        {
+            // LOG_DURATION("split");
+            words = SplitIntoWords(current_query);
+        }
+        // const auto words = SplitIntoWords(current_query);
 
         map<size_t, size_t> docid_count;
 
-        for (const auto &word : words)
         {
-            for (const size_t docid : index.Lookup(string(word)))
+            // LOG_DURATION("docid_count");
+            for (const auto &word : words)
             {
-                ++docid_count[docid];
+                for (const size_t docid : index.Lookup(string(word)))
+                {
+                    ++docid_count[docid];
+                }
             }
         }
 
-        vector<pair<size_t, size_t>> search_results(docid_count.begin(), docid_count.end());
+        vector<pair<size_t, size_t>> search_results(docid_count.size());
+        {
+            // LOG_DURATION("copy");
+            copy(docid_count.begin(), docid_count.end(), search_results.begin());
+        }
 
-        sort(begin(search_results),
-             end(search_results),
-             [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs)
-             {
-                 if (rhs.second < lhs.second)
+        {
+            // LOG_DURATION("sort");
+            sort(begin(search_results),
+                 end(search_results),
+                 [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs)
                  {
-                     return true;
-                 }
-                 else if (rhs.second == lhs.second)
-                 {
-                     return rhs.first > lhs.first;
-                 }
-                 return false;
-             });
+                     if (rhs.second < lhs.second)
+                     {
+                         return true;
+                     }
+                     else if (rhs.second == lhs.second)
+                     {
+                         return rhs.first > lhs.first;
+                     }
+                     return false;
+                 });
+        }
 
+        // LOG_DURATION("search_result");
         string search_result = move(current_query) + ':';
 
         for (auto [docid, hitcount] : Head(search_results, 5))

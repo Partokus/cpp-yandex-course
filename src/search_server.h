@@ -20,7 +20,6 @@ public:
     void Add(string document, size_t doc_id);
     const DocIdHits &Lookup(const string &word) const;
 
-    
     map<string, DocIdHits> index;
 
     void operator+=(InvertedIndex &&other)
