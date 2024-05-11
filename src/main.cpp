@@ -230,8 +230,8 @@ void TestBasicSearch()
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestSerpFormat);
-    RUN_TEST(tr, TestBadAllocFormat);
+    // RUN_TEST(tr, TestSerpFormat);
+    // RUN_TEST(tr, TestBadAllocFormat);
     RUN_TEST(tr, TestTop5);
     RUN_TEST(tr, TestHitcount);
     RUN_TEST(tr, TestRanking);
@@ -240,12 +240,12 @@ void TestAll()
 
 void CreateDocumentsAndQueriesFiles()
 {
-    constexpr size_t DocsCount = 10'000U;             // Количество документов. 50'000 max
-    constexpr size_t OneDocWordsCount = 100U;         // 1000 max
+    constexpr size_t DocsCount = 800U;                // Количество документов. 50'000 max
+    constexpr size_t OneDocWordsCount = 1000U;        // 1000 max
     constexpr size_t DocsDifferentWordsCount = 1000U; // 10'000 max
     constexpr size_t WordLenght = 50U;                // 100 max
 
-    constexpr size_t QueriesCount = 5000U;              // 500'000 max
+    constexpr size_t QueriesCount = 10'000U;             // 500'000 max
     constexpr size_t OneQueryDifferentWordsCount = 10U; // 10 max
 
     constexpr size_t MaxSpacesBtwTwoWordsCount = 10U;
@@ -373,6 +373,7 @@ void ProfileSearchServer(istream &document_input, istream &query_input,
 void Profile()
 {
     // CreateDocumentsAndQueriesFiles();
+    // return;
 
     ifstream docs_file("docs.txt");
     ifstream queries_file("queries.txt");

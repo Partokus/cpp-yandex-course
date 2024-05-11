@@ -71,13 +71,15 @@ public:
     explicit SearchServer(istream &document_input);
     void UpdateDocumentBase(istream &document_input);
     void AddQueriesStream(istream &query_input, ostream &search_results_output);
+
+    chrono::steady_clock::time_point _startTime;
     std::chrono::microseconds _dur{0};
 
 private:
     InvertedIndex index;
     mutex _m_getline;
 
-    size_t next_doc_id = 0U;
+    size_t docs_count = 0U;
 
     Synchronized<map<size_t, string>> _search_results; // first is search result id
     size_t _next_search_result_id = 0U;
@@ -89,6 +91,4 @@ private:
 
     static constexpr size_t MaxDocsCount = 50'000U + 1U;
     static constexpr size_t MaxQueriesCount = 500'000U + 1U;
-
-    chrono::steady_clock::time_point _startTime;
 };

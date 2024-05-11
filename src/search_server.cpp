@@ -10,6 +10,7 @@
 #include <cmath>
 #include <future>
 #include <array>
+#include <stack>
 
 template <class Iterator>
 class Paginator
@@ -67,6 +68,33 @@ private:
     vector<Page> _pages{};
 };
 
+using SearchResults = vector<pair<size_t, size_t>>;
+
+template <typename Container>
+SearchResults MakeSearchResults(const Container &docid_count)
+{
+    SearchResults result;
+    result.reserve(5);
+    stack<pair<size_t, size_t>> max_hits;
+    size_t current_max_hits = 0U;
+
+    for (size_t docid = 0U; docid < docid_count.size(); ++docid)
+    {
+        if (docid_count[docid] >= current_max_hits)
+        {
+            current_max_hits = docid_count[docid];
+            max_hits.emplace(docid, current_max_hits);
+        }
+    }
+
+    while (not max_hits.empty() and result.size() < 5)
+    {
+        result.push_back(max_hits.top());
+        max_hits.pop();
+    }
+    return result;
+}
+
 vector<string_view> SplitIntoWords(string_view str)
 {
     vector<string_view> result;
@@ -113,7 +141,7 @@ void SearchServer::UpdateDocumentBase(istream &document_input)
 {
     vector<future<InvertedIndex>> futures;
     index.index.clear();
-    next_doc_id = 0U;
+    docs_count = 0U;
 
     for (size_t i = 0; i < ThreadsCount; ++i)
     {
@@ -137,7 +165,7 @@ InvertedIndex SearchServer::UpdateDocumentBaseSingleThread(istream &document_inp
     _m_getline.lock();
     for (string current_document; getline(document_input, current_document);)
     {
-        size_t doc_id = next_doc_id++;
+        size_t doc_id = docs_count++;
         _m_getline.unlock();
 
         new_index.Add(move(current_document), doc_id);
@@ -192,7 +220,7 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
 
         array<size_t, MaxDocsCount> docid_count{};
 
-        for (const auto &word : words)
+        for (const auto word : words)
         {
             for (const size_t docid : index.Lookup(string(word)))
             {
@@ -200,12 +228,13 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
             }
         }
 
+        // _startTime = chrono::steady_clock::now();
         vector<pair<size_t, size_t>> search_results;
         search_results.reserve(5U);
 
         while (search_results.size() != 5U)
         {
-            auto max_hits = max_element(docid_count.begin(), docid_count.end());
+            auto max_hits = max_element(docid_count.begin(), docid_count.begin() + docs_count);
             if (*max_hits == 0U)
             {
                 break;
@@ -214,7 +243,7 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
             search_results.emplace_back(docid, *max_hits);
             *max_hits = 0U;
         }
-
+        // _dur += chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - _startTime);
         sort(begin(search_results),
              end(search_results),
              [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs)
