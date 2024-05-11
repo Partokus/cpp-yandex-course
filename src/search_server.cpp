@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cmath>
 #include <future>
+#include <array>
 
 template <class Iterator>
 class Paginator
@@ -169,6 +170,10 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
         f.get();
     }
 
+    // _startTime = chrono::steady_clock::now();
+    // _dur += chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - _startTime);
+    // cout << "time: " << chrono::duration_cast<chrono::milliseconds>(_dur).count() << endl;
+
     for (auto &search_result : _search_results.GetAccess().ref_to_value)
     {
         search_results_output << search_result.second;
@@ -180,58 +185,54 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
     _m_getline.lock();
     for (string current_query; getline(query_input, current_query);)
     {
-        // LOG_DURATION("Go");
         const size_t search_result_id = _next_search_result_id++;
         _m_getline.unlock();
 
-        vector<string_view> words;
-        {
-            // LOG_DURATION("split");
-            words = SplitIntoWords(current_query);
-        }
-        // const auto words = SplitIntoWords(current_query);
+        vector<string_view> words = SplitIntoWords(current_query);
 
-        map<size_t, size_t> docid_count;
+        array<size_t, MaxDocsCount> docid_count{};
 
+        for (const auto &word : words)
         {
-            // LOG_DURATION("docid_count");
-            for (const auto &word : words)
+            for (const size_t docid : index.Lookup(string(word)))
             {
-                for (const size_t docid : index.Lookup(string(word)))
-                {
-                    ++docid_count[docid];
-                }
+                ++docid_count[docid];
             }
         }
 
-        vector<pair<size_t, size_t>> search_results(docid_count.size());
+        vector<pair<size_t, size_t>> search_results;
+        search_results.reserve(5U);
+
+        while (search_results.size() != 5U)
         {
-            // LOG_DURATION("copy");
-            copy(docid_count.begin(), docid_count.end(), search_results.begin());
+            auto max_hits = max_element(docid_count.begin(), docid_count.end());
+            if (*max_hits == 0U)
+            {
+                break;
+            }
+            const size_t docid = max_hits - docid_count.begin();
+            search_results.emplace_back(docid, *max_hits);
+            *max_hits = 0U;
         }
 
-        {
-            // LOG_DURATION("sort");
-            sort(begin(search_results),
-                 end(search_results),
-                 [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs)
+        sort(begin(search_results),
+             end(search_results),
+             [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs)
+             {
+                 if (rhs.second < lhs.second)
                  {
-                     if (rhs.second < lhs.second)
-                     {
-                         return true;
-                     }
-                     else if (rhs.second == lhs.second)
-                     {
-                         return rhs.first > lhs.first;
-                     }
-                     return false;
-                 });
-        }
+                     return true;
+                 }
+                 else if (rhs.second == lhs.second)
+                 {
+                     return rhs.first > lhs.first;
+                 }
+                 return false;
+             });
 
-        // LOG_DURATION("search_result");
         string search_result = move(current_query) + ':';
 
-        for (auto [docid, hitcount] : Head(search_results, 5))
+        for (auto [docid, hitcount] : search_results)
         {
             search_result += " {docid: " + to_string(docid) + ", hitcount: " + to_string(hitcount) + '}';
         }

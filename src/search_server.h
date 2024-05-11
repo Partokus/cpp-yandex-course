@@ -71,6 +71,7 @@ public:
     explicit SearchServer(istream &document_input);
     void UpdateDocumentBase(istream &document_input);
     void AddQueriesStream(istream &query_input, ostream &search_results_output);
+    std::chrono::microseconds _dur{0};
 
 private:
     InvertedIndex index;
@@ -85,4 +86,9 @@ private:
     void AddQueriesStreamSingleThread(istream &query_input);
 
     static constexpr size_t ThreadsCount = 4U;
+
+    static constexpr size_t MaxDocsCount = 50'000U + 1U;
+    static constexpr size_t MaxQueriesCount = 500'000U + 1U;
+
+    chrono::steady_clock::time_point _startTime;
 };

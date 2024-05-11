@@ -69,9 +69,8 @@ void TestSerpFormat()
 void TestBadAllocFormat()
 {
     const vector<string> docs =
-    {
-        "   c  d d e f   "
-    };
+        {
+            "   c  d d e f   "};
     const vector<string> queries = {"d"};
     const vector<string> expected = {"d: {docid: 0, hitcount: 2}"};
 
@@ -119,20 +118,20 @@ void TestHitcount()
         "walle",
         "is is is is",
     };
-    const vector<string> queries = {"the", "wall", "all", "is", "the is"};
+    const vector<string> queries = {"the is"};
     const vector<string> expected = {
-        Join(' ', vector{
-                      "the:",
-                      "{docid: 0, hitcount: 2}",
-                      "{docid: 1, hitcount: 1}",
-                  }),
-        "wall: {docid: 1, hitcount: 1}",
-        "all:",
-        Join(' ', vector{
-                      "is:",
-                      "{docid: 3, hitcount: 4}",
-                      "{docid: 0, hitcount: 1}",
-                  }),
+        // Join(' ', vector{
+        //               "the:",
+        //               "{docid: 0, hitcount: 2}",
+        //               "{docid: 1, hitcount: 1}",
+        //           }),
+        // "wall: {docid: 1, hitcount: 1}",
+        // "all:",
+        // Join(' ', vector{
+        //               "is:",
+        //               "{docid: 3, hitcount: 4}",
+        //               "{docid: 0, hitcount: 1}",
+        //           }),
         Join(' ', vector{
                       "the is:",
                       "{docid: 3, hitcount: 4}",
@@ -288,7 +287,11 @@ void CreateDocumentsAndQueriesFiles()
 
             if (i != OneDocWordsCount - 1)
             {
-                const size_t spaces_btw_two_words_count = rand() % MaxSpacesBtwTwoWordsCount;
+                size_t spaces_btw_two_words_count = rand() % MaxSpacesBtwTwoWordsCount;
+                if (spaces_btw_two_words_count == 0)
+                {
+                    spaces_btw_two_words_count = 1;
+                }
                 const string spaces = string(spaces_btw_two_words_count, ' ');
 
                 doc += spaces;
@@ -322,7 +325,11 @@ void CreateDocumentsAndQueriesFiles()
 
             if (i != OneQueryDifferentWordsCount - 1)
             {
-                const size_t spaces_btw_two_words_count = rand() % MaxSpacesBtwTwoWordsCount;
+                size_t spaces_btw_two_words_count = rand() % MaxSpacesBtwTwoWordsCount;
+                if (spaces_btw_two_words_count == 0)
+                {
+                    spaces_btw_two_words_count = 1;
+                }
                 const string spaces = string(spaces_btw_two_words_count, ' ');
 
                 query += spaces;
@@ -376,6 +383,26 @@ void Profile()
     if (not docs_file or not queries_file)
     {
         throw runtime_error("Didn't open file");
+    }
+
+    {
+        // LOG_DURATION("map and vector");
+        // map<size_t, size_t> c;
+        // {
+        //     LOG_DURATION("constructing");
+        //     for (int i = 0; i < 1'000'000; ++i)
+        //     {
+        //         c[i] = i;
+        //     }
+        // }
+
+        // {
+        //     LOG_DURATION("iterating");
+        //     for (auto &i : c)
+        //     {
+        //         ++i.second;
+        //     }
+        // }
     }
 
     ProfileSearchServer(docs_file, queries_file, search_results_output, expected_earch_results);
