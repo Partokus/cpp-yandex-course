@@ -201,6 +201,8 @@ void TestBasicSearch()
         "we need some help",
         "it",
         "i love this game",
+        "i love this game",
+        "i love this game",
         "tell me why",
         "dislike",
         "about"};
@@ -217,6 +219,8 @@ void TestBasicSearch()
                       "{docid: 7, hitcount: 1}",
                   }),
         "i love this game: {docid: 2, hitcount: 4}",
+        "i love this game: {docid: 2, hitcount: 4}",
+        "i love this game: {docid: 2, hitcount: 4}",
         "tell me why: {docid: 5, hitcount: 2}",
         "dislike:",
         "about: {docid: 3, hitcount: 2}",
@@ -227,12 +231,12 @@ void TestBasicSearch()
 void TestAll()
 {
     TestRunner tr{};
-    // RUN_TEST(tr, TestSerpFormat);
-    // RUN_TEST(tr, TestBadAllocFormat);
-    // RUN_TEST(tr, TestTop5);
-    // RUN_TEST(tr, TestHitcount);
-    // RUN_TEST(tr, TestRanking);
-    // RUN_TEST(tr, TestBasicSearch);
+    RUN_TEST(tr, TestSerpFormat);
+    RUN_TEST(tr, TestBadAllocFormat);
+    RUN_TEST(tr, TestTop5);
+    RUN_TEST(tr, TestHitcount);
+    RUN_TEST(tr, TestRanking);
+    RUN_TEST(tr, TestBasicSearch);
 }
 
 void CreateDocumentsAndQueriesFiles()
@@ -363,8 +367,8 @@ void Profile()
 {
     // CreateDocumentsAndQueriesFiles();
 
-    ifstream docs_file("../docs.txt");
-    ifstream queries_file("../queries.txt");
+    ifstream docs_file("docs.txt");
+    ifstream queries_file("queries.txt");
 
     ofstream search_results_output("search_results_output.txt");
     ifstream expected_earch_results("expected_earch_results.txt");
