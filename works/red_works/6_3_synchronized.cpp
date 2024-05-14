@@ -25,11 +25,11 @@ public:
 
     struct Access
     {
-        T &ref_to_value;
+        T &ref;
         lock_guard<mutex> guard;
     };
 
-    Access GetAccess();
+    Access access();
 
 private:
     T _value;
@@ -43,7 +43,7 @@ Synchronized<T>::Synchronized(T initial)
 }
 
 template <typename T>
-typename Synchronized<T>::Access Synchronized<T>::GetAccess()
+typename Synchronized<T>::Access Synchronized<T>::access()
 {
     return {_value, lock_guard(_m)};
 }
@@ -64,8 +64,8 @@ void TestConcurrentUpdate()
     {
         for (size_t i = 0; i < add_count; ++i)
         {
-            auto access = common_string.GetAccess();
-            access.ref_to_value += 'a';
+            auto access = common_string.access();
+            access.ref += 'a';
         }
     };
 
@@ -75,7 +75,7 @@ void TestConcurrentUpdate()
     f1.get();
     f2.get();
 
-    ASSERT_EQUAL(common_string.GetAccess().ref_to_value.size(), 2 * add_count);
+    ASSERT_EQUAL(common_string.access().ref.size(), 2 * add_count);
 }
 
 vector<int> Consume(Synchronized<deque<int>> &common_queue)
@@ -96,8 +96,8 @@ vector<int> Consume(Synchronized<deque<int>> &common_queue)
             //
             // Размер критической секции существенно влияет на быстродействие
             // многопоточных программ.
-            auto access = common_queue.GetAccess();
-            q = move(access.ref_to_value);
+            auto access = common_queue.access();
+            q = move(access.ref);
         }
 
         for (int item : q)
@@ -123,9 +123,9 @@ void TestProducerConsumer()
     const size_t item_count = 100000;
     for (size_t i = 1; i <= item_count; ++i)
     {
-        common_queue.GetAccess().ref_to_value.push_back(i);
+        common_queue.access().ref.push_back(i);
     }
-    common_queue.GetAccess().ref_to_value.push_back(-1);
+    common_queue.access().ref.push_back(-1);
 
     vector<int> expected(item_count);
     iota(begin(expected), end(expected), 1);

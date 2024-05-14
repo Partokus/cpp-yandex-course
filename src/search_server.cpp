@@ -1,99 +1,10 @@
-#include "search_server.h"
-#include "iterator_range.h"
+#include <search_server.h>
+#include <paginator.h>
 #include <profile.h>
-
 #include <algorithm>
-#include <iterator>
-#include <sstream>
-#include <iostream>
 #include <cstdint>
 #include <cmath>
 #include <future>
-#include <array>
-#include <stack>
-
-template <class Iterator>
-class Paginator
-{
-public:
-    using Page = IteratorRange<Iterator>;
-
-    Paginator(Iterator begin, Iterator end, size_t page_size)
-    {
-        _pages.reserve(std::ceil(static_cast<double>(end - begin) / page_size));
-
-        Iterator it = begin;
-        const size_t last_page_num = _pages.capacity() - 1;
-
-        for (size_t page_num = 0; page_num < _pages.capacity(); ++page_num)
-        {
-            if (page_num != last_page_num)
-            {
-                _pages.push_back({it, it + page_size});
-                it += page_size;
-            }
-            else
-            {
-                _pages.push_back({it, end});
-            }
-        }
-    }
-
-    typename vector<Page>::iterator begin()
-    {
-        return _pages.begin();
-    }
-
-    typename vector<Page>::iterator end()
-    {
-        return _pages.end();
-    }
-
-    typename vector<Page>::iterator begin() const
-    {
-        return _pages.begin();
-    }
-
-    typename vector<Page>::iterator end() const
-    {
-        return _pages.end();
-    }
-
-    size_t size() const
-    {
-        return _pages.size();
-    }
-
-private:
-    vector<Page> _pages{};
-};
-
-using SearchResults = vector<pair<size_t, size_t>>;
-
-template <typename Container>
-SearchResults MakeSearchResults(const Container &docid_count)
-{
-    SearchResults result;
-    result.reserve(5);
-    stack<pair<size_t, size_t>> max_hits;
-    size_t current_max_hits = 0U;
-
-    for (size_t docid = 0U; docid < docid_count.size(); ++docid)
-    {
-        if (docid_count[docid] >= current_max_hits)
-        {
-            current_max_hits = docid_count[docid];
-            max_hits.emplace(docid, current_max_hits);
-        }
-    }
-
-    while (not max_hits.empty() and result.size() < 5)
-    {
-        result.push_back(max_hits.top());
-        max_hits.pop();
-    }
-    return result;
-}
 
 vector<string_view> SplitIntoWords(string_view str)
 {
@@ -132,6 +43,35 @@ vector<string_view> SplitIntoWords(string_view str)
     return result;
 }
 
+void Index::Add(string_view document, size_t doc_id)
+{
+    for (auto &word : SplitIntoWords(document))
+    {
+        data[string(word)].push_back(doc_id);
+    }
+}
+
+const DocIdHits &Index::Lookup(const string &word) const
+{
+    if (auto it = data.find(word); it != data.end())
+    {
+        return it->second;
+    }
+    static DocIdHits empty;
+    return empty;
+}
+
+void Index::operator+=(Index &&other)
+{
+    while (not other.data.empty())
+    {
+        auto node = other.data.extract(other.data.begin());
+        DocIdHits &doc_id_hits = data[move(node.key())];
+        DocIdHits &other_doc_id_hits = node.mapped();
+        doc_id_hits.insert(doc_id_hits.begin(), other_doc_id_hits.begin(), other_doc_id_hits.end());
+    }
+}
+
 SearchServer::SearchServer(istream &document_input)
 {
     UpdateDocumentBase(document_input);
@@ -139,9 +79,9 @@ SearchServer::SearchServer(istream &document_input)
 
 void SearchServer::UpdateDocumentBase(istream &document_input)
 {
-    vector<future<InvertedIndex>> futures;
-    index.index.clear();
-    docs_count = 0U;
+    vector<future<Index>> futures;
+    _index.data.clear();
+    _docs_count = 0U;
 
     for (size_t i = 0; i < ThreadsCount; ++i)
     {
@@ -154,21 +94,21 @@ void SearchServer::UpdateDocumentBase(istream &document_input)
 
     for (auto &f : futures)
     {
-        index += f.get();
+        _index += f.get();
     }
 }
 
-InvertedIndex SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
+Index SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
 {
-    InvertedIndex new_index;
+    Index new_index;
 
     _m_getline.lock();
     for (string current_document; getline(document_input, current_document);)
     {
-        size_t doc_id = docs_count++;
+        size_t doc_id = _docs_count++;
         _m_getline.unlock();
 
-        new_index.Add(move(current_document), doc_id);
+        new_index.Add(current_document, doc_id);
 
         _m_getline.lock();
     }
@@ -181,7 +121,7 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
 {
     vector<future<void>> futures;
 
-    _search_results.GetAccess().ref_to_value.clear();
+    _search_results.access().ref.clear();
     _next_search_result_id = 0U;
 
     for (size_t i = 0; i < ThreadsCount; ++i)
@@ -198,13 +138,14 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
         f.get();
     }
 
+    // для профилирования
     // _startTime = chrono::steady_clock::now();
     // _dur += chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - _startTime);
     // cout << "time: " << chrono::duration_cast<chrono::milliseconds>(_dur).count() << endl;
 
-    for (auto &search_result : _search_results.GetAccess().ref_to_value)
+    for (auto &[id, line] : _search_results.access().ref)
     {
-        search_results_output << search_result.second;
+        search_results_output << line;
     }
 }
 
@@ -218,32 +159,31 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
 
         vector<string_view> words = SplitIntoWords(current_query);
 
-        array<size_t, MaxDocsCount> docid_count{};
+        vector<size_t> doc_id_hits(_docs_count);
 
-        for (const auto word : words)
+        for (const string_view word : words)
         {
-            for (const size_t docid : index.Lookup(string(word)))
+            for (const size_t doc_id : _index.Lookup(string(word)))
             {
-                ++docid_count[docid];
+                ++doc_id_hits[doc_id];
             }
         }
 
-        // _startTime = chrono::steady_clock::now();
         vector<pair<size_t, size_t>> search_results;
-        search_results.reserve(5U);
+        search_results.reserve(MaxRelevantSearchResults);
 
-        while (search_results.size() != 5U)
+        while (search_results.size() != MaxRelevantSearchResults)
         {
-            auto max_hits = max_element(docid_count.begin(), docid_count.begin() + docs_count);
-            if (*max_hits == 0U)
+            auto it_max_hits = max_element(doc_id_hits.begin(), doc_id_hits.end());
+            if (*it_max_hits == 0U)
             {
                 break;
             }
-            const size_t docid = max_hits - docid_count.begin();
-            search_results.emplace_back(docid, *max_hits);
-            *max_hits = 0U;
+            const size_t doc_id = it_max_hits - doc_id_hits.begin();
+            search_results.emplace_back(doc_id, *it_max_hits);
+            *it_max_hits = 0U;
         }
-        // _dur += chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - _startTime);
+
         sort(begin(search_results),
              end(search_results),
              [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs)
@@ -257,40 +197,19 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
                      return rhs.first > lhs.first;
                  }
                  return false;
-             });
+             }
+        );
 
         string search_result = move(current_query) + ':';
-
-        for (auto [docid, hitcount] : search_results)
+        for (auto [doc_id, hitcount] : search_results)
         {
-            search_result += " {docid: " + to_string(docid) + ", hitcount: " + to_string(hitcount) + '}';
+            search_result += " {docid: " + to_string(doc_id) + ", hitcount: " + to_string(hitcount) + '}';
         }
         search_result += '\n';
 
-        _search_results.GetAccess().ref_to_value[search_result_id] = move(search_result);
+        _search_results.access().ref[search_result_id] = move(search_result);
 
         _m_getline.lock();
     }
     _m_getline.unlock();
-}
-
-void InvertedIndex::Add(string document, size_t doc_id)
-{
-    for (auto &word : SplitIntoWords(document))
-    {
-        index[string(word)].push_back(doc_id);
-    }
-}
-
-const DocIdHits &InvertedIndex::Lookup(const string &word) const
-{
-    if (auto it = index.find(word); it != index.end())
-    {
-        return it->second;
-    }
-    else
-    {
-        static DocIdHits empty;
-        return empty;
-    }
 }

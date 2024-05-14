@@ -1,68 +1,27 @@
 #pragma once
-
-#include <iostream>
+#include <synchronized.h>
 #include <istream>
 #include <ostream>
-#include <set>
-#include <list>
 #include <vector>
 #include <map>
 #include <string>
 #include <mutex>
+#include <chrono>
 
 using namespace std;
 
 using DocIdHits = vector<size_t>;
 
-class InvertedIndex
+class Index
 {
 public:
-    void Add(string document, size_t doc_id);
+    void Add(string_view document, size_t doc_id);
     const DocIdHits &Lookup(const string &word) const;
 
-    map<string, DocIdHits> index;
+    void operator+=(Index &&other);
 
-    void operator+=(InvertedIndex &&other)
-    {
-        while (not other.index.empty())
-        {
-            auto node = other.index.extract(other.index.begin());
-            DocIdHits &doc_id_hits = index[move(node.key())];
-            doc_id_hits.insert(doc_id_hits.begin(), node.mapped().begin(), node.mapped().end());
-        }
-    }
+    map<string, DocIdHits> data;
 };
-
-template <typename T>
-class Synchronized
-{
-public:
-    explicit Synchronized(T initial = T());
-
-    struct Access
-    {
-        T &ref_to_value;
-        lock_guard<mutex> guard;
-    };
-
-    Access GetAccess();
-
-private:
-    T _value;
-    mutex _m;
-};
-
-template <typename T>
-Synchronized<T>::Synchronized(T initial)
-    : _value(move(initial))
-{
-}
-
-template <typename T>
-typename Synchronized<T>::Access Synchronized<T>::GetAccess()
-{
-    return {_value, lock_guard(_m)};
-}
 
 class SearchServer
 {
@@ -72,23 +31,22 @@ public:
     void UpdateDocumentBase(istream &document_input);
     void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
-    chrono::steady_clock::time_point _startTime;
-    std::chrono::microseconds _dur{0};
-
 private:
-    InvertedIndex index;
+    Index _index;
     mutex _m_getline;
-
-    size_t docs_count = 0U;
-
-    Synchronized<map<size_t, string>> _search_results; // first is search result id
+    size_t _docs_count = 0U;
+    Synchronized<map<size_t, string>> _search_results;
     size_t _next_search_result_id = 0U;
 
-    InvertedIndex UpdateDocumentBaseSingleThread(istream &document_input);
-    void AddQueriesStreamSingleThread(istream &query_input);
-
     static constexpr size_t ThreadsCount = 4U;
-
     static constexpr size_t MaxDocsCount = 50'000U + 1U;
     static constexpr size_t MaxQueriesCount = 500'000U + 1U;
+    static constexpr size_t MaxRelevantSearchResults = 5U;
+
+    Index UpdateDocumentBaseSingleThread(istream &document_input);
+    void AddQueriesStreamSingleThread(istream &query_input);
+
+    // для профилирования
+    // chrono::steady_clock::time_point _startTime;
+    // std::chrono::microseconds _dur{0};
 };
