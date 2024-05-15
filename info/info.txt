@@ -393,23 +393,41 @@ string_view позволяет сослаться на диапазон симв
 Методы remove_prefix и remove_suffix позволяют удобно итерироваться по string_view
 
 Итерирование с remove_prefix:
-string_view str = ...;
-vector<string_view> result;
-while (true)
+vector<string_view> SplitIntoWords(string_view str)
 {
-    size_t space = str.find(' ');
-    result.push_back(str.substr(0, space));
-    if (space == str.npos)
+    vector<string_view> result;
+
+    if (str.empty())
     {
-        break;
+        return {};
     }
-    else
+    else if (str[0] == ' ')
     {
-        str.remove_prefix(space + 1);
-        // ищем лишние пробелы, так как их может быть больше одного
-        // size_t not_space = str.find_first_not_of(' ');
-        // str.remove_prefix(not_space);
+        size_t not_space = str.find_first_not_of(' ');
+        str.remove_prefix(not_space);
     }
+
+    while (true)
+    {
+        size_t space = str.find(' ');
+        result.push_back(str.substr(0, space));
+        if (space == str.npos)
+        {
+            break;
+        }
+        else
+        {
+            str.remove_prefix(space + 1);
+            // ищем лишние пробелы, так как их может быть больше одного
+            size_t not_space = str.find_first_not_of(' ');
+            if (not_space == str.npos)
+            {
+                break;
+            }
+            str.remove_prefix(not_space);
+        }
+    }
+    return result;
 }
 
 Move
