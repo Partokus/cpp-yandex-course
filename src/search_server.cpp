@@ -171,6 +171,7 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
         vector<pair<size_t, size_t>> search_results;
         search_results.reserve(MaxRelevantSearchResults);
 
+        // находим топ документов по релевантности
         while (search_results.size() != MaxRelevantSearchResults)
         {
             auto it_max_hits = max_element(doc_id_hits.begin(), doc_id_hits.end());
@@ -179,8 +180,9 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
                 break;
             }
             const size_t doc_id = it_max_hits - doc_id_hits.begin();
-            search_results.emplace_back(doc_id, *it_max_hits);
-            *it_max_hits = 0U;
+            size_t &hits_count = *it_max_hits;
+            search_results.emplace_back(doc_id, hits_count);
+            hits_count = 0U;
         }
 
         sort(begin(search_results),
@@ -200,9 +202,9 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
         );
 
         string search_result = move(current_query) + ':';
-        for (auto [doc_id, hitcount] : search_results)
+        for (auto [doc_id, hit_count] : search_results)
         {
-            search_result += " {docid: " + to_string(doc_id) + ", hitcount: " + to_string(hitcount) + '}';
+            search_result += " {docid: " + to_string(doc_id) + ", hitcount: " + to_string(hit_count) + '}';
         }
         search_result += '\n';
 
