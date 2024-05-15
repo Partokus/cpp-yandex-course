@@ -1,6 +1,5 @@
 #include <search_server.h>
 #include <paginator.h>
-#include <profile.h>
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
