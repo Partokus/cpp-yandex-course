@@ -39,7 +39,7 @@ private:
     Synchronized<map<size_t, string>> _search_results;
     size_t _next_search_result_id = 0U;
 
-    const size_t ThreadsCount = thread::hardware_concurrency();
+    const size_t ThreadsCount = thread::hardware_concurrency() ? thread::hardware_concurrency() : 1U;
     static constexpr size_t MaxDocsCount = 50'000U + 1U;
     static constexpr size_t MaxQueriesCount = 500'000U + 1U;
     static constexpr size_t MaxRelevantSearchResults = 5U;
