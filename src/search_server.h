@@ -19,8 +19,6 @@ public:
     void Add(string_view document, size_t doc_id);
     const DocIdHits &Lookup(const string &word) const;
 
-    void operator+=(Index &&other);
-
     map<string, DocIdHits> data;
 };
 
@@ -44,7 +42,6 @@ private:
     static constexpr size_t MaxQueriesCount = 500'000U + 1U;
     static constexpr size_t MaxRelevantSearchResults = 5U;
 
-    Index UpdateDocumentBaseSingleThread(istream &document_input);
     void AddQueriesStreamSingleThread(istream &query_input);
 
     // для профилирования

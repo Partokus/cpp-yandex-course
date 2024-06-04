@@ -60,17 +60,6 @@ const DocIdHits &Index::Lookup(const string &word) const
     return empty;
 }
 
-void Index::operator+=(Index &&other)
-{
-    while (not other.data.empty())
-    {
-        auto node = other.data.extract(other.data.begin());
-        DocIdHits &doc_id_hits = data[move(node.key())];
-        DocIdHits &other_doc_id_hits = node.mapped();
-        doc_id_hits.insert(doc_id_hits.begin(), other_doc_id_hits.begin(), other_doc_id_hits.end());
-    }
-}
-
 SearchServer::SearchServer(istream &document_input)
 {
     UpdateDocumentBase(document_input);
@@ -78,42 +67,14 @@ SearchServer::SearchServer(istream &document_input)
 
 void SearchServer::UpdateDocumentBase(istream &document_input)
 {
-    vector<future<Index>> futures;
     _index.data.clear();
     _docs_count = 0U;
 
-    for (size_t i = 0; i < ThreadsCount; ++i)
-    {
-        futures.push_back(async(
-            [&document_input, this]
-            {
-                return UpdateDocumentBaseSingleThread(document_input);
-            }));
-    }
-
-    for (auto &f : futures)
-    {
-        _index += f.get();
-    }
-}
-
-Index SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
-{
-    Index new_index;
-
-    _m_getline.lock();
     for (string current_document; getline(document_input, current_document);)
     {
-        size_t doc_id = _docs_count++;
-        _m_getline.unlock();
-
-        new_index.Add(current_document, doc_id);
-
-        _m_getline.lock();
+        const size_t doc_id = _docs_count++;
+        _index.Add(current_document, doc_id);
     }
-    _m_getline.unlock();
-
-    return new_index;
 }
 
 void SearchServer::AddQueriesStream(istream &query_input, ostream &search_results_output)
