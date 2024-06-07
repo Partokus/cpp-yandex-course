@@ -46,7 +46,23 @@ void Index::Add(string_view document, size_t doc_id)
 {
     for (auto &word : SplitIntoWords(document))
     {
-        data[string(word)].push_back(doc_id);
+        auto it = data.find(string(word));
+        if (it == data.end())
+        {
+            auto &[toggle_marker, doc_id_hits] = data[string(word)];
+            toggle_marker = not current_toggle_marker;
+            doc_id_hits.push_back(doc_id);
+        }
+        else
+        {
+            auto &[toggle_marker, doc_id_hits] = it->second;
+            if (toggle_marker == current_toggle_marker)
+            {
+                toggle_marker = not current_toggle_marker;
+                doc_id_hits.clear();
+            }
+            doc_id_hits.push_back(doc_id);
+        }
     }
 }
 
@@ -54,7 +70,7 @@ const DocIdHits &Index::Lookup(const string &word) const
 {
     if (auto it = data.find(word); it != data.end())
     {
-        return it->second;
+        return it->second.second;
     }
     static DocIdHits empty;
     return empty;
@@ -67,14 +83,35 @@ SearchServer::SearchServer(istream &document_input)
 
 void SearchServer::UpdateDocumentBase(istream &document_input)
 {
-    _index.data.clear();
-    _docs_count = 0U;
-
+    size_t new_docs_count = 0U;
     for (string current_document; getline(document_input, current_document);)
     {
-        const size_t doc_id = _docs_count++;
+        LockAll();
+        const size_t doc_id = new_docs_count++;
+        if (new_docs_count > _docs_count)
+        {
+            _docs_count = new_docs_count;
+        }
         _index.Add(current_document, doc_id);
+        UnlockAll();
     }
+
+    for (auto it = _index.data.begin(); it != _index.data.end();)
+    {
+        auto &[toggle_marker, doc_id_hits] = it->second;
+        if (toggle_marker == _index.current_toggle_marker)
+        {
+            LockAll();
+            it = _index.data.erase(it);
+            UnlockAll();
+        }
+        else
+        {
+            ++it;
+        }
+    }
+    _docs_count = new_docs_count;
+    _index.current_toggle_marker = not _index.current_toggle_marker;
 }
 
 void SearchServer::AddQueriesStream(istream &query_input, ostream &search_results_output)
@@ -119,14 +156,23 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
 
         vector<string_view> words = SplitIntoWords(current_query);
 
+        mutex &m1 = Lock();
         vector<size_t> doc_id_hits(_docs_count);
+        m1.unlock();
 
         for (const string_view word : words)
         {
+            mutex &m2 = Lock();
             for (const size_t doc_id : _index.Lookup(string(word)))
             {
                 ++doc_id_hits[doc_id];
             }
+            m2.unlock();
+        }
+
+        if (doc_id_hits.empty())
+        {
+            return;
         }
 
         vector<pair<size_t, size_t>> search_results;
@@ -174,4 +220,34 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input)
         _m_getline.lock();
     }
     _m_getline.unlock();
+}
+
+mutex &SearchServer::Lock()
+{
+    while (true)
+    {
+        for (mutex &m : _m_data_base)
+        {
+            if (m.try_lock())
+            {
+                return m;
+            }
+        }
+    }
+}
+
+void SearchServer::LockAll()
+{
+    for (mutex &m : _m_data_base)
+    {
+        m.lock();
+    }
+}
+
+void SearchServer::UnlockAll()
+{
+    for (mutex &m : _m_data_base)
+    {
+        m.unlock();
+    }
 }

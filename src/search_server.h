@@ -8,9 +8,11 @@
 #include <mutex>
 #include <chrono>
 #include <thread>
+#include <array>
 
 using namespace std;
 
+using ToggleMarker = bool;
 using DocIdHits = vector<size_t>;
 
 class Index
@@ -19,7 +21,8 @@ public:
     void Add(string_view document, size_t doc_id);
     const DocIdHits &Lookup(const string &word) const;
 
-    map<string, DocIdHits> data;
+    map<string, pair<ToggleMarker, DocIdHits>> data{};
+    ToggleMarker current_toggle_marker = false;
 };
 
 class SearchServer
@@ -37,12 +40,18 @@ private:
     Synchronized<map<size_t, string>> _search_results;
     size_t _next_search_result_id = 0U;
 
-    const size_t ThreadsCount = thread::hardware_concurrency() ? thread::hardware_concurrency() : 1U;
+    const size_t ThreadsCount = 8; //thread::hardware_concurrency() ? thread::hardware_concurrency() : 1U;
     static constexpr size_t MaxDocsCount = 50'000U + 1U;
     static constexpr size_t MaxQueriesCount = 500'000U + 1U;
     static constexpr size_t MaxRelevantSearchResults = 5U;
 
+    std::array<mutex, 8> _m_data_base;
+
     void AddQueriesStreamSingleThread(istream &query_input);
+
+    mutex &Lock();
+    void LockAll();
+    void UnlockAll();
 
     // для профилирования
     // chrono::steady_clock::time_point _startTime;
