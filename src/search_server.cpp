@@ -9,17 +9,41 @@ SearchServer::SearchServer(istream &document_input)
 
 void SearchServer::UpdateDocumentBase(istream &document_input)
 {
-    _index.data.clear();
-    _docs_count = 0U;
-
-    for (string current_document; getline(document_input, current_document);)
-    {
-        const size_t doc_id = _docs_count++;
-        _index.Add(current_document, doc_id);
-    }
+    _futures.push_back(
+        async(&SearchServer::UpdateDocumentBaseSingleThread, this, ref(document_input))
+    );
 }
 
 void SearchServer::AddQueriesStream(istream &query_input, ostream &search_results_output)
+{
+    _futures.push_back(
+        async(&SearchServer::AddQueriesStreamSingleThread, this, ref(query_input), ref(search_results_output))
+    );
+}
+
+void SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
+{
+    Index new_index;
+    size_t new_docs_count = 0U;
+
+    for (string current_document; getline(document_input, current_document);)
+    {
+        const size_t doc_id = new_docs_count++;
+        new_index.Add(current_document, doc_id);
+    }
+
+    _sync_bridge.access().ref.updating_base = true;
+
+    while (_sync_bridge.access().ref.looking_up_count != 0U)
+    {
+    }
+    _index = move(new_index);
+    _docs_count = new_docs_count;
+
+    _sync_bridge.access().ref.updating_base = false;
+}
+
+void SearchServer::AddQueriesStreamSingleThread(istream &query_input, ostream &search_results_output)
 {
     for (string current_query; getline(query_input, current_query);)
     {
@@ -29,10 +53,25 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
 
         for (const string_view word : words)
         {
+            while (true)
+            {
+                if (auto &sync_bridge = _sync_bridge.access().ref; not sync_bridge.updating_base)
+                {
+                    ++sync_bridge.looking_up_count;
+                    if (doc_id_hits.size() < _docs_count)
+                    {
+                        doc_id_hits.resize(_docs_count);
+                    }
+                    break;
+                }
+            }
+
             for (const size_t doc_id : _index.Lookup(string(word)))
             {
                 ++doc_id_hits[doc_id];
             }
+
+            --_sync_bridge.access().ref.looking_up_count;
         }
 
         vector<pair<size_t, size_t>> search_results;

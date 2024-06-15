@@ -10,6 +10,7 @@
 #include <fstream>
 #include <random>
 #include <thread>
+#include <chrono>
 
 #include <fstream>
 
@@ -17,6 +18,7 @@
 #include <parse.h>
 
 using namespace std;
+using namespace std::chrono;
 
 void TestAll();
 void Profile();
@@ -34,12 +36,25 @@ void TestFunctionality(
     const vector<string> &expected)
 {
     istringstream docs_input(Join('\n', docs));
+    istringstream docs_input2(Join('\n', docs));
+    istringstream docs_input3(Join('\n', docs));
+    istringstream docs_input4(Join('\n', docs));
     istringstream queries_input(Join('\n', queries));
 
     SearchServer srv;
     srv.UpdateDocumentBase(docs_input);
+
+    auto last_time = steady_clock::now();
+    while (steady_clock::now() - last_time < milliseconds{50});
+
     ostringstream queries_output;
     srv.AddQueriesStream(queries_input, queries_output);
+    srv.UpdateDocumentBase(docs_input2);
+    srv.UpdateDocumentBase(docs_input3);
+    srv.UpdateDocumentBase(docs_input4);
+
+    last_time = steady_clock::now();
+    while (steady_clock::now() - last_time < milliseconds{50});
 
     const string result = queries_output.str();
     const auto lines = SplitBy(Strip(result), '\n');
