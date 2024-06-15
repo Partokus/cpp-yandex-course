@@ -17,5 +17,5 @@ string Join(char c, const Container& cont) {
   return os.str();
 }
 
-string_view Strip(string_view s);
-vector<string_view> SplitBy(string_view s, char sep);
+string_view Strip(string_view sv);
+vector<string_view> SplitBy(string_view sv, char sep);

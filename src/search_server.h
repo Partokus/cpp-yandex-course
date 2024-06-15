@@ -1,13 +1,10 @@
 #pragma once
-#include <synchronized.h>
 #include <istream>
 #include <ostream>
 #include <vector>
 #include <map>
 #include <string>
-#include <mutex>
 #include <chrono>
-#include <thread>
 
 using namespace std;
 
@@ -32,17 +29,11 @@ public:
 
 private:
     Index _index;
-    mutex _m_getline;
     size_t _docs_count = 0U;
-    Synchronized<map<size_t, string>> _search_results;
-    size_t _next_search_result_id = 0U;
 
-    const size_t ThreadsCount = thread::hardware_concurrency() ? thread::hardware_concurrency() : 1U;
     static constexpr size_t MaxDocsCount = 50'000U + 1U;
     static constexpr size_t MaxQueriesCount = 500'000U + 1U;
     static constexpr size_t MaxRelevantSearchResults = 5U;
-
-    void AddQueriesStreamSingleThread(istream &query_input);
 
     // для профилирования
     // chrono::steady_clock::time_point _startTime;
