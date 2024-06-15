@@ -1,6 +1,6 @@
-#include <search_server.h>
+#include "search_server.h"
+#include "parse.h"
 #include <algorithm>
-#include <parse.h>
 
 SearchServer::SearchServer(istream &document_input)
 {

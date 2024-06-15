@@ -1,16 +1,20 @@
 #include "parse.h"
 
-string_view Strip(string_view sv) {
-  while (!sv.empty() && isspace(sv.front())) {
-    sv.remove_prefix(1);
-  }
-  while (!sv.empty() && isspace(sv.back())) {
-    sv.remove_suffix(1);
-  }
-  return sv;
+string_view Strip(string_view sv)
+{
+    while (!sv.empty() && isspace(sv.front()))
+    {
+        sv.remove_prefix(1);
+    }
+    while (!sv.empty() && isspace(sv.back()))
+    {
+        sv.remove_suffix(1);
+    }
+    return sv;
 }
 
-vector<string_view> SplitBy(string_view sv, char sep) {
+vector<string_view> SplitBy(string_view sv, char sep)
+{
     vector<string_view> result;
 
     if (sv.empty())
@@ -45,4 +49,3 @@ vector<string_view> SplitBy(string_view sv, char sep) {
     }
     return result;
 }
-
