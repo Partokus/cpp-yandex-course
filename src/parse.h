@@ -10,7 +10,7 @@ template <typename Container>
 string Join(char c, const Container &cont)
 {
     ostringstream os;
-    for (const auto &item : Head(cont, cont.size() - 1))
+    for (const auto &item : Head(cont, cont.size() - 1U))
     {
         os << item << c;
     }

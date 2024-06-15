@@ -2,11 +2,11 @@
 
 string_view Strip(string_view sv)
 {
-    while (!sv.empty() && isspace(sv.front()))
+    while (!sv.empty() and isspace(sv.front()))
     {
         sv.remove_prefix(1);
     }
-    while (!sv.empty() && isspace(sv.back()))
+    while (!sv.empty() and isspace(sv.back()))
     {
         sv.remove_suffix(1);
     }
