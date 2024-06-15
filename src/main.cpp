@@ -230,8 +230,8 @@ void TestBasicSearch()
 void TestAll()
 {
     TestRunner tr{};
-    // RUN_TEST(tr, TestSerpFormat);
-    // RUN_TEST(tr, TestBadAllocFormat);
+    RUN_TEST(tr, TestSerpFormat);
+    RUN_TEST(tr, TestBadAllocFormat);
     RUN_TEST(tr, TestTop5);
     RUN_TEST(tr, TestHitcount);
     RUN_TEST(tr, TestRanking);
