@@ -8,11 +8,11 @@
 
 using namespace std;
 
-using DocIdHits = vector<size_t>;
-
 class Index
 {
 public:
+    using DocIdHits = vector<size_t>;
+
     void Add(string_view document, size_t doc_id);
     const DocIdHits &Lookup(const string &word) const;
 
