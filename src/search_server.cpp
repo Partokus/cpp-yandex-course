@@ -1,10 +1,12 @@
 #include "search_server.h"
 #include "parse.h"
+#include <iostream>
 #include <algorithm>
+#include <thread>
 
 SearchServer::SearchServer(istream &document_input)
 {
-    UpdateDocumentBase(document_input);
+    UpdateDocumentBaseSingleThread(document_input);
 }
 
 void SearchServer::UpdateDocumentBase(istream &document_input)
@@ -23,24 +25,34 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
 
 void SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
 {
-    Index new_index;
-    size_t new_docs_count = 0U;
+    _m_update_index.lock();
+
+    _indexes_using_info.access().ref.updating_index = true;
+    // ждём пока текущий индекс освободится
+    while (_indexes_using_info.access().ref.cur_index_users_count != 0U)
+    {
+        this_thread::sleep_for(ThreadSleepTime);
+    }
+
+    _cur_index.data.clear();
+    _cur_index.docs_count = 0U;
 
     for (string current_document; getline(document_input, current_document);)
     {
-        const size_t doc_id = new_docs_count++;
-        new_index.Add(current_document, doc_id);
+        const size_t doc_id = _cur_index.docs_count++;
+        _cur_index.Add(current_document, doc_id);
     }
 
-    _sync_bridge.access().ref.updating_base = true;
-
-    while (_sync_bridge.access().ref.looking_up_count != 0U)
+    _indexes_using_info.access().ref.updating_index = false;
+    // ждём пока старый индекс освободится
+    while (_indexes_using_info.access().ref.old_index_users_count != 0U)
     {
+        this_thread::sleep_for(ThreadSleepTime);
     }
-    _index = move(new_index);
-    _docs_count = new_docs_count;
 
-    _sync_bridge.access().ref.updating_base = false;
+    _old_index = _cur_index;
+
+    _m_update_index.unlock();
 }
 
 void SearchServer::AddQueriesStreamSingleThread(istream &query_input, ostream &search_results_output)
@@ -49,29 +61,35 @@ void SearchServer::AddQueriesStreamSingleThread(istream &query_input, ostream &s
     {
         vector<string_view> words = SplitBy(current_query, ' ');
 
-        vector<size_t> doc_id_hits(_docs_count);
+        bool use_old_index = false;
+        if (auto info = _indexes_using_info.access(); info.ref.updating_index)
+        {
+            use_old_index = true;
+            ++info.ref.old_index_users_count;
+        }
+        else
+        {
+            use_old_index = false;
+            ++info.ref.cur_index_users_count;
+        }
+        auto &index = use_old_index ? _old_index : _cur_index;
 
+        vector<size_t> doc_id_hits(index.docs_count);
         for (const string_view word : words)
         {
-            while (true)
-            {
-                if (auto &sync_bridge = _sync_bridge.access().ref; not sync_bridge.updating_base)
-                {
-                    ++sync_bridge.looking_up_count;
-                    if (doc_id_hits.size() < _docs_count)
-                    {
-                        doc_id_hits.resize(_docs_count);
-                    }
-                    break;
-                }
-            }
-
-            for (const size_t doc_id : _index.Lookup(string(word)))
+            for (const size_t doc_id : index.Lookup(string(word)))
             {
                 ++doc_id_hits[doc_id];
             }
+        }
 
-            --_sync_bridge.access().ref.looking_up_count;
+        if (use_old_index)
+        {
+            --_indexes_using_info.access().ref.old_index_users_count;
+        }
+        else
+        {
+            --_indexes_using_info.access().ref.cur_index_users_count;
         }
 
         vector<pair<size_t, size_t>> search_results;

@@ -19,6 +19,7 @@ public:
     const DocIdHits &Lookup(const string &word) const;
 
     map<string, DocIdHits> data;
+    size_t docs_count = 0U;
 };
 
 class SearchServer
@@ -30,15 +31,19 @@ public:
     void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
 private:
-    Index _index;
-    size_t _docs_count = 0U;
+    Index _cur_index;
+    Index _old_index;
 
-    struct SyncBridge
+    struct IndexesUsingInfo
     {
-        bool updating_base = false;
-        size_t looking_up_count = 0U;
+        bool updating_index = false;
+        size_t cur_index_users_count = 0U;
+        size_t old_index_users_count = 0U;
     };
-    Synchronized<SyncBridge> _sync_bridge{};
+
+    Synchronized<IndexesUsingInfo> _indexes_using_info{};
+
+    mutex _m_update_index;
 
     vector<future<void>> _futures;
 
@@ -48,6 +53,8 @@ private:
     static constexpr size_t MaxDocsCount = 50'000U + 1U;
     static constexpr size_t MaxQueriesCount = 500'000U + 1U;
     static constexpr size_t MaxRelevantSearchResults = 5U;
+
+    static constexpr chrono::milliseconds ThreadSleepTime{1};
 
     // для профилирования
     // chrono::steady_clock::time_point _startTime;

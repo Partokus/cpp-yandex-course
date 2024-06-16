@@ -26,7 +26,7 @@ void Profile();
 int main()
 {
     TestAll();
-    Profile();
+    // Profile();
     return 0;
 }
 
@@ -40,23 +40,32 @@ void TestFunctionality(
     istringstream docs_input3(Join('\n', docs));
     istringstream docs_input4(Join('\n', docs));
     istringstream queries_input(Join('\n', queries));
+    istringstream queries_input2(Join('\n', queries));
+    istringstream queries_input3(Join('\n', queries));
+    istringstream queries_input4(Join('\n', queries));
 
     SearchServer srv;
     srv.UpdateDocumentBase(docs_input);
 
     auto last_time = steady_clock::now();
-    while (steady_clock::now() - last_time < milliseconds{50});
+    while (steady_clock::now() - last_time < milliseconds{10});
 
     ostringstream queries_output;
+    ostringstream queries_output2;
+    ostringstream queries_output3;
+    ostringstream queries_output4;
     srv.AddQueriesStream(queries_input, queries_output);
+    srv.AddQueriesStream(queries_input2, queries_output2);
     srv.UpdateDocumentBase(docs_input2);
+    srv.AddQueriesStream(queries_input3, queries_output3);
     srv.UpdateDocumentBase(docs_input3);
+    srv.AddQueriesStream(queries_input4, queries_output4);
     srv.UpdateDocumentBase(docs_input4);
 
     last_time = steady_clock::now();
-    while (steady_clock::now() - last_time < milliseconds{50});
+    while (steady_clock::now() - last_time < milliseconds{10});
 
-    const string result = queries_output.str();
+    const string result = queries_output4.str();
     const auto lines = SplitBy(Strip(result), '\n');
     ASSERT_EQUAL(lines.size(), expected.size());
     for (size_t i = 0; i < lines.size(); ++i)
@@ -241,6 +250,40 @@ void TestBasicSearch()
     };
     TestFunctionality(docs, queries, expected);
 }
+void TestMoscow()
+{
+    const vector<string> docs = {
+        "london is the capital of great britain",
+        "paris is the capital of france",
+        "berlin is the capital of germany",
+        "rome is the capital of italy",
+        "madrid is the capital of spain",
+        "lisboa is the capital of portugal",
+        "bern is the capital of switzerland",
+        "moscow is the capital of russia",
+        "kiev is the capital of ukraine",
+        "minsk is the capital of belarus",
+        "astana is the capital of kazakhstan",
+        "beijing is the capital of china",
+        "tokyo is the capital of japan",
+        "bangkok is the capital of thailand",
+        "welcome to moscow the capital of russia the third rome",
+        "amsterdam is the capital of netherlands",
+        "helsinki is the capital of finland",
+        "oslo is the capital of norway",
+        "stockgolm is the capital of sweden",
+        "riga is the capital of latvia",
+        "tallin is the capital of estonia",
+        "warsaw is the capital of poland"};
+
+    const vector<string> queries = {
+        "moscow is the capital of russia"};
+
+    const vector<string> expected = {
+        "moscow is the capital of russia: {docid: 7, hitcount: 6} {docid: 14, hitcount: 6} {docid: 0, hitcount: 4} {docid: 1, hitcount: 4} {docid: 2, hitcount: 4}",
+    };
+    TestFunctionality(docs, queries, expected);
+}
 
 void TestAll()
 {
@@ -251,6 +294,7 @@ void TestAll()
     RUN_TEST(tr, TestHitcount);
     RUN_TEST(tr, TestRanking);
     RUN_TEST(tr, TestBasicSearch);
+    RUN_TEST(tr, TestMoscow);
 }
 
 void CreateDocumentsAndQueriesFiles()
@@ -359,11 +403,7 @@ void ProfileSearchServer(istream &document_input, istream &query_input,
                          ostream &search_results_output, ifstream &expected_search_results)
 {
     LOG_DURATION("SearchServer Total");
-    SearchServer srv;
-    {
-        LOG_DURATION("SearchServer UpdateDocumentBase");
-        srv.UpdateDocumentBase(document_input);
-    }
+    SearchServer srv(document_input);
     {
         LOG_DURATION("SearchServer AddQueriesStream");
         srv.AddQueriesStream(query_input, search_results_output);
