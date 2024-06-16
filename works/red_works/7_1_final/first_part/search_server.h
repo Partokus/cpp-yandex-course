@@ -28,7 +28,7 @@ public:
     void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
 private:
-    Index _cur_index;
+    Index _index;
     size_t _docs_count = 0U;
 
     static constexpr size_t MaxDocsCount = 50'000U + 1U;
