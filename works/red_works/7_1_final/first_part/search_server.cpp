@@ -9,13 +9,13 @@ SearchServer::SearchServer(istream &document_input)
 
 void SearchServer::UpdateDocumentBase(istream &document_input)
 {
-    _cur_index.data.clear();
+    _index.data.clear();
     _docs_count = 0U;
 
     for (string current_document; getline(document_input, current_document);)
     {
         const size_t doc_id = _docs_count++;
-        _cur_index.Add(current_document, doc_id);
+        _index.Add(current_document, doc_id);
     }
 }
 
@@ -29,7 +29,7 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
 
         for (const string_view word : words)
         {
-            for (const size_t doc_id : _cur_index.Lookup(string(word)))
+            for (const size_t doc_id : _index.Lookup(string(word)))
             {
                 ++doc_id_hits[doc_id];
             }
@@ -85,7 +85,7 @@ void Index::Add(string_view document, size_t doc_id)
     }
 }
 
-const DocIdHits &Index::Lookup(const string &word) const
+const Index::DocIdHits &Index::Lookup(const string &word) const
 {
     if (auto it = data.find(word); it != data.end())
     {
