@@ -1,6 +1,5 @@
 #include "search_server.h"
 #include "parse.h"
-#include <iostream>
 #include <algorithm>
 #include <thread>
 
@@ -25,7 +24,7 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
 
 void SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
 {
-    _m_update_index.lock();
+    _m_updating_index.lock();
 
     _indexes_using_info.access().ref.updating_index = true;
     // ждём пока текущий индекс освободится
@@ -36,7 +35,6 @@ void SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
 
     _cur_index.data.clear();
     _cur_index.docs_count = 0U;
-
     for (string current_document; getline(document_input, current_document);)
     {
         const size_t doc_id = _cur_index.docs_count++;
@@ -52,7 +50,7 @@ void SearchServer::UpdateDocumentBaseSingleThread(istream &document_input)
 
     _old_index = _cur_index;
 
-    _m_update_index.unlock();
+    _m_updating_index.unlock();
 }
 
 void SearchServer::AddQueriesStreamSingleThread(istream &query_input, ostream &search_results_output)
@@ -142,7 +140,7 @@ void Index::Add(string_view document, size_t doc_id)
     }
 }
 
-const DocIdHits &Index::Lookup(const string &word) const
+const Index::DocIdHits &Index::Lookup(const string &word) const
 {
     if (auto it = data.find(word); it != data.end())
     {

@@ -10,11 +10,11 @@
 
 using namespace std;
 
-using DocIdHits = vector<size_t>;
-
 class Index
 {
 public:
+    using DocIdHits = vector<size_t>;
+
     void Add(string_view document, size_t doc_id);
     const DocIdHits &Lookup(const string &word) const;
 
@@ -43,7 +43,7 @@ private:
 
     Synchronized<IndexesUsingInfo> _indexes_using_info{};
 
-    mutex _m_update_index;
+    mutex _m_updating_index;
 
     vector<future<void>> _futures;
 
@@ -54,7 +54,7 @@ private:
     static constexpr size_t MaxQueriesCount = 500'000U + 1U;
     static constexpr size_t MaxRelevantSearchResults = 5U;
 
-    static constexpr chrono::milliseconds ThreadSleepTime{1};
+    static constexpr chrono::milliseconds ThreadSleepTime{1U};
 
     // для профилирования
     // chrono::steady_clock::time_point _startTime;
