@@ -19,35 +19,32 @@ using namespace std;
 void TestAll();
 void Profile();
 
-using CoordType = int;
+struct Address {
+  string city, street;
+  int building;
 
-struct Point3D
-{
-    CoordType x;
-    CoordType y;
-    CoordType z;
-
-    bool operator==(const Point3D &other) const
-    {
-        return tie(x, y, z) == tie(other.x, other.y, other.z);
-    }
+  bool operator==(const Address& other) const {
+    // реализуйте оператор
+  }
 };
 
-struct Hasher
-{
-    size_t operator()(const Point3D &p) const
-    {
-        // Ax^2 + Bx + C
-        static constexpr size_t X = 41U;
+struct Person {
+  string name;
+  int height;
+  double weight;
+  Address address;
 
-        const size_t r1 = hasher(p.x);
-        const size_t r2 = hasher(p.y);
-        const size_t r3 = hasher(p.z);
+  bool operator==(const Person& other) const {
+    // реализуйте оператор
+  }
+};
 
-        return r1 * X * X + r2 * X + r3;
-    }
+struct AddressHasher {
+  // реализуйте структуру
+};
 
-    hash<CoordType> hasher{};
+struct PersonHasher {
+  // реализуйте структуру
 };
 
 int main()
