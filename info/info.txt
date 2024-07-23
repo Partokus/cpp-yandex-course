@@ -683,7 +683,7 @@ struct MyTypeHasher
         // Ax^2 + Bx + C
         static constexpr size_t X = 37;
 
-        return r1 * x * x + r2 * x + r3;
+        return r1 * X * X + r2 * X + r3;
     }
 
     hash<double> dhash;
