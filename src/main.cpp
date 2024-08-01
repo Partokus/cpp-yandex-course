@@ -6,6 +6,7 @@
 #include <iterator>
 #include <map>
 #include <unordered_set>
+#include <unordered_map>
 #include <vector>
 #include <string>
 #include <forward_list>
@@ -21,201 +22,229 @@ void Profile();
 
 using namespace std;
 
-struct Address
+struct Record
 {
-    string city;
-    string street;
-    int building = 0;
+    string id;
+    string title;
+    string user;
+    int timestamp;
+    int karma;
 
-    bool operator==(const Address &other) const
+    bool operator<(const Record &other) const
     {
-        return tie(city, street, building) == tie(other.city, other.street, other.building);
+        return id < other.id;
     }
 };
 
-struct Person
+// Реализуйте этот класс
+class Database
 {
-    string name;
-    int height = 0;
-    double weight = 0.0;
-    Address address{};
+public:
+    bool Put(const Record &record);
+    const Record *GetById(const string &id) const;
+    bool Erase(const string &id);
 
-    bool operator==(const Person &other) const
-    {
-        return tie(name, height, weight, address) == tie(other.name, other.height, other.weight, other.address);
-    }
+    template <typename Callback>
+    void RangeByTimestamp(int low, int high, Callback callback) const;
+
+    template <typename Callback>
+    void RangeByKarma(int low, int high, Callback callback) const;
+
+    template <typename Callback>
+    void AllByUser(const string &user, Callback callback) const;
+
+private:
+    set<Record> _ids;
+    multimap<int, string_view> _timestamp_to_id;
+    multimap<int, string_view> _karma_to_id;
+    multimap<string_view, string_view> _user_to_id;
+
+    template<typename Multimap>
+    void erase(Multimap &m,
+               const typename Multimap::key_type &key,
+               const typename Multimap::mapped_type &value);
+
+    template <typename Multimap, typename Callback>
+    void RangeBy(const Multimap &m, int low, int high, Callback callback) const;
 };
 
-struct AddressHasher
+bool Database::Put(const Record &record)
 {
-    size_t operator()(const Address &p) const
+    auto [it, inserted] = _ids.insert(record);
+    if (not inserted)
     {
-        const size_t res1 = str_hasher(p.city);
-        const size_t res2 = str_hasher(p.street);
-        const size_t res3 = int_hasher(p.building);
-
-        // Ax^2 + Bx + C
-        static constexpr size_t Coef = 514'229U;
-
-        return res1 * Coef * Coef + res2 * Coef + res3;
+        return false;
     }
 
-    // std::hash обычно не имеет состояния, поэтому создание
-    // локальных переменных не сопряжено с накладными расходами,
-    // а наоборот, помогает компилятору лучше оптимизировать код
-    hash<string> str_hasher;
-    hash<int> int_hasher;
-};
+    _timestamp_to_id.emplace(it->timestamp, it->id);
+    _karma_to_id.emplace(it->karma, it->id);
+    _user_to_id.emplace(it->user, it->id);
+    return true;
+}
 
-struct PersonHasher
+const Record *Database::GetById(const string &id) const
 {
-    size_t operator()(const Person &p) const
+    if (auto it = _ids.find(Record{.id = id}); it != _ids.end())
     {
-        const size_t res1 = str_hasher(p.name);
-        const size_t res2 = int_hasher(p.height);
-        const size_t res3 = double_hasher(p.weight);
-        const size_t res4 = address_hasher(p.address);
+        return &(*it);
+    }
+    return nullptr;
+}
 
-        // Ax^3 + Bx^2 + Cx + D
-        static constexpr size_t Coef = 39'916'801U;
-
-        return res1 * Coef * Coef * Coef + res2 * Coef * Coef + res3 * Coef + res4;
+bool Database::Erase(const string &id)
+{
+    auto it = _ids.find(Record{.id = id});
+    if (it == _ids.end())
+    {
+        return false;
     }
 
-    hash<string> str_hasher;
-    hash<int> int_hasher;
-    hash<double> double_hasher;
-    AddressHasher address_hasher;
-};
+    erase(_timestamp_to_id, it->timestamp, id);
+    erase(_karma_to_id, it->karma, id);
+    erase(_user_to_id, it->user, id);
+
+    _ids.erase(it);
+    return true;
+}
+
+template <typename Callback>
+void Database::RangeByTimestamp(int low, int high, Callback callback) const
+{
+    RangeBy(_timestamp_to_id, low, high, callback);
+}
+
+template <typename Callback>
+void Database::RangeByKarma(int low, int high, Callback callback) const
+{
+    RangeBy(_karma_to_id, low, high, callback);
+}
+
+template <typename Callback>
+void Database::AllByUser(const string &user, Callback callback) const
+{
+    for (auto [it, end] = _user_to_id.equal_range(user); it != end; ++it)
+    {
+        const Record &record = *GetById(string{it->second});
+        if (const bool keep_searching = callback(record); not keep_searching)
+        {
+            return;
+        }
+    }
+}
+
+template<typename Multimap>
+void Database::erase(Multimap &m,
+            const typename Multimap::key_type &key,
+            const typename Multimap::mapped_type &value)
+{
+    for (auto [it, end] = m.equal_range(key); it != end; ++it)
+    {
+        if (auto value_range = it->second; value_range == value)
+        {
+            m.erase(it);
+            break;
+        }
+    }
+}
+
+template <typename Multimap, typename Callback>
+void Database::RangeBy(const Multimap &m, int low, int high, Callback callback) const
+{
+    auto range_begin = m.lower_bound(low);
+    auto range_end = m.upper_bound(high);
+
+    for (auto it = range_begin; it != range_end; ++it)
+    {
+        const Record &record = *GetById(string{it->second});
+        if (const bool keep_searching = callback(record); not keep_searching)
+        {
+            return;
+        }
+    }
+}
 
 int main()
 {
     TestAll();
     Profile();
+
+    // const int good_karma = 1000;
+    // const int bad_karma = -10;
+
+    // Database db;
+    // db.Put({"id1", "Hello there", "master", 1536107260, good_karma});
+    // db.Put({"id2", "O>>-<", "general2", 1536107260, bad_karma});
+
+    // db.Erase("id1");
+    // db.Erase("id3");
+    // db.Erase("id2");
+    // multimap<int, int> m;
+    // m.insert({1, 1});
+    // m.insert({1, 1});
+    // m.insert({1, 2});
+    // m.insert({1, 0});
+    // m.insert({0, 1});
+
+    // for (const auto &[key, value] : m)
+    // {
+    //     cout << "[" << key << ", " << value << "]" << endl;
+    // }
     return 0;
 }
 
-// сгенерированы командой:
-// $ sort -R /usr/share/dict/propernames | head -n 100
-//
-// http://www.freebsd.org/cgi/cvsweb.cgi/~checkout~/src/share/dict/propernames
-const vector<string> WORDS = {
-    "Kieran", "Jong", "Jisheng", "Vickie", "Adam", "Simon", "Lance",
-    "Everett", "Bryan", "Timothy", "Daren", "Emmett", "Edwin", "List",
-    "Sharon", "Trying", "Dan", "Saad", "Kamiya", "Nikolai", "Del",
-    "Casper", "Arthur", "Mac", "Rajesh", "Belinda", "Robin", "Lenora",
-    "Carisa", "Penny", "Sabrina", "Ofer", "Suzanne", "Pria", "Magnus",
-    "Ralph", "Cathrin", "Phill", "Alex", "Reinhard", "Marsh", "Tandy",
-    "Mongo", "Matthieu", "Sundaresan", "Piotr", "Ramneek", "Lynne", "Erwin",
-    "Edgar", "Srikanth", "Kimberly", "Jingbai", "Lui", "Jussi", "Wilmer",
-    "Stuart", "Grant", "Hotta", "Stan", "Samir", "Ramadoss", "Narendra",
-    "Gill", "Jeff", "Raul", "Ken", "Rahul", "Max", "Agatha",
-    "Elizabeth", "Tai", "Ellen", "Matt", "Ian", "Toerless", "Naomi",
-    "Rodent", "Terrance", "Ethan", "Florian", "Rik", "Stanislaw", "Mott",
-    "Charlie", "Marguerite", "Hitoshi", "Panacea", "Dieter", "Randell", "Earle",
-    "Rajiv", "Ted", "Mann", "Bobbie", "Pat", "Olivier", "Harmon",
-    "Raman", "Justin"};
-
-void TestSmoke()
+void TestRangeBoundaries()
 {
-    vector<Person> points = {
-        {"John", 180, 82.5, {"London", "Baker St", 221}},
-        {"Sherlock", 190, 75.3, {"London", "Baker St", 221}},
-    };
+    const int good_karma = 1000;
+    const int bad_karma = -10;
 
-    unordered_set<Person, PersonHasher> point_set;
-    for (const auto &point : points)
-    {
-        point_set.insert(point);
-    }
+    Database db;
+    db.Put({"id1", "Hello there", "master", 1536107260, good_karma});
+    db.Put({"id2", "O>>-<", "general2", 1536107260, bad_karma});
 
-    ASSERT_EQUAL(points.size(), point_set.size());
-    for (const auto &point : points)
-    {
-        ASSERT_EQUAL(point_set.count(point), static_cast<size_t>(1));
-    }
+    int count = 0;
+    db.RangeByKarma(bad_karma, good_karma, [&count](const Record &)
+                    {
+        ++count;
+    return true; });
+
+    ASSERT_EQUAL(2, count);
 }
 
-void TestPurity()
+void TestSameUser()
 {
-    Person person = {"John", 180, 82.5, {"London", "Baker St", 221}};
-    PersonHasher hasher;
+    Database db;
+    db.Put({"id1", "Don't sell", "master", 1536107260, 1000});
+    db.Put({"id2", "Rethink life", "master", 1536107260, 2000});
 
-    auto hash = hasher(person);
-    for (size_t t = 0; t < 100; ++t)
-    {
-        ASSERT_EQUAL(hasher(person), hash);
-    }
-};
+    int count = 0;
+    db.AllByUser("master", [&count](const Record &)
+                 {
+    ++count;
+    return true; });
 
-void TestDistribution()
+    ASSERT_EQUAL(2, count);
+}
+
+void TestReplacement()
 {
-    auto seed = 42;
-    mt19937 gen(seed);
+    const string final_body = "Feeling sad";
 
-    uniform_int_distribution<int> height_dist(150, 200);
-    uniform_int_distribution<int> weight_dist(100, 240); // [50, 120]
-    uniform_int_distribution<int> building_dist(1, 300);
-    uniform_int_distribution<int> word_dist(0, WORDS.size() - 1);
+    Database db;
+    db.Put({"id", "Have a hand", "not-master", 1536107260, 10});
+    db.Erase("id");
+    db.Put({"id", final_body, "not-master", 1536107260, -10});
 
-    PersonHasher hasher;
-
-    // выбираем число бакетов не очень большим простым числом
-    // (unordered_set, unordered_map используют простые числа бакетов
-    // в реализациях GCC и Clang, для непростых чисел бакетов
-    // возникают сложности со стандартной хеш-функцией в этих реализациях)
-    const size_t num_buckets = 2053;
-
-    // мы хотим, чтобы число точек в бакетах было ~100'000
-    const size_t perfect_bucket_size = 50;
-    const size_t num_points = num_buckets * perfect_bucket_size;
-    vector<size_t> buckets(num_buckets);
-    for (size_t t = 0; t < num_points; ++t)
-    {
-        Person person;
-        person.name = WORDS[word_dist(gen)];
-        person.height = height_dist(gen);
-        person.weight = weight_dist(gen) * 0.5;
-        person.address.city = WORDS[word_dist(gen)];
-        person.address.street = WORDS[word_dist(gen)];
-        person.address.building = building_dist(gen);
-        ++buckets[hasher(person) % num_buckets];
-    }
-
-    // Статистика Пирсона:
-    // https://en.wikipedia.org/wiki/Pearson's_chi-squared_test
-    //
-    // Численной мерой равномерности распределения также может выступать
-    // энтропия, но для ее порогов нет хорошей статистической интерпретации
-    double pearson_stat = 0;
-    for (auto bucket_size : buckets)
-    {
-        size_t size_diff = bucket_size - perfect_bucket_size;
-        pearson_stat +=
-            size_diff * size_diff / static_cast<double>(perfect_bucket_size);
-    }
-
-    // проверяем равномерность распределения методом согласия Пирсона
-    // со статистической значимостью 0.95:
-    //
-    // если подставить вместо ++buckets[hasher(person) % num_buckets]
-    // выражение ++buckets[gen() % num_buckets], то с вероятностью 95%
-    // ASSERT ниже отработает успешно,
-    //
-    // т.к. статистика Пирсона приблизительно распределена по chi^2
-    // с числом степеней свободы, равным num_buckets - 1,
-    // и 95 процентиль этого распределения равен:
-    // >>> scipy.stats.chi2.ppf(0.95, 2052)
-    const double critical_value = 2158.4981036918693;
-    ASSERT(pearson_stat < critical_value);
+    auto record = db.GetById("id");
+    ASSERT(record != nullptr);
+    ASSERT_EQUAL(final_body, record->title);
 }
 
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestSmoke);
-    RUN_TEST(tr, TestPurity);
-    RUN_TEST(tr, TestDistribution);
+    RUN_TEST(tr, TestRangeBoundaries);
+    RUN_TEST(tr, TestSameUser);
+    RUN_TEST(tr, TestReplacement);
 }
 
 void Profile()
