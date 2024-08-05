@@ -681,7 +681,7 @@ struct MyTypeHasher
         size_t r2 = phash(p.plate);
 
         // Ax^2 + Bx + C
-        static constexpr size_t X = 37;
+        static constexpr size_t X = 37U;
 
         return r1 * X * X + r2 * X + r3;
     }

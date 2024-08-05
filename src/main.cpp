@@ -27,13 +27,23 @@ struct Record
     string id;
     string title;
     string user;
-    int timestamp;
-    int karma;
+    int timestamp = 0;
+    int karma = 0;
 
-    bool operator<(const Record &other) const
+    bool operator==(const Record &other) const
     {
-        return id < other.id;
+        return id == other.id;
     }
+};
+
+struct RecordHasher
+{
+    size_t operator()(const Record &v) const
+    {
+        return str_hasher(v.id);
+    }
+
+    hash<string> str_hasher;
 };
 
 // Реализуйте этот класс
@@ -54,15 +64,15 @@ public:
     void AllByUser(const string &user, Callback callback) const;
 
 private:
-    set<Record> _ids;
+    unordered_set<Record, RecordHasher> _ids;
     multimap<int, string_view> _timestamp_to_id;
     multimap<int, string_view> _karma_to_id;
     multimap<string_view, string_view> _user_to_id;
 
     template<typename Multimap>
     void erase(Multimap &m,
-               const typename Multimap::key_type &key,
-               const typename Multimap::mapped_type &value);
+        const typename Multimap::key_type &key,
+        const typename Multimap::mapped_type &value);
 
     template <typename Multimap, typename Callback>
     void RangeBy(const Multimap &m, int low, int high, Callback callback) const;
@@ -134,8 +144,8 @@ void Database::AllByUser(const string &user, Callback callback) const
 
 template<typename Multimap>
 void Database::erase(Multimap &m,
-            const typename Multimap::key_type &key,
-            const typename Multimap::mapped_type &value)
+    const typename Multimap::key_type &key,
+    const typename Multimap::mapped_type &value)
 {
     for (auto [it, end] = m.equal_range(key); it != end; ++it)
     {
