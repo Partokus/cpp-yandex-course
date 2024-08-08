@@ -134,7 +134,7 @@ void Database::AllByUser(const string &user, Callback callback) const
 {
     for (auto [it, end] = _user_to_id.equal_range(user); it != end; ++it)
     {
-        const Record &record = *GetById(string{it->second});
+        const Record &record = *_ids.find(Record{.id = string{it->second}});
         if (const bool keep_searching = callback(record); not keep_searching)
         {
             return;
@@ -151,7 +151,7 @@ void Database::erase(Multimap &m,
     {
         if (auto value_range = it->second; value_range == value)
         {
-            m.erase(it);
+            it = m.erase(it);
             break;
         }
     }
@@ -160,12 +160,12 @@ void Database::erase(Multimap &m,
 template <typename Multimap, typename Callback>
 void Database::RangeBy(const Multimap &m, int low, int high, Callback callback) const
 {
-    auto range_begin = m.lower_bound(low);
-    auto range_end = m.upper_bound(high);
+    auto begin = m.lower_bound(low);
+    auto end = m.upper_bound(high);
 
-    for (auto it = range_begin; it != range_end; ++it)
+    for (auto it = begin; it != end; ++it)
     {
-        const Record &record = *GetById(string{it->second});
+        const Record &record = *_ids.find(Record{.id = string{it->second}});
         if (const bool keep_searching = callback(record); not keep_searching)
         {
             return;
