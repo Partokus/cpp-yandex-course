@@ -14,6 +14,9 @@
 #include <deque>
 #include <tuple>
 #include <random>
+#include <functional>
+#include <fstream>
+#include <random>
 
 using namespace std;
 
@@ -65,14 +68,14 @@ public:
 
 private:
     unordered_set<Record, RecordHasher> _ids;
-    multimap<int, string_view> _timestamp_to_id;
-    multimap<int, string_view> _karma_to_id;
-    multimap<string_view, string_view> _user_to_id;
+    multimap<int, reference_wrapper<const Record>> _timestamp_to_rec;
+    multimap<int, reference_wrapper<const Record>> _karma_to_rec;
+    unordered_multimap<string_view, reference_wrapper<const Record>> _user_to_rec;
 
     template<typename Multimap>
     void erase(Multimap &m,
         const typename Multimap::key_type &key,
-        const typename Multimap::mapped_type &value);
+        const typename Multimap::mapped_type &mapped);
 
     template <typename Multimap, typename Callback>
     void RangeBy(const Multimap &m, int low, int high, Callback callback) const;
@@ -86,9 +89,9 @@ bool Database::Put(const Record &record)
         return false;
     }
 
-    _timestamp_to_id.emplace(it->timestamp, it->id);
-    _karma_to_id.emplace(it->karma, it->id);
-    _user_to_id.emplace(it->user, it->id);
+    _timestamp_to_rec.emplace(it->timestamp, ref(*it));
+    _karma_to_rec.emplace(it->karma, ref(*it));
+    _user_to_rec.emplace(it->user, ref(*it));
     return true;
 }
 
@@ -109,9 +112,9 @@ bool Database::Erase(const string &id)
         return false;
     }
 
-    erase(_timestamp_to_id, it->timestamp, id);
-    erase(_karma_to_id, it->karma, id);
-    erase(_user_to_id, it->user, id);
+    erase(_timestamp_to_rec, it->timestamp, ref(*it));
+    erase(_karma_to_rec, it->karma, ref(*it));
+    erase(_user_to_rec, it->user, ref(*it));
 
     _ids.erase(it);
     return true;
@@ -120,21 +123,21 @@ bool Database::Erase(const string &id)
 template <typename Callback>
 void Database::RangeByTimestamp(int low, int high, Callback callback) const
 {
-    RangeBy(_timestamp_to_id, low, high, callback);
+    RangeBy(_timestamp_to_rec, low, high, callback);
 }
 
 template <typename Callback>
 void Database::RangeByKarma(int low, int high, Callback callback) const
 {
-    RangeBy(_karma_to_id, low, high, callback);
+    RangeBy(_karma_to_rec, low, high, callback);
 }
 
 template <typename Callback>
 void Database::AllByUser(const string &user, Callback callback) const
 {
-    for (auto [it, end] = _user_to_id.equal_range(user); it != end; ++it)
+    for (auto [it, end] = _user_to_rec.equal_range(user); it != end; ++it)
     {
-        const Record &record = *_ids.find(Record{.id = string{it->second}});
+        const Record &record = it->second.get();
         if (const bool keep_searching = callback(record); not keep_searching)
         {
             return;
@@ -145,14 +148,16 @@ void Database::AllByUser(const string &user, Callback callback) const
 template<typename Multimap>
 void Database::erase(Multimap &m,
     const typename Multimap::key_type &key,
-    const typename Multimap::mapped_type &value)
+    const typename Multimap::mapped_type &mapped)
 {
+    const Record &record_with_need_id = mapped.get();
     for (auto [it, end] = m.equal_range(key); it != end; ++it)
     {
-        if (auto value_range = it->second; value_range == value)
+        const Record &record_with_need_timestamp = it->second;
+        if (record_with_need_timestamp == record_with_need_id)
         {
             it = m.erase(it);
-            break;
+            return;
         }
     }
 }
@@ -165,7 +170,7 @@ void Database::RangeBy(const Multimap &m, int low, int high, Callback callback) 
 
     for (auto it = begin; it != end; ++it)
     {
-        const Record &record = *_ids.find(Record{.id = string{it->second}});
+        const Record &record = it->second.get();
         if (const bool keep_searching = callback(record); not keep_searching)
         {
             return;
@@ -249,14 +254,122 @@ void TestReplacement()
     ASSERT_EQUAL(final_body, record->title);
 }
 
+static constexpr size_t RecordsCount = 300'000U;
+
+void MakeInputData()
+{
+    static constexpr size_t IdsVariaty = 100U; // количество различных id
+
+    Database db;
+    ofstream ofile("input_data.txt");
+    Record r{};
+
+    for (size_t i = 0U; i < RecordsCount; ++i)
+    {
+        // делаем id с названием "123456789" и
+        // в конце число от 0 до IdsVariaty
+        const size_t num1 = rand() % IdsVariaty;
+        const size_t num2 = rand() % IdsVariaty;
+        r.id = "123456789" + to_string(num1);
+        r.title = "just_random_title" + to_string(num1) + to_string(num2);
+        r.user = "just_random_name" + to_string(num1) + to_string(num2);
+        r.timestamp = num1;
+        r.karma = num2;
+
+        ofile << r.id << " " << r.title << " " << r.user << " " << r.timestamp << " " << r.karma << endl;
+    }
+}
+
+void ProfileLong()
+{
+    LOG_DURATION("Total");
+    Database db;
+    ifstream ifile("input_data.txt");
+
+    if (not ifile)
+    {
+        throw runtime_error("Didn't open file");
+    }
+
+    {
+        LOG_DURATION("Put");
+        for (size_t i = 0; i < RecordsCount; ++i)
+        {
+            Record r;
+            ifile >> r.id >> r.title >> r.user >> r.timestamp >> r.karma;
+            db.Put(r);
+        }
+    }
+
+    ifile.seekg(ios::beg);
+
+    {
+        LOG_DURATION("GetById");
+        for (size_t i = 0; i < RecordsCount; ++i)
+        {
+            Record r;
+            ifile >> r.id >> r.title >> r.user >> r.timestamp >> r.karma;
+            db.GetById(r.id);
+        }
+    }
+
+    ifile.seekg(ios::beg);
+
+    size_t counter = 0U;
+    auto cb = [&counter](const Record &rec){
+        return ++counter;
+    };
+
+    {
+        LOG_DURATION("RangeByTimestamp");
+        for (size_t i = 0; i < RecordsCount; ++i)
+        {
+            Record r;
+            ifile >> r.id >> r.title >> r.user >> r.timestamp >> r.karma;
+            const int low = r.timestamp <= r.karma ? r.timestamp : r.karma;
+            const int high = r.timestamp >= r.karma ? r.timestamp : r.karma;
+            db.RangeByTimestamp(low, high, cb);
+        }
+    }
+
+    ifile.seekg(ios::beg);
+
+    {
+        LOG_DURATION("RangeByKarma");
+        for (size_t i = 0; i < RecordsCount; ++i)
+        {
+            Record r;
+            ifile >> r.id >> r.title >> r.user >> r.timestamp >> r.karma;
+            const int low = r.timestamp <= r.karma ? r.timestamp : r.karma;
+            const int high = r.timestamp >= r.karma ? r.timestamp : r.karma;
+            db.RangeByKarma(low, high, cb);
+        }
+    }
+
+    ifile.seekg(ios::beg);
+
+    {
+        LOG_DURATION("AllByUser");
+        for (size_t i = 0; i < RecordsCount; ++i)
+        {
+            Record r;
+            ifile >> r.id >> r.title >> r.user >> r.timestamp >> r.karma;
+            db.AllByUser(r.user, cb);
+        }
+    }
+}
+
 void TestAll()
 {
     TestRunner tr{};
     RUN_TEST(tr, TestRangeBoundaries);
     RUN_TEST(tr, TestSameUser);
     RUN_TEST(tr, TestReplacement);
+
+    // MakeInputData();
 }
 
 void Profile()
 {
+    ProfileLong();
 }
