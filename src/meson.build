@@ -19,6 +19,7 @@ inc = include_directories(
 
 src = [
     'main.cpp',
+    'xml.cpp',
     'tests/test_runner.cpp'
 ]
 
