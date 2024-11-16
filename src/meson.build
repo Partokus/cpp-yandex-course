@@ -19,7 +19,9 @@ inc = include_directories(
 
 src = [
     'main.cpp',
-    'tests/test_runner.cpp'
+    'tests/test_runner.cpp',
+    'xml.cpp',
+    'json.cpp'
 ]
 
 if host_machine.system() == 'windows'
