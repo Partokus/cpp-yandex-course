@@ -20,8 +20,8 @@ inc = include_directories(
 src = [
     'main.cpp',
     'tests/test_runner.cpp',
-    'xml.cpp',
-    'json.cpp'
+    'stats_aggregator_test.cpp',
+    'stats_aggregator.cpp'
 ]
 
 if host_machine.system() == 'windows'
