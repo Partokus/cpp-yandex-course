@@ -19,8 +19,7 @@ inc = include_directories(
 
 src = [
     'main.cpp',
-    'tests/test_runner.cpp',
-    'geo2d.cpp'
+    'tests/test_runner.cpp'
 ]
 
 if host_machine.system() == 'windows'
