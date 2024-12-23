@@ -30,8 +30,8 @@ public:
     template <typename U>
     struct Access
     {
-        U &ref_to_value;
         lock_guard<mutex> guard;
+        U &ref_to_value;
     };
 
     Access<T> GetAccess();
@@ -51,13 +51,13 @@ Synchronized<T>::Synchronized(T initial)
 template <typename T>
 typename Synchronized<T> ::template Access<T> Synchronized<T>::GetAccess()
 {
-    return {_value, lock_guard(_m)};
+    return {lock_guard(_m), _value};
 }
 
 template <typename T>
 typename Synchronized<T> ::template Access<const T> Synchronized<T>::GetAccess() const
 {
-    return {_value, lock_guard(_m)};
+    return {lock_guard(_m), _value};
 }
 
 int main()
