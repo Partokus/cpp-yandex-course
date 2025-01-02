@@ -130,7 +130,7 @@ class Copier : public Worker
 {
 public:
     Copier(string to)
-        : _to(to)
+        : _to(move(to))
     {
     }
 
