@@ -1,84 +1,119 @@
 #include "Common.h"
-#include <deque>
-#include <algorithm>
-#include <atomic>
-#include <mutex>
-#include <iostream>
+#include <stdexcept>
 
 using namespace std;
 
-class LruCache : public ICache
+// Этот файл сдаётся на проверку
+// Здесь напишите реализацию необходимых классов-потомков `IShape`
+class Shape : public IShape
 {
 public:
-    LruCache(shared_ptr<IBooksUnpacker> books_unpacker,
-             const Settings &settings)
-        : _books_unpacker(books_unpacker),
-          _settings(settings)
+    void SetPosition(Point point) final
     {
+        _point = point;
     }
 
-    BookPtr GetBook(const string &book_name) override
+    Point GetPosition() const final
     {
-        {
-            lock_guard g(_mutex);
-            auto it = find_if(_books.cbegin(), _books.cend(),
-                [&book_name](const BookPtr &v){
-                return v->GetName() == book_name;
-            });
+        return _point;
+    }
 
-            // если книга уже есть в кэше
-            if (it != _books.cend())
+    void SetSize(Size size) final
+    {
+        _size = size;
+    }
+
+    Size GetSize() const final
+    {
+        return _size;
+    }
+
+    void SetTexture(shared_ptr<ITexture> texture) final
+    {
+        _texture = move(texture);
+    }
+
+    ITexture *GetTexture() const final
+    {
+        return _texture.get();
+    }
+
+    void Draw(Image &image) const override
+    {
+        for (int y = 0; y < _size.height; ++y)
+        {
+            for (int x = 0; x < _size.width; ++x)
             {
-                if (it != _books.cbegin())
+                if (IsEllipse() and not IsPointInEllipse(Point{x, y}, _size))
                 {
-                    // перемещаем книгу в начало очереди,
-                    // показывая, что она имеет максимальный ранг
-                    BookPtr temp = move(*it);
-                    _books.erase(it);
-                    _books.push_front(move(temp));
+                    continue;
                 }
-                return _books.front();
+
+                const Point point{x + _point.x, y + _point.y};
+
+                if (point.y < 0 or point.x < 0)
+                {
+                    continue;
+                }
+
+                // проверяем, что в пределах изображения
+                if (static_cast<size_t>(point.y) < image.size() and
+                    static_cast<size_t>(point.x) < image[y].size())
+                {
+                    char symbol = '.';
+                    // если пересечение с текстурой
+                    if (_texture and y < _texture->GetSize().height and x < _texture->GetSize().width)
+                    {
+                        symbol = _texture->GetImage()[y][x];
+                    }
+                    image[point.y][point.x] = symbol;
+                }
             }
         }
-
-        BookPtr new_book = move(_books_unpacker->UnpackBook(book_name));
-
-        const size_t new_book_size = new_book->GetContent().size();
-
-        // если книга больше максимального размера кэша, то
-        // не имеет смысла её кэшировать, сразу отдаём дальше
-        if (new_book_size > _settings.max_memory)
-        {
-            return new_book;
-        }
-
-        // пока в кэше нет места для новой книги,
-        // удаляем книги с конца очереди в соответствии
-        // с их маленьким рангом
-        lock_guard g(_mutex);
-        while (new_book_size > _remain_memory)
-        {
-            _remain_memory += _books.back()->GetContent().size();
-            _books.pop_back();
-        }
-
-        _books.push_front(move(new_book));
-        _remain_memory -= new_book_size;
-
-        return _books.front();
     }
 
-private:
-    shared_ptr<IBooksUnpacker> _books_unpacker;
-    const Settings &_settings;
-    deque<BookPtr> _books;
-    size_t _remain_memory = _settings.max_memory;
-    mutex _mutex;
+    virtual bool IsEllipse() const
+    {
+        return false;
+    }
+
+protected:
+    Point _point;
+    Size _size;
+    shared_ptr<ITexture> _texture;
 };
 
-unique_ptr<ICache> MakeCache(
-    shared_ptr<IBooksUnpacker> books_unpacker,
-    const ICache::Settings &settings)
+class Rectangle : public Shape
 {
-    return make_unique<LruCache>(move(books_unpacker), settings);
+public:
+    std::unique_ptr<IShape> Clone() const override
+    {
+        return make_unique<Rectangle>(*this);
+    }
+};
+
+class Ellipse : public Shape
+{
+public:
+    std::unique_ptr<IShape> Clone() const override
+    {
+        return make_unique<Ellipse>(*this);
+    }
+
+    bool IsEllipse() const override
+    {
+        return true;
+    }
+};
+
+unique_ptr<IShape> MakeShape(ShapeType shape_type)
+{
+    switch (shape_type)
+    {
+    case ShapeType::Rectangle:
+        return make_unique<Rectangle>();
+    case ShapeType::Ellipse:
+        return make_unique<Ellipse>();
+    }
+    return nullptr;
 }

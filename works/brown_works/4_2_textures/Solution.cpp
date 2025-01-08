@@ -30,7 +30,7 @@ public:
 
     void SetTexture(shared_ptr<ITexture> texture) final
     {
-        _texture = texture;
+        _texture = move(texture);
     }
 
     ITexture *GetTexture() const final
@@ -49,14 +49,20 @@ public:
                     continue;
                 }
 
-                Point point{x + _point.x, y + _point.y};
+                const Point point{x + _point.x, y + _point.y};
+
+                if (point.y < 0 or point.x < 0)
+                {
+                    continue;
+                }
 
                 // проверяем, что в пределах изображения
-                if (point.y < image.size() and x < image[y].size())
+                if (static_cast<size_t>(point.y) < image.size() and
+                    static_cast<size_t>(point.x) < image[y].size())
                 {
                     char symbol = '.';
                     // если пересечение с текстурой
-                    if (_texture && y < _texture->GetSize().height && x < _texture->GetSize().width)
+                    if (_texture and y < _texture->GetSize().height and x < _texture->GetSize().width)
                     {
                         symbol = _texture->GetImage()[y][x];
                     }
@@ -109,5 +115,5 @@ unique_ptr<IShape> MakeShape(ShapeType shape_type)
     case ShapeType::Ellipse:
         return make_unique<Ellipse>();
     }
-    return make_unique<Rectangle>();
+    return nullptr;
 }

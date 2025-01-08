@@ -1,56 +1,80 @@
 #pragma once
-
-#include <memory>
 #include <string>
+#include <vector>
+#include <memory>
 
-// Интерфейс, представляющий книгу
-class IBook {
-public:
-  virtual ~IBook() = default;
-
-  // Возвращает название книги
-  virtual const std::string& GetName() const = 0;
-
-  // Возвращает текст книги как строку.
-  // Размером книги считается размер её текста в байтах.
-  virtual const std::string& GetContent() const = 0;
+struct Point
+{
+    int x;
+    int y;
 };
 
-// Интерфейс, позволяющий распаковывать книги
-class IBooksUnpacker {
-public:
-  virtual ~IBooksUnpacker() = default;
-
-  // Распаковывает книгу с указанным названием из хранилища
-  virtual std::unique_ptr<IBook> UnpackBook(const std::string& book_name) = 0;
+struct Size
+{
+    int width;
+    int height;
 };
 
-// Интерфейс, представляющий кэш
-class ICache {
-public:
-  // Настройки кэша
-  struct Settings {
-    // Максимальный допустимый объём памяти, потребляемый закэшированными
-    // объектами, в байтах
-    size_t max_memory = 0;
-  };
+// Проверяет, содержится ли заданная точка в эллипсе заданного размера
+// Считается, что эллипс вписан в прямоугольник с вершинами в точках (0, 0) и
+// (size.width, size.height)
+inline bool IsPointInEllipse(Point p, Size size)
+{
+    // Нормируем координаты точки в диапазон (-1, 1)
+    double x = (p.x + 0.5) / (size.width / 2.0) - 1;
+    double y = (p.y + 0.5) / (size.height / 2.0) - 1;
+    // Проверяем, лежит ли точка в единичном круге
+    return x * x + y * y <= 1;
+}
 
-  using BookPtr = std::shared_ptr<const IBook>;
+// Изображение. Пиксели это символы.
+// Первый индекс (по std::vector) - строки изображения, координата y
+// Второй индекс (по std::string) - столбцы изображения, координата x
+// Предполагается, что длина всех строк одинакова
+using Image = std::vector<std::string>;
 
-public:
-  virtual ~ICache() = default;
-
-  // Возвращает книгу с заданным названием. Если её в данный момент нет
-  // в кэше, то предварительно считывает её и добавляет в кэш. Следит за тем,
-  // чтобы общий объём считанных книг не превосходил указанного в параметре
-  // max_memory. При необходимости удаляет из кэша книги, к которым дольше всего
-  // не обращались. Если размер самой книги уже больше max_memory, то оставляет
-  // кэш пустым.
-  virtual BookPtr GetBook(const std::string& book_name) = 0;
+// Поддерживаемые виды фигур: прямоугольник и эллипс
+enum class ShapeType
+{
+    Rectangle,
+    Ellipse
 };
 
-// Создаёт объект кэша для заданного распаковщика и заданных настроек
-std::unique_ptr<ICache> MakeCache(
-    std::shared_ptr<IBooksUnpacker> books_unpacker,
-    const ICache::Settings& settings
-);
+// Интерфейс текстуры
+class ITexture
+{
+public:
+    virtual ~ITexture() = default;
+
+    // Возвращает размер хранимого изображения
+    virtual Size GetSize() const = 0;
+    // Возвращает хранимое изображение
+    virtual const Image &GetImage() const = 0;
+};
+
+// Интерфейс фигуры
+class IShape
+{
+public:
+    virtual ~IShape() = default;
+
+    // Возвращает точную копию фигуры.
+    // Если фигура содержит текстуру, то созданная копия содержит ту же самую
+    // текстуру. Фигура и её копия совместно владеют этой текстурой.
+    virtual std::unique_ptr<IShape> Clone() const = 0;
+
+    virtual void SetPosition(Point) = 0;
+    virtual Point GetPosition() const = 0;
+
+    virtual void SetSize(Size) = 0;
+    virtual Size GetSize() const = 0;
+
+    virtual void SetTexture(std::shared_ptr<ITexture>) = 0;
+    virtual ITexture *GetTexture() const = 0;
+
+    // Рисует фигуру на указанном изображении
+    virtual void Draw(Image &) const = 0;
+};
+
+// Создаёт фигуру заданного типа. Вам нужно реализовать эту функцию.
+std::unique_ptr<IShape> MakeShape(ShapeType shape_type);
