@@ -19,9 +19,7 @@ inc = include_directories(
 
 src = [
     'main.cpp',
-    'tests/test_runner.cpp',
-    'Solution.cpp',
-    'Textures.cpp'
+    'tests/test_runner.cpp'
 ]
 
 if host_machine.system() == 'windows'
