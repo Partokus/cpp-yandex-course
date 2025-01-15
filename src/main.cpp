@@ -1,90 +1,118 @@
-#include "new_trip_manager.h"
-
 #include <profile.h>
 #include <test_runner.h>
+
+#include <vector>
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <utility>
+#include <map>
+#include <optional>
+#include <unordered_set>
+#include <algorithm>
+#include <numeric>
+#include <functional>
+#include <future>
+#include <mutex>
+#include <queue>
+#include <cmath>
+#include <random>
+#include <stdexcept>
 
 using namespace std;
 
 void TestAll();
 void Profile();
 
+enum class Gender {
+  FEMALE,
+  MALE
+};
+
+struct Person {
+  int age;
+  Gender gender;
+  bool is_employed;
+};
+
+template <typename InputIt>
+int ComputeMedianAge(InputIt range_begin, InputIt range_end) {
+  if (range_begin == range_end) {
+    return 0;
+  }
+  vector<typename iterator_traits<InputIt>::value_type> range_copy(
+      range_begin,
+      range_end
+  );
+  auto middle = begin(range_copy) + range_copy.size() / 2;
+  nth_element(
+      begin(range_copy), middle, end(range_copy),
+      [](const Person& lhs, const Person& rhs) {
+        return lhs.age < rhs.age;
+      }
+  );
+  return middle->age;
+}
+
 int main()
 {
     TestAll();
     Profile();
 
+    int person_count;
+  cin >> person_count;
+  vector<Person> persons;
+  persons.reserve(person_count);
+  for (int i = 0; i < person_count; ++i) {
+    int age, gender, is_employed;
+    cin >> age >> gender >> is_employed;
+    Person person{
+        age,
+        static_cast<Gender>(gender),
+        is_employed == 1
+    };
+    persons.push_back(person);
+  }
+
+  auto females_end = partition(
+      begin(persons), end(persons),
+      [](const Person& p) {
+        return p.gender == Gender::FEMALE;
+      }
+  );
+  auto employed_females_end = partition(
+      begin(persons), females_end,
+      [](const Person& p) {
+        return p.is_employed;
+      }
+  );
+  auto employed_males_end = partition(
+      females_end, end(persons),
+      [](const Person& p) {
+        return p.is_employed;
+      }
+  );
+
+  cout << "Median age = "
+       << ComputeMedianAge(begin(persons), end(persons))         << endl
+       << "Median age for females = "
+       << ComputeMedianAge(begin(persons), females_end)          << endl
+       << "Median age for males = "
+       << ComputeMedianAge(females_end, end(persons))            << endl
+       << "Median age for employed females = "
+       << ComputeMedianAge(begin(persons), employed_females_end) << endl
+       << "Median age for unemployed females = "
+       << ComputeMedianAge(employed_females_end, females_end)    << endl
+       << "Median age for employed males = "
+       << ComputeMedianAge(females_end, employed_males_end)      << endl
+       << "Median age for unemployed males = "
+       << ComputeMedianAge(employed_males_end, end(persons))     << endl;
     return 0;
-}
-
-// Эти определения статических переменных правильнее было бы поместить в соответствующий cpp-файл,
-// но мы для простоты разместим их здесь
-
-int FlightProvider::capacity = 0;
-int FlightProvider::counter = 0;
-
-int HotelProvider::capacity = 0;
-int HotelProvider::counter = 0;
-
-void TestNoOverbooking()
-{
-    FlightProvider::capacity = 100;
-    HotelProvider::capacity = 100;
-    FlightProvider::counter = 0;
-    HotelProvider::counter = 0;
-    {
-        TripManager tm;
-        auto trip = tm.Book({});
-    }
-    ASSERT_EQUAL(FlightProvider::counter, 0);
-    ASSERT_EQUAL(HotelProvider::counter, 0);
-}
-
-void TestFlightOverbooking()
-{
-    FlightProvider::capacity = 1;
-    HotelProvider::capacity = 100;
-    FlightProvider::counter = 0;
-    HotelProvider::counter = 0;
-    try
-    {
-        TripManager tm;
-        auto trip = tm.Book({});
-    }
-    catch (const runtime_error &)
-    {
-        ASSERT_EQUAL(FlightProvider::counter, 0);
-        ASSERT_EQUAL(HotelProvider::counter, 0);
-        return;
-    }
-    Assert(false, "Flight overbooking was expected");
-}
-
-void TestHotelOverbooking()
-{
-    FlightProvider::capacity = 100;
-    HotelProvider::capacity = 0;
-    FlightProvider::counter = 0;
-    HotelProvider::counter = 0;
-    try
-    {
-        TripManager tm;
-        auto trip = tm.Book({});
-    }
-    catch (const runtime_error &ex)
-    {
-        ASSERT_EQUAL(FlightProvider::counter, 0);
-        ASSERT_EQUAL(HotelProvider::counter, 0);
-        return;
-    }
-    Assert(false, "Hotel overbooking was expected");
 }
 
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestNoOverbooking);
-    RUN_TEST(tr, TestFlightOverbooking);
-    RUN_TEST(tr, TestHotelOverbooking);
 }
 
 void Profile()
