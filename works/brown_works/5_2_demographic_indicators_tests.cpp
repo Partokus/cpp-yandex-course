@@ -42,11 +42,11 @@ bool operator==(const Person &lhs, const Person &rhs)
     return lhs.age == rhs.age && lhs.gender == rhs.gender && lhs.is_employed == rhs.is_employed;
 }
 
-ostream &operator<<(ostream &stream, const Person &person)
+ostream & operator<<(ostream &stream, const Person &person)
 {
-    return stream << "Person(age=" << person.age
-                  << ", gender=" << static_cast<int>(person.gender)
-                  << ", is_employed=" << boolalpha << person.is_employed << ")";
+    return stream << "Person(age=" << person.age <<
+                     ", gender=" << static_cast<int>(person.gender) <<
+                     ", is_employed=" << boolalpha << person.is_employed << ")";
 }
 
 struct AgeStats
@@ -69,14 +69,16 @@ int ComputeMedianAge(InputIt range_begin, InputIt range_end)
     }
     vector<typename iterator_traits<InputIt>::value_type> range_copy(
         range_begin,
-        range_end);
+        range_end
+    );
     auto middle = begin(range_copy) + range_copy.size() / 2;
     nth_element(
         begin(range_copy), middle, end(range_copy),
         [](const Person &lhs, const Person &rhs)
         {
             return lhs.age < rhs.age;
-        });
+        }
+    );
     return middle->age;
 }
 
@@ -93,7 +95,8 @@ vector<Person> ReadPersons(istream &in_stream = cin)
         Person person{
             age,
             static_cast<Gender>(gender),
-            is_employed == 1};
+            is_employed == 1
+        };
         persons.push_back(person);
     }
     return persons;
@@ -112,19 +115,22 @@ AgeStats ComputeStats(vector<Person> persons)
         [](const Person &p)
         {
             return p.gender == Gender::FEMALE;
-        });
+        }
+    );
     auto employed_females_end = partition(
         begin(persons), females_end,
         [](const Person &p)
         {
             return p.is_employed;
-        });
+        }
+    );
     auto employed_males_end = partition(
         females_end, end(persons),
         [](const Person &p)
         {
             return p.is_employed;
-        });
+        }
+    );
 
     return {
         ComputeMedianAge(begin(persons), end(persons)),
@@ -162,15 +168,16 @@ int main()
     return 0;
 }
 
-const vector<Person> etalon_persons = {
-    {31, Gender::MALE, false},
-    {40, Gender::FEMALE, true},
-    {24, Gender::MALE, true},
-    {20, Gender::FEMALE, true},
-    {80, Gender::FEMALE, false},
-    {78, Gender::MALE, false},
-    {10, Gender::FEMALE, false},
-    {55, Gender::MALE, true},
+const vector<Person> etalon_persons =
+    {
+        {31, Gender::MALE, false},
+        {40, Gender::FEMALE, true},
+        {24, Gender::MALE, true},
+        {20, Gender::FEMALE, true},
+        {80, Gender::FEMALE, false},
+        {78, Gender::MALE, false},
+        {10, Gender::FEMALE, false},
+        {55, Gender::MALE, true},
 };
 
 void TestComputeMedianAge()
