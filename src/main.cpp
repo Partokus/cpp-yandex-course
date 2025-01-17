@@ -143,11 +143,25 @@ void TestReadPersons()
     ASSERT_EQUAL(etalon_persons, ReadPersons(iss));
 }
 
+void TestComputeStats()
+{
+    const AgeStats stats = ComputeStats(etalon_persons);
+
+    ASSERT_EQUAL(stats.females, 40);
+    ASSERT_EQUAL(stats.males, 55);
+    ASSERT_EQUAL(stats.total, 40);
+    ASSERT_EQUAL(stats.unemployed_females, 80);
+    ASSERT_EQUAL(stats.unemployed_males, 78);
+    ASSERT_EQUAL(stats.employed_females, 40);
+    ASSERT_EQUAL(stats.employed_males, 55);
+}
+
 void TestAll()
 {
     TestRunner tr{};
     RUN_TEST(tr, TestComputeMedianAge);
     RUN_TEST(tr, TestReadPersons);
+    RUN_TEST(tr, TestComputeStats);
 }
 
 void Profile()
