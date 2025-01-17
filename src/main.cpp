@@ -54,12 +54,8 @@ int ComputeMedianAge(InputIt range_begin, InputIt range_end) {
   return middle->age;
 }
 
-int main()
-{
-    TestAll();
-    Profile();
-
-    int person_count;
+int main() {
+  int person_count;
   cin >> person_count;
   vector<Person> persons;
   persons.reserve(person_count);
@@ -107,12 +103,51 @@ int main()
        << ComputeMedianAge(females_end, employed_males_end)      << endl
        << "Median age for unemployed males = "
        << ComputeMedianAge(employed_males_end, end(persons))     << endl;
-    return 0;
+
+  return 0;
+}
+
+const vector<Person> etalon_persons =
+{
+        {31, Gender::MALE, false},
+        {40, Gender::FEMALE, true},
+        {24, Gender::MALE, true},
+        {20, Gender::FEMALE, true},
+        {80, Gender::FEMALE, false},
+        {78, Gender::MALE, false},
+        {10, Gender::FEMALE, false},
+        {55, Gender::MALE, true},
+};
+
+void TestComputeMedianAge()
+{
+    ASSERT_EQUAL(ComputeMedianAge(etalon_persons.begin(), etalon_persons.begin()), 0);
+    ASSERT_EQUAL(ComputeMedianAge(etalon_persons.begin(), etalon_persons.end()), 40);
+    ASSERT_EQUAL(ComputeMedianAge(etalon_persons.begin(), etalon_persons.begin() + 1), 31);
+}
+
+void TestReadPersons()
+{
+    istringstream iss(R"(
+      8
+      31 1 0
+      40 0 1
+      24 1 1
+      20 0 1
+      80 0 0
+      78 1 0
+      10 0 0
+      55 1 1
+    )");
+
+    ASSERT_EQUAL(etalon_persons, ReadPersons(iss));
 }
 
 void TestAll()
 {
     TestRunner tr{};
+    RUN_TEST(tr, TestComputeMedianAge);
+    RUN_TEST(tr, TestReadPersons);
 }
 
 void Profile()
