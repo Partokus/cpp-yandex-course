@@ -24,233 +24,215 @@ using namespace std;
 void TestAll();
 void Profile();
 
-enum class Gender
+using Domens = vector<string>;
+
+struct AllDomens
 {
-    FEMALE,
-    MALE
+    Domens bad_domens;
+    Domens usual_domens;
 };
 
-struct Person
+// bad domens and all domens
+AllDomens Parse(istream &is)
 {
-    int age;
-    Gender gender;
-    bool is_employed;
-};
-
-bool operator==(const Person &lhs, const Person &rhs)
-{
-    return lhs.age == rhs.age && lhs.gender == rhs.gender && lhs.is_employed == rhs.is_employed;
-}
-
-ostream & operator<<(ostream &stream, const Person &person)
-{
-    return stream << "Person(age=" << person.age <<
-                     ", gender=" << static_cast<int>(person.gender) <<
-                     ", is_employed=" << boolalpha << person.is_employed << ")";
-}
-
-struct AgeStats
-{
-    int total;
-    int females;
-    int males;
-    int employed_females;
-    int unemployed_females;
-    int employed_males;
-    int unemployed_males;
-};
-
-template <typename InputIt>
-int ComputeMedianAge(InputIt range_begin, InputIt range_end)
-{
-    if (range_begin == range_end)
+    auto parse_single_domens = [](istream &is)
     {
-        return 0;
-    }
-    vector<typename iterator_traits<InputIt>::value_type> range_copy(
-        range_begin,
-        range_end
-    );
-    auto middle = begin(range_copy) + range_copy.size() / 2;
-    nth_element(
-        begin(range_copy), middle, end(range_copy),
-        [](const Person &lhs, const Person &rhs)
+        size_t domens_count = 0U;
+        is >> domens_count;
+        Domens domens(domens_count);
+        for (size_t i = 0; i < domens_count; ++i)
         {
-            return lhs.age < rhs.age;
+            is >> domens[i];
+            domens[i].insert(domens[i].begin(), '.');
+            domens[i].push_back('.');
         }
-    );
-    return middle->age;
-}
+        return domens;
+    };
 
-vector<Person> ReadPersons(istream &in_stream = cin)
-{
-    int person_count;
-    in_stream >> person_count;
-    vector<Person> persons;
-    persons.reserve(person_count);
-    for (int i = 0; i < person_count; ++i)
+    return
     {
-        int age, gender, is_employed;
-        in_stream >> age >> gender >> is_employed;
-        Person person{
-            age,
-            static_cast<Gender>(gender),
-            is_employed == 1
-        };
-        persons.push_back(person);
+        .bad_domens = parse_single_domens(is),
+        .usual_domens = parse_single_domens(is)
+    };
+}
+
+vector<string> Filter(const AllDomens &all_domens)
+{
+    vector<string> good_bad;
+    good_bad.reserve(all_domens.usual_domens.size());
+
+    for (const string &usual_domen : all_domens.usual_domens)
+    {
+        bool bad_detected = false;
+        for (const string &bad_domen : all_domens.bad_domens)
+        {
+            if (usual_domen.find(bad_domen) != usual_domen.npos)
+            {
+                good_bad.push_back("Bad");
+                bad_detected = true;
+                break;
+            }
+        }
+        if (not bad_detected)
+        {
+            good_bad.push_back("Good");
+        }
     }
-    return persons;
+
+    return good_bad;
 }
 
-AgeStats ComputeStats(vector<Person> persons)
+void Print(ostream &os, const vector<string> &good_bad)
 {
-    //                 persons
-    //                |       |
-    //          females        males
-    //         |       |      |     |
-    //      empl.  unempl. empl.   unempl.
-
-    auto females_end = partition(
-        begin(persons), end(persons),
-        [](const Person &p)
-        {
-            return p.gender == Gender::FEMALE;
-        }
-    );
-    auto employed_females_end = partition(
-        begin(persons), females_end,
-        [](const Person &p)
-        {
-            return p.is_employed;
-        }
-    );
-    auto employed_males_end = partition(
-        females_end, end(persons),
-        [](const Person &p)
-        {
-            return p.is_employed;
-        }
-    );
-
-    return {
-        ComputeMedianAge(begin(persons), end(persons)),
-        ComputeMedianAge(begin(persons), females_end),
-        ComputeMedianAge(females_end, end(persons)),
-        ComputeMedianAge(begin(persons), employed_females_end),
-        ComputeMedianAge(employed_females_end, females_end),
-        ComputeMedianAge(females_end, employed_males_end),
-        ComputeMedianAge(employed_males_end, end(persons))};
-}
-
-void PrintStats(const AgeStats &stats,
-                ostream &out_stream = cout)
-{
-    out_stream << "Median age = "
-               << stats.total << endl
-               << "Median age for females = "
-               << stats.females << endl
-               << "Median age for males = "
-               << stats.males << endl
-               << "Median age for employed females = "
-               << stats.employed_females << endl
-               << "Median age for unemployed females = "
-               << stats.unemployed_females << endl
-               << "Median age for employed males = "
-               << stats.employed_males << endl
-               << "Median age for unemployed males = "
-               << stats.unemployed_males << endl;
+    for (const string &s : good_bad)
+    {
+        os << s << endl;
+    }
 }
 
 int main()
 {
     TestAll();
 
+    const AllDomens all_domens = Parse(cin);
+    const vector<string> good_bad = Filter(all_domens);
+    Print(cout, good_bad);
     return 0;
 }
 
-const vector<Person> etalon_persons =
-    {
-        {31, Gender::MALE, false},
-        {40, Gender::FEMALE, true},
-        {24, Gender::MALE, true},
-        {20, Gender::FEMALE, true},
-        {80, Gender::FEMALE, false},
-        {78, Gender::MALE, false},
-        {10, Gender::FEMALE, false},
-        {55, Gender::MALE, true},
-};
-
-void TestComputeMedianAge()
-{
-    ASSERT_EQUAL(ComputeMedianAge(etalon_persons.begin(), etalon_persons.begin()), 0);
-    ASSERT_EQUAL(ComputeMedianAge(etalon_persons.begin(), etalon_persons.end()), 40);
-    ASSERT_EQUAL(ComputeMedianAge(etalon_persons.begin(), etalon_persons.begin() + 1), 31);
-}
-
-void TestReadPersons()
+void TestParse()
 {
     istringstream iss(R"(
-      8
-      31 1 0
-      40 0 1
-      24 1 1
-      20 0 1
-      80 0 0
-      78 1 0
-      10 0 0
-      55 1 1
+        4
+        ya.ru
+        maps.me
+        m.ya.ru
+        com
+        7
+        ya.ru
+        ya.com
+        m.maps.me
+        moscow.m.ya.ru
+        maps.com
+        maps.ru
+        ya.ya
     )");
 
-    ASSERT_EQUAL(etalon_persons, ReadPersons(iss));
+    Domens bad_domens_expect{
+        ".ya.ru.",
+        ".maps.me.",
+        ".m.ya.ru.",
+        ".com."
+    };
+
+    Domens usual_domens_expect{
+        ".ya.ru.",
+        ".ya.com.",
+        ".m.maps.me.",
+        ".moscow.m.ya.ru.",
+        ".maps.com.",
+        ".maps.ru.",
+        ".ya.ya."
+    };
+
+    AllDomens all_domens = Parse(iss);
+
+    ASSERT_EQUAL(all_domens.bad_domens, bad_domens_expect);
+    ASSERT_EQUAL(all_domens.usual_domens, usual_domens_expect);
 }
 
-void TestComputeStats()
+void TestFilter()
 {
-    const AgeStats stats = ComputeStats(etalon_persons);
+    {
+        istringstream iss(R"(
+            4
+            ya.ru
+            maps.me
+            m.ya.ru
+            com
+            7
+            ya.ru
+            ya.com
+            m.maps.me
+            moscow.m.ya.ru
+            maps.com
+            maps.ru
+            ya.ya
+        )");
 
-    ASSERT_EQUAL(stats.females, 40);
-    ASSERT_EQUAL(stats.males, 55);
-    ASSERT_EQUAL(stats.total, 40);
-    ASSERT_EQUAL(stats.unemployed_females, 80);
-    ASSERT_EQUAL(stats.unemployed_males, 78);
-    ASSERT_EQUAL(stats.employed_females, 40);
-    ASSERT_EQUAL(stats.employed_males, 55);
-}
+        const AllDomens all_domens = Parse(iss);
+        const vector<string> good_bad = Filter(all_domens);
 
-void TestPrintStats()
-{
-    const AgeStats stats = ComputeStats(etalon_persons);
+        vector<string> expect{
+            "Bad", "Bad", "Bad", "Bad", "Bad", "Good", "Good"
+        };
 
-    ostringstream oss;
+        ASSERT_EQUAL(good_bad, expect);
+    }
 
-    PrintStats(stats, oss);
+    {
+        istringstream iss(R"(
+            1
+            com
+            3
+            ya.com
+            ya.common
+            ya.common.com
+        )");
 
-    ostringstream oss_expect;
-    oss_expect << "Median age = "
-               << stats.total << endl
-               << "Median age for females = "
-               << stats.females << endl
-               << "Median age for males = "
-               << stats.males << endl
-               << "Median age for employed females = "
-               << stats.employed_females << endl
-               << "Median age for unemployed females = "
-               << stats.unemployed_females << endl
-               << "Median age for employed males = "
-               << stats.employed_males << endl
-               << "Median age for unemployed males = "
-               << stats.unemployed_males << endl;
+        const AllDomens all_domens = Parse(iss);
+        const vector<string> good_bad = Filter(all_domens);
 
-    ASSERT_EQUAL(oss.str(), oss_expect.str());
+        const vector<string> expect{
+            "Bad", "Good", "Bad"
+        };
+
+        ASSERT_EQUAL(good_bad, expect);
+    }
+
+    {
+        istringstream iss(R"(
+            7
+            common.com
+            pop
+            com.com
+            mem.sem.kem.pem
+            a
+            e
+            p
+            13
+            ya.com
+            ya.common
+            ya.common.com
+            com
+            common
+            pol.mem.sem.kem.pem.mol
+            mem.sem.kem.pem.mol
+            pol.mem.sem.kem.pem
+            pol.mem.sam.kem.pem
+            mem.sem.kem
+            poppop
+            po.p
+            pop.pop
+        )");
+
+        const AllDomens all_domens = Parse(iss);
+        const vector<string> good_bad = Filter(all_domens);
+
+        const vector<string> expect{
+            "Good", "Good", "Bad", "Good", "Good", "Bad", "Bad",
+            "Bad", "Good", "Good", "Good", "Bad", "Bad"
+        };
+
+        ASSERT_EQUAL(good_bad, expect);
+    }
 }
 
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestComputeMedianAge);
-    RUN_TEST(tr, TestReadPersons);
-    RUN_TEST(tr, TestComputeStats);
-    RUN_TEST(tr, TestPrintStats);
+    RUN_TEST(tr, TestParse);
+    RUN_TEST(tr, TestFilter);
 }
 
 void Profile()
