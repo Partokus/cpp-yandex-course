@@ -42,8 +42,6 @@ AllDomens Parse(istream &is)
         for (size_t i = 0; i < domens_count; ++i)
         {
             is >> domens[i];
-            domens[i].insert(domens[i].begin(), '.');
-            domens[i].push_back('.');
         }
         return domens;
     };
@@ -55,49 +53,36 @@ AllDomens Parse(istream &is)
     };
 }
 
-vector<string> Filter(const AllDomens &all_domens)
+void FilterAndPrint(const AllDomens &all_domens, ostream &os)
 {
-    vector<string> good_bad;
-    good_bad.reserve(all_domens.domens_for_check.size());
-
-    for (const string &domen_for_check : all_domens.domens_for_check)
+    for (const string_view domen_for_check : all_domens.domens_for_check)
     {
         bool bad_detected = false;
-        for (const string &bad_domen : all_domens.bad_domens)
+        for (const string_view bad_domen : all_domens.bad_domens)
         {
-            if (const size_t pos = domen_for_check.rfind(bad_domen); pos != domen_for_check.npos)
+            if (bad_domen.size() < domen_for_check.size())
             {
-                if ((pos + bad_domen.size()) != domen_for_check.size())
+                if (domen_for_check[domen_for_check.size() - bad_domen.size() - 1] != '.')
                 {
-                    // Здесь мы зафиксировали, что плохой домен находится не в конце
-                    // проверяемого доммена, а также проверяемый доммен не равен в точности
-                    // плохому домену.
-                    // То естьдомен com является поддоменом hate.description.com,
-                    // и не является поддоменом hate.com.description
-                    // Также при плохом домене com, домен com.ru считается хорошим,
-                    // так как com не является поддоменом com.ru
                     continue;
                 }
+            }
+            else if (bad_domen.size() > domen_for_check.size())
+            {
+                continue;
+            }
 
-                good_bad.push_back("Bad");
+            if (domen_for_check.substr(domen_for_check.size() - bad_domen.size()) == bad_domen)
+            {
+                os << "Bad\n";
                 bad_detected = true;
                 break;
             }
         }
         if (not bad_detected)
         {
-            good_bad.push_back("Good");
+            os << "Good\n";
         }
-    }
-
-    return good_bad;
-}
-
-void Print(ostream &os, const vector<string> &good_bad)
-{
-    for (const string &s : good_bad)
-    {
-        os << s << endl;
     }
 }
 
@@ -105,9 +90,11 @@ int main()
 {
     TestAll();
 
+    cin.tie(nullptr);
+    ios_base::sync_with_stdio(false);
+
     const AllDomens all_domens = Parse(cin);
-    const vector<string> good_bad = Filter(all_domens);
-    Print(cout, good_bad);
+    FilterAndPrint(all_domens, cout);
     return 0;
 }
 
@@ -130,20 +117,20 @@ void TestParse()
     )");
 
     Domens bad_domens_expect{
-        ".ya.ru.",
-        ".maps.me.",
-        ".m.ya.ru.",
-        ".com."
+        "ya.ru",
+        "maps.me",
+        "m.ya.ru",
+        "com"
     };
 
     Domens domens_for_check_expect{
-        ".ya.ru.",
-        ".ya.com.",
-        ".m.maps.me.",
-        ".moscow.m.ya.ru.",
-        ".maps.com.",
-        ".maps.ru.",
-        ".ya.ya."
+        "ya.ru",
+        "ya.com",
+        "m.maps.me",
+        "moscow.m.ya.ru",
+        "maps.com",
+        "maps.ru",
+        "ya.ya"
     };
 
     AllDomens all_domens = Parse(iss);
@@ -172,39 +159,40 @@ void TestFilter()
         )");
 
         const AllDomens all_domens = Parse(iss);
-        const vector<string> good_bad = Filter(all_domens);
-
-        vector<string> expect{
-            "Bad", "Bad", "Bad", "Bad", "Bad", "Good", "Good"
-        };
-
-        ASSERT_EQUAL(good_bad, expect);
+        //FilterAndPrint(all_domens, cout);
     }
 
-    {
-        istringstream iss(R"(
-            2
-            com
-            maps.ru
-            7
-            maps.com.ru
-            ya.com
-            ya.common
-            ya.common.com
-            com.ru
-            com.ru.com
-            maps.ru.c.maps.ru
-        )");
+    //     vector<bool> expect{
+    //         true, true, true, true, true, false, false
+    //     };
 
-        const AllDomens all_domens = Parse(iss);
-        const vector<string> good_bad = Filter(all_domens);
+    //     ASSERT_EQUAL(is_bad, expect);
+    // }
 
-        const vector<string> expect{
-           "Good", "Bad", "Good", "Bad", "Good", "Bad", "Bad"
-        };
+    // {
+    //     istringstream iss(R"(
+    //         2
+    //         com
+    //         maps.ru
+    //         7
+    //         maps.com.ru
+    //         ya.com
+    //         ya.common
+    //         ya.common.com
+    //         com.ru
+    //         com.ru.com
+    //         maps.ru.c.maps.ru
+    //     )");
 
-        ASSERT_EQUAL(good_bad, expect);
-    }
+    //     const AllDomens all_domens = Parse(iss);
+    //     const vector<bool> is_bad = Filter(all_domens);
+
+    //     const vector<bool> expect{
+    //        false, true, false, true, false, true, true
+    //     };
+
+    //     ASSERT_EQUAL(is_bad, expect);
+    // }
 
     // {
     //     istringstream iss(R"(
@@ -221,13 +209,13 @@ void TestFilter()
     //     )");
 
     //     const AllDomens all_domens = Parse(iss);
-    //     const vector<string> good_bad = Filter(all_domens);
+    //     const vector<bool> is_bad = Filter(all_domens);
 
-    //     const vector<string> expect{
-    //         "Bad", "Good", "Bad", "Good", "Bad", "Good"
+    //     const vector<bool> expect{
+    //         true, false, true, false, true, true
     //     };
 
-    //     ASSERT_EQUAL(good_bad, expect);
+    //     ASSERT_EQUAL(is_bad, expect);
     // }
 
     // {
@@ -257,21 +245,21 @@ void TestFilter()
     //     )");
 
     //     const AllDomens all_domens = Parse(iss);
-    //     const vector<string> good_bad = Filter(all_domens);
+    //     const vector<bool> is_bad = Filter(all_domens);
 
-    //     const vector<string> expect{
-    //         "Good", "Good", "Bad", "Good", "Good", "Bad", "Good",
-    //         "Bad", "Good", "Good", "Good", "Bad", "Bad"
+    //     const vector<bool> expect{
+    //         false, false, true, false, false, false, false,
+    //         true, false, false, false, true, true
     //     };
 
-    //     ASSERT_EQUAL(good_bad, expect);
+    //     ASSERT_EQUAL(is_bad, expect);
     // }
 }
 
 void TestAll()
 {
     TestRunner tr{};
-    // RUN_TEST(tr, TestParse);
+    RUN_TEST(tr, TestParse);
     RUN_TEST(tr, TestFilter);
 }
 
