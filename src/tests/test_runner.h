@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <set>
 #include <string>
 #include <vector>
@@ -75,6 +76,23 @@ ostream &operator<<(ostream &os, const map<K, V> &m)
         }
         first = false;
         os << kv.first << ": " << kv.second;
+    }
+    return os << "}";
+}
+
+template <class T>
+ostream &operator<<(ostream &os, const unordered_set<T> &s)
+{
+    os << "{";
+    bool first = true;
+    for (const auto &x : s)
+    {
+        if (!first)
+        {
+            os << ", ";
+        }
+        first = false;
+        os << x;
     }
     return os << "}";
 }
