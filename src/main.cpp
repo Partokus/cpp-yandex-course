@@ -261,8 +261,7 @@ void TestParse()
         Domain{"ya.ru"},
         Domain{"maps.me"},
         Domain{"m.ya.ru"},
-        Domain{"com"}
-    };
+        Domain{"com"}};
 
     vector<Domain> domens_for_check_expect{
         Domain{"ya.ru"},
@@ -271,8 +270,7 @@ void TestParse()
         Domain{"moscow.m.ya.ru"},
         Domain{"maps.com"},
         Domain{"maps.ru"},
-        Domain{"ya.ya"}
-    };
+        Domain{"ya.ya"}};
 
     vector<Domain> bad_domens = ReadDomains(iss);
     vector<Domain> domens_for_check = ReadDomains(iss);
@@ -305,8 +303,7 @@ void TestFilter()
         vector<bool> is_good = CheckDomains(banned_domains, domains_to_check);
 
         const vector<bool> expect{
-           false, false, false, false, false, true, true
-        };
+            false, false, false, false, false, true, true};
 
         ASSERT_EQUAL(is_good, expect);
     }
@@ -331,8 +328,7 @@ void TestFilter()
         const vector<bool> is_good = CheckDomains(banned_domains, domains_to_check);
 
         const vector<bool> expect{
-           true, false, true, false, true, false, false
-        };
+            true, false, true, false, true, false, false};
 
         ASSERT_EQUAL(is_good, expect);
     }
@@ -356,8 +352,7 @@ void TestFilter()
         const vector<bool> is_good = CheckDomains(banned_domains, domains_to_check);
 
         const vector<bool> expect{
-            false, true, false, true, false, false
-        };
+            false, true, false, true, false, false};
 
         ASSERT_EQUAL(is_good, expect);
     }
@@ -394,8 +389,7 @@ void TestFilter()
 
         const vector<bool> expect{
             true, true, false, true, true, true, true,
-            false, true, true, true, false, false
-        };
+            false, true, true, true, false, false};
 
         ASSERT_EQUAL(is_good, expect);
 
