@@ -24,97 +24,207 @@ using namespace std;
 void TestAll();
 void Profile();
 
-struct Domens
+template <typename It>
+class Range
 {
-    unordered_set<string> bad;
-    vector<string> for_check;
+public:
+    Range(It begin, It end) : begin_(begin), end_(end) {}
+    It begin() const { return begin_; }
+    It end() const { return end_; }
+
+private:
+    It begin_;
+    It end_;
 };
 
-Domens Parse(istream &is)
+pair<string_view, optional<string_view>> SplitTwoStrict(string_view s, string_view delimiter = " ")
 {
-    Domens result;
-
-    size_t domens_count = 0U;
-    is >> domens_count;
-    for (size_t i = 0; i < domens_count; ++i)
+    const size_t pos = s.find(delimiter);
+    if (pos == s.npos)
     {
-        string domen;
-        is >> domen;
-        result.bad.insert(move(domen));
+        return {s, nullopt};
     }
-
-    is >> domens_count;
-    result.for_check.resize(domens_count);
-    for (size_t i = 0; i < domens_count; ++i)
+    else
     {
-        is >> result.for_check[i];
+        return {s.substr(0, pos), s.substr(pos + delimiter.length())};
     }
-
-    return result;
 }
 
-vector<string_view> SplitIntoSubdomens(string_view domen)
+vector<string_view> Split(string_view s, string_view delimiter = " ")
 {
-    vector<string_view> result{domen};
-
-    // rdot_pos - reverse dot position
-    for (size_t rdot_pos = domen.rfind('.', domen.npos);
-         rdot_pos != domen.npos;
-         rdot_pos = domen.rfind('.', rdot_pos - 1))
+    vector<string_view> parts;
+    if (s.empty())
     {
-        const string_view sub_domen = domen.substr(rdot_pos + 1);
-        result.push_back(sub_domen);
+        return parts;
     }
-
-    return result;
-}
-
-using IsBad = vector<bool>;
-
-IsBad Filter(const Domens &domens)
-{
-    IsBad result;
-    result.reserve(domens.for_check.size());
-
-    const unordered_set<string_view> bad_domens{domens.bad.cbegin(), domens.bad.cend()};
-
-    for (string_view domen_for_check : domens.for_check)
+    while (true)
     {
-        bool bad_detected = false;
-
-        vector<string_view> sub_domens = SplitIntoSubdomens(domen_for_check);
-
-        for (const string_view sub_domen : sub_domens)
+        const auto [lhs, rhs_opt] = SplitTwoStrict(s, delimiter);
+        parts.push_back(lhs);
+        if (!rhs_opt)
         {
-            if (bad_domens.find(sub_domen) != bad_domens.cend())
-            {
-                bad_detected = true;
-                result.push_back(true);
-                break;
-            }
+            break;
         }
-
-        if (not bad_detected)
-        {
-            result.push_back(false);
-        }
+        s = *rhs_opt;
     }
-
-    return result;
+    return parts;
 }
 
-void Print(ostream &os, const IsBad &is_bad)
+class Domain
 {
-    for (const bool bad : is_bad)
+public:
+    explicit Domain(string_view text)
     {
-        if (bad)
+        vector<string_view> parts = Split(text, ".");
+        parts_reversed_.assign(rbegin(parts), rend(parts));
+    }
+
+    size_t GetPartCount() const
+    {
+        return parts_reversed_.size();
+    }
+
+    auto GetParts() const
+    {
+        return Range(rbegin(parts_reversed_), rend(parts_reversed_));
+    }
+    auto GetReversedParts() const
+    {
+        return Range(begin(parts_reversed_), end(parts_reversed_));
+    }
+
+    bool operator==(const Domain &other) const
+    {
+        return parts_reversed_ == other.parts_reversed_;
+    }
+
+private:
+    vector<string> parts_reversed_;
+};
+
+ostream &operator<<(ostream &stream, const Domain &domain)
+{
+    bool first = true;
+    for (const string_view part : domain.GetParts())
+    {
+        if (!first)
         {
-            os << "Bad" << '\n';
+            stream << '.';
         }
         else
         {
-            os << "Good" << '\n';
+            first = false;
         }
+        stream << part;
+    }
+    return stream;
+}
+
+// domain is subdomain of itself
+bool IsSubdomain(const Domain &subdomain, const Domain &domain)
+{
+    const auto subdomain_reversed_parts = subdomain.GetReversedParts();
+    const auto domain_reversed_parts = domain.GetReversedParts();
+    return subdomain.GetPartCount() >= domain.GetPartCount() && equal(begin(domain_reversed_parts), end(domain_reversed_parts),
+                                                                      begin(subdomain_reversed_parts));
+}
+
+bool IsSubOrSuperDomain(const Domain &lhs, const Domain &rhs)
+{
+    return lhs.GetPartCount() >= rhs.GetPartCount()
+               ? IsSubdomain(lhs, rhs)
+               : IsSubdomain(rhs, lhs);
+}
+
+class DomainChecker
+{
+public:
+    template <typename InputIt>
+    DomainChecker(InputIt domains_begin, InputIt domains_end)
+    {
+        sorted_domains_.reserve(distance(domains_begin, domains_end));
+        for (const Domain &domain : Range(domains_begin, domains_end))
+        {
+            sorted_domains_.push_back(&domain);
+        }
+        sort(begin(sorted_domains_), end(sorted_domains_), IsDomainLess);
+        sorted_domains_ = AbsorbSubdomains(move(sorted_domains_));
+    }
+
+    // Check if candidate is subdomain of some domain
+    bool IsSubdomain(const Domain &candidate) const
+    {
+        const auto it = upper_bound(
+            begin(sorted_domains_), end(sorted_domains_),
+            &candidate, IsDomainLess);
+        if (it == begin(sorted_domains_))
+        {
+            return false;
+        }
+        return ::IsSubdomain(candidate, **prev(it));
+    }
+
+private:
+    vector<const Domain *> sorted_domains_;
+
+    static bool IsDomainLess(const Domain *lhs, const Domain *rhs)
+    {
+        const auto lhs_reversed_parts = lhs->GetReversedParts();
+        const auto rhs_reversed_parts = rhs->GetReversedParts();
+        return lexicographical_compare(
+            begin(lhs_reversed_parts), end(lhs_reversed_parts),
+            begin(rhs_reversed_parts), end(rhs_reversed_parts));
+    }
+
+    static vector<const Domain *> AbsorbSubdomains(vector<const Domain *> domains)
+    {
+        domains.erase(
+            unique(begin(domains), end(domains),
+                   [](const Domain *lhs, const Domain *rhs)
+                   {
+                       return IsSubOrSuperDomain(*lhs, *rhs);
+                   }),
+            end(domains));
+        return domains;
+    }
+};
+
+vector<Domain> ReadDomains(istream &in_stream = cin)
+{
+    vector<Domain> domains;
+
+    size_t count;
+    in_stream >> count;
+    domains.reserve(count);
+
+    for (size_t i = 0; i < count; ++i)
+    {
+        string domain_text;
+        in_stream >> domain_text;
+        domains.emplace_back(domain_text);
+    }
+    return domains;
+}
+
+vector<bool> CheckDomains(const vector<Domain> &banned_domains, const vector<Domain> &domains_to_check)
+{
+    const DomainChecker checker(begin(banned_domains), end(banned_domains));
+
+    vector<bool> check_results;
+    check_results.reserve(domains_to_check.size());
+    for (const Domain &domain_to_check : domains_to_check)
+    {
+        check_results.push_back(!checker.IsSubdomain(domain_to_check));
+    }
+
+    return check_results;
+}
+
+void PrintCheckResults(const vector<bool> &check_results, ostream &out_stream = cout)
+{
+    for (const bool check_result : check_results)
+    {
+        out_stream << (check_result ? "Good" : "Bad") << "\n";
     }
 }
 
@@ -122,179 +232,241 @@ int main()
 {
     TestAll();
 
-    cin.tie(nullptr);
-    ios_base::sync_with_stdio(false);
-
-    const Domens domens = Parse(cin);
-    const IsBad is_bad = Filter(domens);
-    Print(cout, is_bad);
+    const vector<Domain> banned_domains = ReadDomains();
+    const vector<Domain> domains_to_check = ReadDomains();
+    PrintCheckResults(CheckDomains(banned_domains, domains_to_check));
 
     return 0;
 }
 
-// void TestParse()
-// {
-//     istringstream iss(R"(
-//         4
-//         ya.ru
-//         maps.me
-//         m.ya.ru
-//         com
-//         7
-//         ya.ru
-//         ya.com
-//         m.maps.me
-//         moscow.m.ya.ru
-//         maps.com
-//         maps.ru
-//         ya.ya
-//     )");
+void TestParse()
+{
+    istringstream iss(R"(
+        4
+        ya.ru
+        maps.me
+        m.ya.ru
+        com
+        7
+        ya.ru
+        ya.com
+        m.maps.me
+        moscow.m.ya.ru
+        maps.com
+        maps.ru
+        ya.ya
+    )");
 
-//     unordered_set<string> bad_domens_expect{
-//         "ya.ru",
-//         "maps.me",
-//         "m.ya.ru",
-//         "com"
-//     };
+    vector<Domain> bad_domens_expect{
+        Domain{"ya.ru"},
+        Domain{"maps.me"},
+        Domain{"m.ya.ru"},
+        Domain{"com"}
+    };
 
-//     vector<string> domens_for_check_expect{
-//         "ya.ru",
-//         "ya.com",
-//         "m.maps.me",
-//         "moscow.m.ya.ru",
-//         "maps.com",
-//         "maps.ru",
-//         "ya.ya"
-//     };
+    vector<Domain> domens_for_check_expect{
+        Domain{"ya.ru"},
+        Domain{"ya.com"},
+        Domain{"m.maps.me"},
+        Domain{"moscow.m.ya.ru"},
+        Domain{"maps.com"},
+        Domain{"maps.ru"},
+        Domain{"ya.ya"}
+    };
 
-//     Domens domens = Parse(iss);
+    vector<Domain> bad_domens = ReadDomains(iss);
+    vector<Domain> domens_for_check = ReadDomains(iss);
 
-//     ASSERT_EQUAL(domens.bad, bad_domens_expect);
-//     ASSERT_EQUAL(domens.for_check, domens_for_check_expect);
-// }
+    ASSERT_EQUAL(bad_domens, bad_domens_expect);
+    ASSERT_EQUAL(domens_for_check, domens_for_check_expect);
+}
 
-// void TestFilter()
-// {
-//     {
-//         istringstream iss(R"(
-//             4
-//             ya.ru
-//             maps.me
-//             m.ya.ru
-//             com
-//             7
-//             ya.ru
-//             ya.com
-//             m.maps.me
-//             moscow.m.ya.ru
-//             maps.com
-//             maps.ru
-//             ya.ya
-//         )");
+void TestFilter()
+{
+    {
+        istringstream iss(R"(
+            4
+            ya.ru
+            maps.me
+            m.ya.ru
+            com
+            7
+            ya.ru
+            ya.com
+            m.maps.me
+            moscow.m.ya.ru
+            maps.com
+            maps.ru
+            ya.ya
+        )");
 
-//         const Domens domens = Parse(iss);
+        const vector<Domain> banned_domains = ReadDomains(iss);
+        const vector<Domain> domains_to_check = ReadDomains(iss);
+        vector<bool> is_good = CheckDomains(banned_domains, domains_to_check);
 
-//         const IsBad is_bad = Filter(domens);
+        const vector<bool> expect{
+           false, false, false, false, false, true, true
+        };
 
-//         const IsBad expect{
-//            true, true, true, true, true, false, false
-//         };
+        ASSERT_EQUAL(is_good, expect);
+    }
 
-//         ASSERT_EQUAL(is_bad, expect);
-//     }
+    {
+        istringstream iss(R"(
+            2
+            com
+            maps.ru
+            7
+            maps.com.ru
+            ya.com
+            ya.common
+            ya.common.com
+            com.ru
+            com.ru.com
+            maps.ru.c.maps.ru
+        )");
 
-//     {
-//         istringstream iss(R"(
-//             2
-//             com
-//             maps.ru
-//             7
-//             maps.com.ru
-//             ya.com
-//             ya.common
-//             ya.common.com
-//             com.ru
-//             com.ru.com
-//             maps.ru.c.maps.ru
-//         )");
+        const vector<Domain> banned_domains = ReadDomains(iss);
+        const vector<Domain> domains_to_check = ReadDomains(iss);
+        const vector<bool> is_good = CheckDomains(banned_domains, domains_to_check);
 
-//         const Domens domens = Parse(iss);
-//         const IsBad is_bad = Filter(domens);
+        const vector<bool> expect{
+           true, false, true, false, true, false, false
+        };
 
-//         const IsBad expect{
-//            false, true, false, true, false, true, true
-//         };
+        ASSERT_EQUAL(is_good, expect);
+    }
 
-//         ASSERT_EQUAL(is_bad, expect);
-//     }
+    {
+        istringstream iss(R"(
+            2
+            com
+            maps.ru
+            6
+            ya.com
+            ya.common
+            ya.common.com
+            com.ru
+            com.ru.com
+            maps.ru.c.maps.ru
+        )");
 
-//     {
-//         istringstream iss(R"(
-//             2
-//             com
-//             maps.ru
-//             6
-//             ya.com
-//             ya.common
-//             ya.common.com
-//             com.ru
-//             com.ru.com
-//             maps.ru.c.maps.ru
-//         )");
+        const vector<Domain> banned_domains = ReadDomains(iss);
+        const vector<Domain> domains_to_check = ReadDomains(iss);
+        const vector<bool> is_good = CheckDomains(banned_domains, domains_to_check);
 
-//         const Domens domens = Parse(iss);
-//         const IsBad is_bad = Filter(domens);
+        const vector<bool> expect{
+            false, true, false, true, false, false
+        };
 
-//         const IsBad expect{
-//             true, false, true, false, true, true
-//         };
+        ASSERT_EQUAL(is_good, expect);
+    }
 
-//         ASSERT_EQUAL(is_bad, expect);
-//     }
+    {
+        istringstream iss(R"(
+            7
+            common.com
+            pop
+            com.com
+            mem.sem.kem.pem
+            a
+            e
+            p
+            13
+            ya.com
+            ya.common
+            ya.common.com
+            com
+            common
+            pol.mem.sem.kem.pem.mol
+            mem.sem.kem.pem.mol
+            pol.mem.sem.kem.pem
+            pol.mem.sam.kem.pem
+            mem.sem.kem
+            poppop
+            po.p
+            pop.pop
+        )");
 
-//     {
-//         istringstream iss(R"(
-//             7
-//             common.com
-//             pop
-//             com.com
-//             mem.sem.kem.pem
-//             a
-//             e
-//             p
-//             13
-//             ya.com
-//             ya.common
-//             ya.common.com
-//             com
-//             common
-//             pol.mem.sem.kem.pem.mol
-//             mem.sem.kem.pem.mol
-//             pol.mem.sem.kem.pem
-//             pol.mem.sam.kem.pem
-//             mem.sem.kem
-//             poppop
-//             po.p
-//             pop.pop
-//         )");
+        const vector<Domain> banned_domains = ReadDomains(iss);
+        const vector<Domain> domains_to_check = ReadDomains(iss);
+        const vector<bool> is_good = CheckDomains(banned_domains, domains_to_check);
 
-//         const Domens domens = Parse(iss);
-//         const IsBad is_bad = Filter(domens);
+        const vector<bool> expect{
+            true, true, false, true, true, true, true,
+            false, true, true, true, false, false
+        };
 
-//         const IsBad expect{
-//             false, false, true, false, false, false, false,
-//             true, false, false, false, true, true
-//         };
+        ASSERT_EQUAL(is_good, expect);
 
-//         ASSERT_EQUAL(is_bad, expect);
-//     }
-// }
+        ostringstream oss;
+        PrintCheckResults(expect, oss);
+        ASSERT_EQUAL(oss.str(), "Good\nGood\nBad\nGood\nGood\nGood\nGood\nBad\nGood\nGood\nGood\nBad\nBad\n");
+    }
+
+    {
+        Domain domain{"ya.ru.com.mac"};
+
+        vector<string> expect_forward{"ya", "ru", "com", "mac"};
+        vector<string> expect_reverse{"mac", "com", "ru", "ya"};
+
+        const Range range_forward = domain.GetParts();
+        const Range range_reverse = domain.GetReversedParts();
+
+        ASSERT(std::equal(expect_forward.begin(), expect_forward.end(),
+                          range_forward.begin(), range_forward.end()));
+        ASSERT(std::equal(expect_reverse.begin(), expect_reverse.end(),
+                          range_reverse.begin(), range_reverse.end()));
+    }
+
+    {
+        Domain domain1{"ya.ru.com.mac"};
+        Domain domain2{"ya.ru.com.mac"};
+
+        ASSERT(IsSubdomain(domain1, domain2));
+        ASSERT(IsSubdomain(domain1, domain2));
+    }
+
+    {
+        Domain domain1{"ya.ru.com.mac"};
+        Domain domain2{"com.mac"};
+        Domain domain3{"com"};
+        Domain domain4{"ru.com"};
+
+        ASSERT(IsSubdomain(domain1, domain2));
+        ASSERT(not IsSubdomain(domain2, domain1));
+        ASSERT(not IsSubdomain(domain1, domain3));
+        ASSERT(not IsSubdomain(domain1, domain4));
+    }
+
+    {
+        vector<Domain> domains{
+            Domain{"ya.ru.com.mac"},
+            Domain{"m.maps.ru"},
+            Domain{"com.mac"},
+            Domain{"com"},
+            Domain{"mac.com"},
+        };
+
+        DomainChecker dc{domains.begin(), domains.end()};
+
+        ASSERT(dc.IsSubdomain(Domain{"ya.ru.com.mac"}));
+        ASSERT(dc.IsSubdomain(Domain{"m.maps.ru"}));
+        ASSERT(dc.IsSubdomain(Domain{"com.mac"}));
+        ASSERT(!dc.IsSubdomain(Domain{"com.mac.kak"}));
+        ASSERT(dc.IsSubdomain(Domain{"a.m.maps.ru"}));
+        ASSERT(!dc.IsSubdomain(Domain{"a.m.maps.ru.m"}));
+    }
+
+    {
+    }
+}
 
 void TestAll()
 {
     TestRunner tr{};
-    // RUN_TEST(tr, TestParse);
-    // RUN_TEST(tr, TestFilter);
+    RUN_TEST(tr, TestParse);
+    RUN_TEST(tr, TestFilter);
 }
 
 void Profile()
