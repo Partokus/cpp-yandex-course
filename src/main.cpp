@@ -223,6 +223,12 @@ void ProcessQuery(istream &is, ostream &os)
 
 int main()
 {
+    // для ускорения чтения данных отключается синхронизация
+    // cin и cout с stdio,
+    // а также выполняется отвязка cin от cout
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
     TestAll();
 
     ProcessQuery(cin, cout);
