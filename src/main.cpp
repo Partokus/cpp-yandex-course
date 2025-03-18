@@ -88,7 +88,7 @@ public:
 class PersonalBudjet
 {
 public:
-    void Earn(Date from, Date to, double value)
+    void Earn(const Date &from, const Date &to, double value)
     {
         _partial_sum_updated = false;
 
@@ -100,7 +100,7 @@ public:
         }
     }
 
-    void PayTax(Date from, Date to)
+    void PayTax(const Date &from, const Date &to)
     {
         _partial_sum_updated = false;
 
@@ -114,7 +114,7 @@ public:
         }
     }
 
-    double ComputeIncome(Date from, Date to)
+    double ComputeIncome(const Date &from, const Date &to)
     {
         auto it_from = _budjet.lower_bound(from);
         if (it_from == _budjet.cend())
