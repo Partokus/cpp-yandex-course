@@ -177,14 +177,9 @@ private:
 Date ParseDate(istream &is)
 {
     Date result;
-    string str;
+    char separ;
 
-    getline(is, str, '-');
-    result.year = stoi(str);
-    getline(is, str, '-');
-    result.month = stoi(str);
-    is >> str;
-    result.day = stoi(str);
+    is >> result.year >> separ >> result.month >> separ >> result.day;
 
     return result;
 }
@@ -226,8 +221,8 @@ int main()
     // для ускорения чтения данных отключается синхронизация
     // cin и cout с stdio,
     // а также выполняется отвязка cin от cout
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
+    // ios::sync_with_stdio(false);
+    // cin.tie(nullptr);
 
     TestAll();
 
