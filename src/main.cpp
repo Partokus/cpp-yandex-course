@@ -90,6 +90,11 @@ class PersonalBudjet
 public:
     void Earn(const Date &from, const Date &to, double value)
     {
+        if (value == 0.0)
+        {
+            return;
+        }
+
         _partial_sum_updated = false;
 
         const double value_for_day = value / static_cast<double>((ComputeDaysDiff(from, to) + 1));
@@ -102,15 +107,17 @@ public:
 
     void PayTax(const Date &from, const Date &to)
     {
-        _partial_sum_updated = false;
-
         static constexpr double TaxPay = 0.87; // 13%
 
         for (auto it = _budjet.lower_bound(from);
              it != _budjet.cend() and it->first <= to;
              ++it)
         {
-            it->second.value *= TaxPay;
+            if (it->second.value != 0.0)
+            {
+                it->second.value *= TaxPay;
+                _partial_sum_updated = false;
+            }
         }
     }
 
@@ -128,7 +135,7 @@ public:
 
         auto it_to = prev(_budjet.upper_bound(to));
 
-        if (not _partial_sum_updated)
+        if (from != to and not _partial_sum_updated)
         {
             UpdatePartialSum(_budjet);
             _partial_sum_updated = true;
@@ -221,8 +228,8 @@ int main()
     // для ускорения чтения данных отключается синхронизация
     // cin и cout с stdio,
     // а также выполняется отвязка cin от cout
-    // ios::sync_with_stdio(false);
-    // cin.tie(nullptr);
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
 
     TestAll();
 
