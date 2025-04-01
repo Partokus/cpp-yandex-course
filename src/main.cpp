@@ -629,20 +629,16 @@ public:
             Date date2{.day = 2, .month = 1, .year = 2000};
             Date date3{.day = 3, .month = 1, .year = 2000};
 
-            PersonalBudjet::ValueStat value_stat1{.value = 5, .partial_sum = 0};
-            PersonalBudjet::ValueStat value_stat2{.value = 10, .partial_sum = 0};
-            PersonalBudjet::ValueStat value_stat3{.value = 15, .partial_sum = 0};
-
-            pb._budjet[date1] = value_stat1;
+            pb.Earn(date1, date1, 5);
             pb.UpdatePartialSum(pb._budjet);
             ASSERT_EQUAL(pb._budjet[date1].partial_sum, 0);
 
-            pb._budjet[date2] = value_stat2;
+            pb.Earn(date2, date2, 10);
             pb.UpdatePartialSum(pb._budjet);
             ASSERT_EQUAL(pb._budjet[date1].partial_sum, 0);
             ASSERT_EQUAL(pb._budjet[date2].partial_sum, 5);
 
-            pb._budjet[date3] = value_stat3;
+            pb.Earn(date3, date3, 15);
             pb.UpdatePartialSum(pb._budjet);
             ASSERT_EQUAL(pb._budjet[date1].partial_sum, 0);
             ASSERT_EQUAL(pb._budjet[date2].partial_sum, 5);
@@ -699,116 +695,16 @@ void TestProcessQuery()
     ASSERT_EQUAL(oss.str(), expect);
 }
 
-void TestPersonalBudjet()
-{
-    {
-        PersonalBudjet pb{};
-        double value = double(10.9) / 10.0;
-        pb.Earn({2000, 1, 1}, {2000, 1, 10}, 10.9);
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2099, 12, 31}), value * 10, "PersonalBudjet 0");
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2000, 1, 1}), value * 1, "PersonalBudjet 1");
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2000, 1, 2}), value * 2, "PersonalBudjet 2");
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2000, 1, 10}), value * 10, "PersonalBudjet 3");
-        AssertEqual(pb.ComputeIncome({2000, 1, 8}, {2099, 12, 28}), value * 3, "PersonalBudjet 4");
-        AssertEqual(pb.ComputeIncome({2000, 1, 4}, {2000, 1, 7}), value * 4, "PersonalBudjet 5");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2000, 1, 1}, {2000, 1, 10}, 100);
-        AssertEqual(pb.ComputeIncome({2000, 1, 10}, {2000, 1, 12}), 10, "PersonalBudjet 6");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2003, 2, 27}, {2003, 3, 2}, 11.2);
-        AssertEqual(pb.ComputeIncome({2003, 2, 27}, {2003, 3, 2}), double{11.2}, "PersonalBudjet 7");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2000, 1, 1}, {2001, 1, 1}, 400);
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2001, 1, 1}), 399.9999999999986357579473, "PersonalBudjet 8");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2000, 1, 1}, {2000, 1, 15}, 65.0);
-        pb.Earn({2000, 2, 5}, {2000, 2, 15}, 30.0);
-        pb.Earn({2002, 6, 5}, {2002, 6, 20}, 35.0);
-        pb.Earn({2065, 6, 5}, {2065, 6, 20}, 40.0);
-        double value = 65.0 + 30.0 + 35.0 + 40.0;
-        double res = pb.ComputeIncome({2000, 1, 1}, {2099, 1, 1});
-        Assert(res >= (value - 0.1) and res <= (value + 0.1), "PersonalBudjet 9");
-        value = 65.0 + 30.0 + 35.0;
-        res = pb.ComputeIncome({2000, 1, 1}, {2005, 1, 1});
-        Assert(res >= (value - 0.1) and res <= (value + 0.1), "PersonalBudjet 10");
-        pb.Earn({2065, 6, 5}, {2065, 6, 20}, 40.0);
-        value = 80.0;
-        res = pb.ComputeIncome({2005, 1, 1}, {2099, 1, 1});
-        Assert(res >= (value - 0.1) and res <= (value + 0.1), "PersonalBudjet 11");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2000, 1, 1}, {2000, 1, 15}, 65.0);
-        pb.Earn({2000, 2, 5}, {2000, 2, 15}, 30.0);
-        pb.Earn({2002, 6, 5}, {2002, 6, 20}, 35.0);
-        pb.Earn({2065, 6, 5}, {2065, 6, 20}, 40.0);
-        double value = 65.0 + 30.0 + 35.0 + 40.0;
-        double res = pb.ComputeIncome({2000, 1, 1}, {2099, 1, 1});
-        Assert(res >= (value - 0.1) and res <= (value + 0.1), "PersonalBudjet 12");
-        value = 65.0 + 30.0 + 35.0;
-        res = pb.ComputeIncome({2000, 1, 1}, {2005, 1, 1});
-        Assert(res >= (value - 0.1) and res <= (value + 0.1), "PersonalBudjet 13");
-        pb.Earn({2065, 6, 5}, {2065, 6, 20}, 40.0);
-        value = 80.0;
-        res = pb.ComputeIncome({2005, 1, 1}, {2099, 1, 1});
-        Assert(res >= (value - 0.1) and res <= (value + 0.1), "PersonalBudjet 14");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2000, 1, 1}, {2099, 12, 31}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 30}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 29}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 28}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 27}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 26}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 25}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 24}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 23}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 22}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 21}, 30000.0);
-        pb.Earn({2000, 1, 1}, {2099, 12, 20}, 30000.0);
-        auto res = pb.ComputeIncome({2000, 1, 1}, {2099, 12, 29});
-        AssertEqual(res, 359997.5359119722270406783, "PersonalBudjet 15");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2000, 1, 2}, {2000, 1, 6}, 20);
-        AssertEqual(pb.ComputeIncome({2000, 1, 2}, {2001, 1, 1}), 20, "PersonalBudjet 16");
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2000, 1, 3}), 8, "PersonalBudjet 17");
-        pb.Earn({2000, 1, 3}, {2000, 1, 3}, 10);
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2001, 1, 1}), 30, "PersonalBudjet 18");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2000, 1, 1}, {2099, 12, 31}, 1000000.0);
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2099, 12, 31}), 999999.9999993942910805345, "PersonalBudjet 19");
-    }
-    {
-        PersonalBudjet pb{};
-        pb.Earn({2000, 1, 1}, {2099, 12, 31}, 1000000.0);
-        AssertEqual(pb.ComputeIncome({2000, 1, 1}, {2099, 12, 31}), 999999.9999993942910805345, "PersonalBudjet 20");
-    }
-}
-
 void TestAll()
 {
     TestRunner tr{};
-    // RUN_TEST(tr, TestPersonalBudjet);
     RUN_TEST(tr, TestProcessQuery);
     RUN_TEST(tr, TestDateAddDay);
     RUN_TEST(tr, PersonalBudjetTester::TestEarn);
     RUN_TEST(tr, PersonalBudjetTester::TestPayTax);
     RUN_TEST(tr, PersonalBudjetTester::TestComputeIncome);
-    // RUN_TEST(tr, PersonalBudjetTester::TestComputeIncomeFromValueStat);
-    // RUN_TEST(tr, PersonalBudjetTester::TestUpdatePartialSum);
+    RUN_TEST(tr, PersonalBudjetTester::TestComputeIncomeFromValueStat);
+    RUN_TEST(tr, PersonalBudjetTester::TestUpdatePartialSum);
 }
 
 void Profile()
