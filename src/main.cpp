@@ -121,25 +121,12 @@ class PersonalBudjet
 public:
     void Earn(const Date &from, const Date &to, double value)
     {
-        if (value == 0.0)
-        {
-            return;
-        }
+        EarnOrSpend(from, to, value, Action::Earn);
+    }
 
-        const double value_for_day = value / static_cast<double>((ComputeDaysDiff(from, to) + 1));
-
-        for (Date date = from; date <= to; date.AddDay())
-        {
-            _budjet[date].value += value_for_day;
-        }
-
-        if (_it_update_partial_sum_start_with != _budjet.end() and
-            from >= _it_update_partial_sum_start_with->first)
-        {
-            return;
-        }
-
-        _it_update_partial_sum_start_with = _budjet.find(from);
+    void Spend(const Date &from, const Date &to, double value)
+    {
+        EarnOrSpend(from, to, value, Action::Spend);
     }
 
     void PayTax(const Date &from, const Date &to, int percentage)
@@ -152,7 +139,7 @@ public:
              it != _budjet.cend() and it->first <= to;
              ++it)
         {
-            it->second.value *= tax_pay;
+            it->second.earned *= tax_pay;
         }
 
         if (_it_update_partial_sum_start_with != _budjet.end() and
@@ -192,7 +179,8 @@ private:
 
     struct ValueStat
     {
-        double value = 0.0;
+        double earned = 0.0;
+        double spent = 0.0;
         double partial_sum = 0.0;
     };
 
@@ -216,21 +204,52 @@ private:
         if (_it_update_partial_sum_start_with != _budjet.begin())
         {
             auto prev_it = prev(_it_update_partial_sum_start_with);
-            init_sum = prev_it->second.partial_sum + prev_it->second.value;
+            init_sum = prev_it->second.partial_sum + prev_it->second.earned;
         }
 
         accumulate(_it_update_partial_sum_start_with, _budjet.end(), init_sum,
             [](double sum, auto &p)
             {
                 p.second.partial_sum = sum;
-                return sum + p.second.value;
+                return sum + p.second.earned;
             }
         );
     }
 
     double ComputeIncome(const ValueStat &from, const ValueStat &to) const
     {
-        return to.partial_sum - from.partial_sum + to.value;
+        return to.partial_sum - from.partial_sum + to.earned;
+    }
+
+    enum class Action
+    {
+        Earn,
+        Spend
+    };
+
+    void EarnOrSpend(const Date &from, const Date &to, double value, Action action)
+    {
+        if (value == 0.0)
+        {
+            return;
+        }
+
+        const double value_for_day = value / static_cast<double>((ComputeDaysDiff(from, to) + 1));
+
+        if (action == Action::Earn)
+            for (Date date = from; date <= to; date.AddDay())
+                _budjet[date].earned += value_for_day;
+        else
+            for (Date date = from; date <= to; date.AddDay())
+                _budjet[date].spent += value_for_day;
+
+        if (_it_update_partial_sum_start_with != _budjet.end() and
+            from >= _it_update_partial_sum_start_with->first)
+        {
+            return;
+        }
+
+        _it_update_partial_sum_start_with = _budjet.find(from);
     }
 };
 
@@ -305,7 +324,7 @@ public:
                 Date{.day = 1, .month = 1, .year = 2000},
                 9.0
             );
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).value, 9.0);
+            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned, 9.0);
         }
         {
             PersonalBudjet pb;
@@ -314,17 +333,17 @@ public:
                 Date{.day = 3, .month = 1, .year = 2000},
                 9.0
             );
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).value, 3.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).value, 3.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).value, 3.0);
+            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned, 3.0);
+            ASSERT_EQUAL(pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).earned, 3.0);
+            ASSERT_EQUAL(pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).earned, 3.0);
             pb.Earn(
                 Date{.day = 1, .month = 1, .year = 2000},
                 Date{.day = 3, .month = 1, .year = 2000},
                 9.0
             );
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).value, 6.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).value, 6.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).value, 6.0);
+            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned, 6.0);
+            ASSERT_EQUAL(pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).earned, 6.0);
+            ASSERT_EQUAL(pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).earned, 6.0);
         }
         {
             PersonalBudjet pb;
@@ -333,11 +352,11 @@ public:
                 Date{.day = 3, .month = 1, .year = 2000},
                 8.4
             );
-            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).value;
+            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned;
             ASSERT(value > 2.7 and value < 2.9);
-            value = pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).value;
+            value = pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).earned;
             ASSERT(value > 2.7 and value < 2.9);
-            value = pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).value;
+            value = pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).earned;
             ASSERT(value > 2.7 and value < 2.9);
         }
     }
@@ -354,7 +373,7 @@ public:
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
                       Date{.day = 1, .month = 1, .year = 2000}, 13);
 
-            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}, 13).value;
+            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned;
             ASSERT_EQUAL(value, 8.7);
         }
         {
@@ -367,13 +386,13 @@ public:
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
                       Date{.day = 3, .month = 1, .year = 2000}, 13);
 
-            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).value;
+            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned;
             ASSERT(value > 2.6 and value < 2.62);
 
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
                       Date{.day = 3, .month = 1, .year = 2000}, 13);
 
-            value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).value;
+            value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned;
             ASSERT(value > 2.26 and value < 2.28);
         }
     }
@@ -411,7 +430,7 @@ public:
             ASSERT_EQUAL(income, 0.0);
 
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 2, .month = 1, .year = 2001});
+                      Date{.day = 2, .month = 1, .year = 2001}, 13);
 
             income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
                                       Date{.day = 1, .month = 1, .year = 2000});
@@ -422,14 +441,14 @@ public:
             ASSERT(income > 15.65 and income < 15.67);
 
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 2, .month = 1, .year = 2001});
+                      Date{.day = 2, .month = 1, .year = 2001}, 13);
 
             income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
                                       Date{.day = 2, .month = 1, .year = 2000});
             ASSERT(income > 13.61 and income < 13.63);
 
             pb.PayTax(Date{.day = 1, .month = 1, .year = 1999},
-                      Date{.day = 31, .month = 12, .year = 1999});
+                      Date{.day = 31, .month = 12, .year = 1999}, 13);
 
             income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
                                       Date{.day = 2, .month = 1, .year = 2000});
@@ -505,14 +524,14 @@ public:
             ASSERT_EQUAL(income, 500.0);
 
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2099});
+                      Date{.day = 1, .month = 1, .year = 2099}, 13);
 
             income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
                                       Date{.day = 1, .month = 1, .year = 2099});
             ASSERT(income > 434.0 and income < 436.0);
 
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2099});
+                      Date{.day = 1, .month = 1, .year = 2099}, 13);
 
             income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
                                       Date{.day = 1, .month = 1, .year = 2099});
@@ -549,13 +568,13 @@ public:
                 2.0
             );
             pb.PayTax(Date{.day = 2, .month = 1, .year = 2000},
-                      Date{.day = 2, .month = 1, .year = 2000});
+                      Date{.day = 2, .month = 1, .year = 2000}, 13);
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2000});
+                      Date{.day = 1, .month = 1, .year = 2000}, 13);
             pb.PayTax(Date{.day = 5, .month = 1, .year = 2000},
-                      Date{.day = 5, .month = 1, .year = 2000});
+                      Date{.day = 5, .month = 1, .year = 2000}, 13);
             pb.PayTax(Date{.day = 5, .month = 1, .year = 2000},
-                      Date{.day = 5, .month = 1, .year = 2099});
+                      Date{.day = 5, .month = 1, .year = 2099}, 13);
 
             double income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
                                              Date{.day = 2, .month = 1, .year = 2000});
@@ -582,7 +601,7 @@ public:
                                       Date{.day = 4, .month = 1, .year = 2099});
             ASSERT(income == 0.0);
             pb.PayTax(Date{.day = 3, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2099});
+                      Date{.day = 1, .month = 1, .year = 2099}, 13);
             income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
                                       Date{.day = 4, .month = 1, .year = 2000});
             ASSERT(income > 5.21 and income < 5.23);
@@ -599,7 +618,7 @@ public:
                                              Date{.day = 1, .month = 1, .year = 2000});
             ASSERT_EQUAL(income, 1.0);
             pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 31, .month = 12, .year = 2099});
+                      Date{.day = 31, .month = 12, .year = 2099}, 13);
             income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
                                       Date{.day = 1, .month = 1, .year = 2000});
             ASSERT_EQUAL(income, 0.87);
@@ -611,13 +630,13 @@ public:
         PersonalBudjet pb;
 
         {
-            PersonalBudjet::ValueStat from{.value = 5, .partial_sum = 5};
-            PersonalBudjet::ValueStat to{.value = 5, .partial_sum = 10};
+            PersonalBudjet::ValueStat from{.earned = 5, .partial_sum = 5};
+            PersonalBudjet::ValueStat to{.earned = 5, .partial_sum = 10};
             ASSERT_EQUAL(pb.ComputeIncome(from, to), 10);
         }
         {
-            PersonalBudjet::ValueStat from{.value = 5, .partial_sum = 5};
-            PersonalBudjet::ValueStat to{.value = 5, .partial_sum = 5};
+            PersonalBudjet::ValueStat from{.earned = 5, .partial_sum = 5};
+            PersonalBudjet::ValueStat to{.earned = 5, .partial_sum = 5};
             ASSERT_EQUAL(pb.ComputeIncome(from, to), 5);
         }
     }
@@ -680,11 +699,11 @@ void TestProcessQuery()
         8
         Earn 2000-01-02 2000-01-06 20
         ComputeIncome 2000-01-01 2001-01-01
-        PayTax 2000-01-02 2000-01-03
+        PayTax 2000-01-02 2000-01-03 13
         ComputeIncome 2000-01-01 2001-01-01
         Earn 2000-01-03 2000-01-03 10
         ComputeIncome 2000-01-01 2001-01-01
-        PayTax 2000-01-03 2000-01-03
+        PayTax 2000-01-03 2000-01-03 13
         ComputeIncome 2000-01-01 2001-01-01
     )");
 
@@ -700,13 +719,13 @@ void TestProcessQuery()
 void TestAll()
 {
     TestRunner tr{};
-    // RUN_TEST(tr, TestProcessQuery);
-    // RUN_TEST(tr, TestDateAddDay);
-    // RUN_TEST(tr, PersonalBudjetTester::TestEarn);
-    // RUN_TEST(tr, PersonalBudjetTester::TestPayTax);
-    // RUN_TEST(tr, PersonalBudjetTester::TestComputeIncome);
-    // RUN_TEST(tr, PersonalBudjetTester::TestComputeIncomeFromValueStat);
-    // RUN_TEST(tr, PersonalBudjetTester::TestUpdatePartialSum);
+    RUN_TEST(tr, TestProcessQuery);
+    RUN_TEST(tr, TestDateAddDay);
+    RUN_TEST(tr, PersonalBudjetTester::TestEarn);
+    RUN_TEST(tr, PersonalBudjetTester::TestPayTax);
+    RUN_TEST(tr, PersonalBudjetTester::TestComputeIncome);
+    RUN_TEST(tr, PersonalBudjetTester::TestComputeIncomeFromValueStat);
+    RUN_TEST(tr, PersonalBudjetTester::TestUpdatePartialSum);
 }
 
 void Profile()
