@@ -230,8 +230,7 @@ private:
 
     double ComputeIncome(const ValueStat &from, const ValueStat &to) const
     {
-        double result = to.partial_sum - from.partial_sum + to.value;
-        return result;
+        return to.partial_sum - from.partial_sum + to.value;
     }
 };
 
