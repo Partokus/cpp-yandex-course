@@ -131,7 +131,7 @@ public:
 
     void PayTax(const Date &from, const Date &to, int percentage)
     {
-        const double tax_pay = 1 - (percentage / 100.0);
+        const double tax_pay = 1.0 - (percentage / 100.0);
 
         auto begin = _budjet.lower_bound(from);
 
@@ -204,21 +204,21 @@ private:
         if (_it_update_partial_sum_start_with != _budjet.begin())
         {
             auto prev_it = prev(_it_update_partial_sum_start_with);
-            init_sum = prev_it->second.partial_sum + prev_it->second.earned;
+            init_sum = prev_it->second.partial_sum + prev_it->second.earned - prev_it->second.spent;
         }
 
         accumulate(_it_update_partial_sum_start_with, _budjet.end(), init_sum,
             [](double sum, auto &p)
             {
                 p.second.partial_sum = sum;
-                return sum + p.second.earned;
+                return sum + p.second.earned - p.second.spent;
             }
         );
     }
 
     double ComputeIncome(const ValueStat &from, const ValueStat &to) const
     {
-        return to.partial_sum - from.partial_sum + to.earned;
+        return to.partial_sum - from.partial_sum + to.earned - to.spent;
     }
 
     enum class Action
@@ -284,13 +284,19 @@ void ProcessQuery(istream &is, ostream &os)
             is >> value;
             pb.Earn(from, to, value);
         }
+        else if (query == "Spend")
+        {
+            double value = 0.0;
+            is >> value;
+            pb.Spend(from, to, value);
+        }
         else if (query == "ComputeIncome")
         {
             os << setprecision(25) << pb.ComputeIncome(from, to) << '\n';
         }
         else if (query == "PayTax")
         {
-            double percentage = 0.0;
+            int percentage = 0;
             is >> percentage;
             pb.PayTax(from, to, percentage);
         }
@@ -358,6 +364,39 @@ public:
             ASSERT(value > 2.7 and value < 2.9);
             value = pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).earned;
             ASSERT(value > 2.7 and value < 2.9);
+        }
+    }
+
+    static void TestSpend()
+    {
+        {
+            PersonalBudjet pb;
+            Date date{.day = 1, .month = 1, .year = 2000};
+            pb.Earn(date, date, 10.0);
+            pb.Spend(date, date, 10.0);
+            int income = pb.ComputeIncome(date, date);
+            ASSERT_EQUAL(income, 0.0);
+        }
+        {
+            PersonalBudjet pb;
+            Date date{.day = 1, .month = 1, .year = 2000};
+            pb.Earn(date, date, 10.0);
+            pb.Spend(date, date, 4.0);
+            int income = pb.ComputeIncome(date, date);
+            ASSERT_EQUAL(income, 6.0);
+            pb.Earn(date, date, 5.0);
+            income = pb.ComputeIncome(date, date);
+            ASSERT_EQUAL(income, 11.0);
+            pb.Spend(date, date, 2.0);
+            income = pb.ComputeIncome(date, date);
+            ASSERT_EQUAL(income, 9.0);
+        }
+        {
+            PersonalBudjet pb;
+            Date date{.day = 1, .month = 1, .year = 2000};
+            pb.Spend(date,date, 4.0);
+            int income = pb.ComputeIncome(date, date);
+            ASSERT_EQUAL(income, -4.0);
         }
     }
 
@@ -695,25 +734,48 @@ void TestDateAddDay()
 
 void TestProcessQuery()
 {
-    istringstream iss(R"(
-        8
-        Earn 2000-01-02 2000-01-06 20
-        ComputeIncome 2000-01-01 2001-01-01
-        PayTax 2000-01-02 2000-01-03 13
-        ComputeIncome 2000-01-01 2001-01-01
-        Earn 2000-01-03 2000-01-03 10
-        ComputeIncome 2000-01-01 2001-01-01
-        PayTax 2000-01-03 2000-01-03 13
-        ComputeIncome 2000-01-01 2001-01-01
-    )");
+    {
+        istringstream iss(R"(
+            8
+            Earn 2000-01-02 2000-01-06 20
+            ComputeIncome 2000-01-01 2001-01-01
+            PayTax 2000-01-02 2000-01-03 13
+            ComputeIncome 2000-01-01 2001-01-01
+            Earn 2000-01-03 2000-01-03 10
+            ComputeIncome 2000-01-01 2001-01-01
+            PayTax 2000-01-03 2000-01-03 13
+            ComputeIncome 2000-01-01 2001-01-01
+        )");
 
-    ostringstream oss;
+        ostringstream oss;
 
-    ProcessQuery(iss, oss);
+        ProcessQuery(iss, oss);
 
-    string expect = "20\n18.96000000000000085265128\n28.96000000000000085265128\n27.20759999999999934061634\n";
+        string expect = "20\n18.96000000000000085265128\n28.96000000000000085265128\n27.20759999999999934061634\n";
 
-    ASSERT_EQUAL(oss.str(), expect);
+        ASSERT_EQUAL(oss.str(), expect);
+    }
+    {
+        istringstream iss(R"(
+            8
+            Earn 2000-01-02 2000-01-06 20
+            ComputeIncome 2000-01-01 2001-01-01
+            PayTax 2000-01-02 2000-01-03 13
+            ComputeIncome 2000-01-01 2001-01-01
+            Spend 2000-12-30 2001-01-02 14
+            ComputeIncome 2000-01-01 2001-01-01
+            PayTax 2000-12-30 2000-12-30 13
+            ComputeIncome 2000-01-01 2001-01-01
+        )");
+
+        ostringstream oss;
+
+        ProcessQuery(iss, oss);
+
+        string expect = "20\n18.96000000000000085265128\n8.460000000000000852651283\n8.460000000000000852651283\n";
+
+        ASSERT_EQUAL(oss.str(), expect);
+    }
 }
 
 void TestAll()
@@ -722,6 +784,7 @@ void TestAll()
     RUN_TEST(tr, TestProcessQuery);
     RUN_TEST(tr, TestDateAddDay);
     RUN_TEST(tr, PersonalBudjetTester::TestEarn);
+    RUN_TEST(tr, PersonalBudjetTester::TestSpend);
     RUN_TEST(tr, PersonalBudjetTester::TestPayTax);
     RUN_TEST(tr, PersonalBudjetTester::TestComputeIncome);
     RUN_TEST(tr, PersonalBudjetTester::TestComputeIncomeFromValueStat);
