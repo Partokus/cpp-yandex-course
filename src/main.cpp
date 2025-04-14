@@ -26,761 +26,621 @@ using namespace std;
 void TestAll();
 void Profile();
 
+template <typename It>
+class Range
+{
+public:
+    Range(It begin, It end) : begin_(begin), end_(end) {}
+    It begin() const { return begin_; }
+    It end() const { return end_; }
+
+private:
+    It begin_;
+    It end_;
+};
+
+pair<string_view, optional<string_view>> SplitTwoStrict(string_view s, string_view delimiter = " ")
+{
+    const size_t pos = s.find(delimiter);
+    if (pos == s.npos)
+    {
+        return {s, nullopt};
+    }
+    else
+    {
+        return {s.substr(0, pos), s.substr(pos + delimiter.length())};
+    }
+}
+
+pair<string_view, string_view> SplitTwo(string_view s, string_view delimiter = " ")
+{
+    const auto [lhs, rhs_opt] = SplitTwoStrict(s, delimiter);
+    return {lhs, rhs_opt.value_or("")};
+}
+
+string_view ReadToken(string_view &s, string_view delimiter = " ")
+{
+    const auto [lhs, rhs] = SplitTwo(s, delimiter);
+    s = rhs;
+    return lhs;
+}
+
+int ConvertToInt(string_view str)
+{
+    // use std::from_chars when available to git rid of string copy
+    size_t pos;
+    const int result = stoi(string(str), &pos);
+    if (pos != str.length())
+    {
+        std::stringstream error;
+        error << "string " << str << " contains " << (str.length() - pos) << " trailing chars";
+        throw invalid_argument(error.str());
+    }
+    return result;
+}
+
+template <typename Number>
+void ValidateBounds(Number number_to_check, Number min_value, Number max_value)
+{
+    if (number_to_check < min_value || number_to_check > max_value)
+    {
+        std::stringstream error;
+        error << number_to_check << " is out of [" << min_value << ", " << max_value << "]";
+        throw out_of_range(error.str());
+    }
+}
+
+struct IndexSegment
+{
+    size_t left;
+    size_t right;
+
+    size_t length() const
+    {
+        return right - left;
+    }
+    bool empty() const
+    {
+        return length() == 0;
+    }
+
+    bool Contains(IndexSegment other) const
+    {
+        return left <= other.left && other.right <= right;
+    }
+};
+
+IndexSegment IntersectSegments(IndexSegment lhs, IndexSegment rhs)
+{
+    const size_t left = max(lhs.left, rhs.left);
+    const size_t right = min(lhs.right, rhs.right);
+    return {left, max(left, right)};
+}
+
+bool AreSegmentsIntersected(IndexSegment lhs, IndexSegment rhs)
+{
+    return !(lhs.right <= rhs.left || rhs.right <= lhs.left);
+}
+
+struct BulkMoneyAdder
+{
+    double delta = 0.0;
+};
+
+struct BulkMoneySpender
+{
+    double delta = 0.0;
+};
+
+struct BulkTaxApplier
+{
+    size_t tax_percentage = 0;
+    uint32_t count = 0;
+
+    double ComputeFactor() const
+    {
+        const double factor = 1.0 - tax_percentage / 100.0;
+        return pow(factor, count);
+    }
+};
+
+class BulkLinearUpdater
+{
+public:
+    BulkLinearUpdater() = default;
+
+    BulkLinearUpdater(const BulkMoneyAdder &add)
+        : add_(add)
+    {
+    }
+
+    BulkLinearUpdater(const BulkMoneySpender &spend)
+        : spend_(spend)
+    {
+    }
+
+    BulkLinearUpdater(const BulkTaxApplier &tax)
+        : tax_(tax)
+    {
+    }
+
+    void CombineWith(const BulkLinearUpdater &other)
+    {
+        tax_.count += other.tax_.count;
+        add_.delta = add_.delta * other.tax_.ComputeFactor() + other.add_.delta;
+        spend_.delta += other.spend_.delta;
+    }
+
+    double Collapse(double origin, IndexSegment segment) const
+    {
+        return origin * tax_.ComputeFactor() + add_.delta * segment.length() - spend_.delta * segment.length();
+    }
+
+private:
+    // apply tax first, then add
+    BulkTaxApplier tax_;
+    BulkMoneyAdder add_;
+    BulkMoneySpender spend_;
+};
+
+template <typename Data, typename BulkOperation>
+class SummingSegmentTree
+{
+public:
+    SummingSegmentTree(size_t size) : root_(Build({0, size})) {}
+
+    Data ComputeSum(IndexSegment segment) const
+    {
+        return this->TraverseWithQuery(root_, segment, ComputeSumVisitor{});
+    }
+
+    void AddBulkOperation(IndexSegment segment, const BulkOperation &operation)
+    {
+        this->TraverseWithQuery(root_, segment, AddBulkOperationVisitor{operation});
+    }
+
+private:
+    struct Node;
+    using NodeHolder = unique_ptr<Node>;
+
+    struct Node
+    {
+        NodeHolder left;
+        NodeHolder right;
+        IndexSegment segment;
+        Data data;
+        BulkOperation postponed_bulk_operation;
+    };
+
+    NodeHolder root_;
+
+    static NodeHolder Build(IndexSegment segment)
+    {
+        if (segment.empty())
+        {
+            return nullptr;
+        }
+        else if (segment.length() == 1)
+        {
+            return make_unique<Node>(Node{
+                .left = nullptr,
+                .right = nullptr,
+                .segment = segment,
+            });
+        }
+        else
+        {
+            const size_t middle = segment.left + segment.length() / 2;
+            return make_unique<Node>(Node{
+                .left = Build({segment.left, middle}),
+                .right = Build({middle, segment.right}),
+                .segment = segment,
+            });
+        }
+    }
+
+    template <typename Visitor>
+    static typename Visitor::ResultType TraverseWithQuery(const NodeHolder &node, IndexSegment query_segment, Visitor visitor)
+    {
+        if (!node || !AreSegmentsIntersected(node->segment, query_segment))
+        {
+            return visitor.ProcessEmpty(node);
+        }
+        else
+        {
+            PropagateBulkOperation(node);
+            if (query_segment.Contains(node->segment))
+            {
+                return visitor.ProcessFull(node);
+            }
+            else
+            {
+                if constexpr (is_void_v<typename Visitor::ResultType>)
+                {
+                    TraverseWithQuery(node->left, query_segment, visitor);
+                    TraverseWithQuery(node->right, query_segment, visitor);
+                    return visitor.ProcessPartial(node, query_segment);
+                }
+                else
+                {
+                    return visitor.ProcessPartial(
+                        node, query_segment,
+                        TraverseWithQuery(node->left, query_segment, visitor),
+                        TraverseWithQuery(node->right, query_segment, visitor));
+                }
+            }
+        }
+    }
+
+    class ComputeSumVisitor
+    {
+    public:
+        using ResultType = Data;
+
+        Data ProcessEmpty(const NodeHolder &) const
+        {
+            return {};
+        }
+
+        Data ProcessFull(const NodeHolder &node) const
+        {
+            return node->data;
+        }
+
+        Data ProcessPartial(const NodeHolder &, IndexSegment, const Data &left_result, const Data &right_result) const
+        {
+            return left_result + right_result;
+        }
+    };
+
+    class AddBulkOperationVisitor
+    {
+    public:
+        using ResultType = void;
+
+        explicit AddBulkOperationVisitor(const BulkOperation &operation)
+            : operation_(operation)
+        {
+        }
+
+        void ProcessEmpty(const NodeHolder &) const {}
+
+        void ProcessFull(const NodeHolder &node) const
+        {
+            node->postponed_bulk_operation.CombineWith(operation_);
+            node->data = operation_.Collapse(node->data, node->segment);
+        }
+
+        void ProcessPartial(const NodeHolder &node, IndexSegment) const
+        {
+            node->data = (node->left ? node->left->data : Data()) + (node->right ? node->right->data : Data());
+        }
+
+    private:
+        const BulkOperation &operation_;
+    };
+
+    static void PropagateBulkOperation(const NodeHolder &node)
+    {
+        for (auto *child_ptr : {node->left.get(), node->right.get()})
+        {
+            if (child_ptr)
+            {
+                child_ptr->postponed_bulk_operation.CombineWith(node->postponed_bulk_operation);
+                child_ptr->data = node->postponed_bulk_operation.Collapse(child_ptr->data, child_ptr->segment);
+            }
+        }
+        node->postponed_bulk_operation = BulkOperation();
+    }
+};
+
 class Date
 {
 public:
+    static Date FromString(string_view str)
+    {
+        const int year = ConvertToInt(ReadToken(str, "-"));
+        const int month = ConvertToInt(ReadToken(str, "-"));
+        ValidateBounds(month, 1, 12);
+        const int day = ConvertToInt(str);
+        ValidateBounds(day, 1, 31);
+        return {year, month, day};
+    }
+
+    // Weird legacy, can't wait for std::chrono::year_month_day
     time_t AsTimestamp() const
     {
         std::tm t;
         t.tm_sec = 0;
         t.tm_min = 0;
         t.tm_hour = 0;
-        t.tm_mday = day;
-        t.tm_mon = month - 1;
-        t.tm_year = year - 1900;
+        t.tm_mday = day_;
+        t.tm_mon = month_ - 1;
+        t.tm_year = year_ - 1900;
         t.tm_isdst = 0;
         return mktime(&t);
     }
 
-    int day = 1U;
-    int month = 1U;
-    int year = 2000U;
-
-    bool operator<(const Date &other) const
-    {
-        return tie(year, month, day) < tie(other.year, other.month, other.day);
-    }
-
-    bool operator>=(const Date &other) const
-    {
-        return tie(year, month, day) >= tie(other.year, other.month, other.day);
-    }
-
-    bool operator==(const Date &other) const
-    {
-        return tie(year, month, day) == tie(other.year, other.month, other.day);
-    }
-
-    bool operator<=(const Date &other) const
-    {
-        return tie(year, month, day) <= tie(other.year, other.month, other.day);
-    }
-
-    bool operator!=(const Date &other) const
-    {
-        return tie(year, month, day) != tie(other.year, other.month, other.day);
-    }
-
-    Date &AddDay()
-    {
-        if (day < 28)
-        {
-            ++day;
-            return *this;
-        }
-
-        int max_day = 0;
-        switch (month)
-        {
-        case 4:
-        case 6:
-        case 9:
-        case 11:
-            max_day = 30;
-            break;
-        case 2:
-            max_day = year % 4 == 0 ? 29 : 28;
-            break;
-        default:
-            max_day = 31;
-            break;
-        }
-
-        if (day == max_day)
-        {
-            day = 1;
-            if (month == 12)
-            {
-                month = 1;
-                ++year;
-            }
-            else
-                ++month;
-        }
-        else
-        {
-            ++day;
-        }
-
-        return *this;
-    }
-};
-
-class PersonalBudjet
-{
-public:
-    void Earn(const Date &from, const Date &to, double value)
-    {
-        EarnOrSpend(from, to, value, Action::Earn);
-    }
-
-    void Spend(const Date &from, const Date &to, double value)
-    {
-        EarnOrSpend(from, to, value, Action::Spend);
-    }
-
-    void PayTax(const Date &from, const Date &to, int percentage)
-    {
-        const double tax_pay = 1.0 - (percentage / 100.0);
-
-        auto begin = _budjet.lower_bound(from);
-
-        for (auto it = begin;
-             it != _budjet.cend() and it->first <= to;
-             ++it)
-        {
-            it->second.earned *= tax_pay;
-        }
-
-        if (_it_update_partial_sum_start_with != _budjet.end() and
-            from >= _it_update_partial_sum_start_with->first)
-        {
-            return;
-        }
-
-        _it_update_partial_sum_start_with = begin;
-    }
-
-    double ComputeIncome(const Date &from, const Date &to)
-    {
-        auto it_from = _budjet.lower_bound(from);
-        if (it_from == _budjet.cend() or to < it_from->first)
-            return 0.0;
-
-        auto it_to = prev(_budjet.upper_bound(to));
-
-        if (from != to and _it_update_partial_sum_start_with != _budjet.end())
-        {
-            UpdatePartialSum(_budjet);
-            _it_update_partial_sum_start_with = _budjet.end();
-        }
-
-        return ComputeIncome(it_from->second, it_to->second);
-    }
-
 private:
-    friend class PersonalBudjetTester;
+    int year_;
+    int month_;
+    int day_;
 
-    struct ValueStat
+    Date(int year, int month, int day)
+        : year_(year), month_(month), day_(day)
     {
-        double earned = 0.0;
-        double spent = 0.0;
-        double partial_sum = 0.0;
-    };
-
-    using Budjet = map<Date, ValueStat>;
-    Budjet _budjet;
-
-    Budjet::iterator _it_update_partial_sum_start_with = _budjet.end();
-
-    int ComputeDaysDiff(const Date &from, const Date &to) const
-    {
-        const time_t timestamp_to = to.AsTimestamp();
-        const time_t timestamp_from = from.AsTimestamp();
-        static constexpr int SecondsInDay = 60 * 60 * 24;
-        return (timestamp_to - timestamp_from) / SecondsInDay;
-    }
-
-    void UpdatePartialSum(map<Date, ValueStat> &budjet)
-    {
-        double init_sum = 0.0;
-
-        if (_it_update_partial_sum_start_with != _budjet.begin())
-        {
-            auto prev_it = prev(_it_update_partial_sum_start_with);
-            init_sum = prev_it->second.partial_sum + prev_it->second.earned - prev_it->second.spent;
-        }
-
-        accumulate(_it_update_partial_sum_start_with, _budjet.end(), init_sum,
-            [](double sum, auto &p)
-            {
-                p.second.partial_sum = sum;
-                return sum + p.second.earned - p.second.spent;
-            }
-        );
-    }
-
-    double ComputeIncome(const ValueStat &from, const ValueStat &to) const
-    {
-        return to.partial_sum - from.partial_sum + to.earned - to.spent;
-    }
-
-    enum class Action
-    {
-        Earn,
-        Spend
-    };
-
-    void EarnOrSpend(const Date &from, const Date &to, double value, Action action)
-    {
-        if (value == 0.0)
-            return;
-
-        const double value_for_day = value / static_cast<double>((ComputeDaysDiff(from, to) + 1));
-
-        if (action == Action::Earn)
-            for (Date date = from; date <= to; date.AddDay())
-                _budjet[date].earned += value_for_day;
-        else
-            for (Date date = from; date <= to; date.AddDay())
-                _budjet[date].spent += value_for_day;
-
-        if (_it_update_partial_sum_start_with != _budjet.end() and
-            from >= _it_update_partial_sum_start_with->first)
-        {
-            return;
-        }
-
-        _it_update_partial_sum_start_with = _budjet.find(from);
     }
 };
 
-Date ParseDate(istream &is)
+int ComputeDaysDiff(const Date &date_to, const Date &date_from)
 {
-    Date result;
-    char separ;
-
-    is >> result.year >> separ >> result.month >> separ >> result.day;
-
-    return result;
+    const time_t timestamp_to = date_to.AsTimestamp();
+    const time_t timestamp_from = date_from.AsTimestamp();
+    static constexpr int SECONDS_IN_DAY = 60 * 60 * 24;
+    return (timestamp_to - timestamp_from) / SECONDS_IN_DAY;
 }
 
-void ProcessQuery(istream &is, ostream &os)
+static const Date START_DATE = Date::FromString("2000-01-01");
+static const Date END_DATE = Date::FromString("2100-01-01");
+static const size_t DAY_COUNT = ComputeDaysDiff(END_DATE, START_DATE);
+
+size_t ComputeDayIndex(const Date &date)
 {
-    PersonalBudjet pb;
+    return ComputeDaysDiff(date, START_DATE);
+}
 
-    int query_count = 0;
-    is >> query_count;
+IndexSegment MakeDateSegment(const Date &date_from, const Date &date_to)
+{
+    return {ComputeDayIndex(date_from), ComputeDayIndex(date_to) + 1};
+}
 
-    for (int i = 0; i < query_count; ++i)
+class BudgetManager : public SummingSegmentTree<double, BulkLinearUpdater>
+{
+public:
+    BudgetManager() : SummingSegmentTree(DAY_COUNT) {}
+};
+
+struct Request;
+using RequestHolder = unique_ptr<Request>;
+
+struct Request
+{
+    enum class Type
     {
-        string query;
-        is >> query;
+        COMPUTE_INCOME,
+        EARN,
+        SPEND,
+        PAY_TAX
+    };
 
-        Date from = ParseDate(is);
-        Date to = ParseDate(is);
+    Request(Type type) : type(type) {}
+    static RequestHolder Create(Type type);
+    virtual void ParseFrom(string_view input) = 0;
+    virtual ~Request() = default;
 
-        if (query == "Earn")
+    const Type type;
+};
+
+const unordered_map<string_view, Request::Type> STR_TO_REQUEST_TYPE = {
+    {"ComputeIncome", Request::Type::COMPUTE_INCOME},
+    {"Earn", Request::Type::EARN},
+    {"Spend", Request::Type::SPEND},
+    {"PayTax", Request::Type::PAY_TAX},
+};
+
+template <typename ResultType>
+struct ReadRequest : Request
+{
+    using Request::Request;
+    virtual ResultType Process(const BudgetManager &manager) const = 0;
+};
+
+struct ModifyRequest : Request
+{
+    using Request::Request;
+    virtual void Process(BudgetManager &manager) const = 0;
+};
+
+struct ComputeIncomeRequest : ReadRequest<double>
+{
+    ComputeIncomeRequest() : ReadRequest(Type::COMPUTE_INCOME) {}
+    void ParseFrom(string_view input) override
+    {
+        date_from = Date::FromString(ReadToken(input));
+        date_to = Date::FromString(input);
+    }
+
+    double Process(const BudgetManager &manager) const override
+    {
+        return manager.ComputeSum(MakeDateSegment(date_from, date_to));
+    }
+
+    Date date_from = START_DATE;
+    Date date_to = START_DATE;
+};
+
+struct EarnRequest : ModifyRequest
+{
+    EarnRequest() : ModifyRequest(Type::EARN) {}
+    void ParseFrom(string_view input) override
+    {
+        date_from = Date::FromString(ReadToken(input));
+        date_to = Date::FromString(ReadToken(input));
+        income = ConvertToInt(input);
+    }
+
+    void Process(BudgetManager &manager) const override
+    {
+        const auto date_segment = MakeDateSegment(date_from, date_to);
+        const double daily_income = income * 1.0 / date_segment.length();
+        manager.AddBulkOperation(date_segment, BulkMoneyAdder{daily_income});
+    }
+
+    Date date_from = START_DATE;
+    Date date_to = START_DATE;
+    size_t income = 0;
+};
+
+struct SpendRequest : ModifyRequest
+{
+    SpendRequest() : ModifyRequest(Type::SPEND) {}
+    void ParseFrom(string_view input) override
+    {
+        date_from = Date::FromString(ReadToken(input));
+        date_to = Date::FromString(ReadToken(input));
+        spent = ConvertToInt(input);
+    }
+
+    void Process(BudgetManager &manager) const override
+    {
+        const auto date_segment = MakeDateSegment(date_from, date_to);
+        const double daily_spent = spent * 1.0 / date_segment.length();
+        manager.AddBulkOperation(date_segment, BulkMoneySpender{daily_spent});
+    }
+
+    Date date_from = START_DATE;
+    Date date_to = START_DATE;
+    size_t spent = 0;
+};
+
+struct PayTaxRequest : ModifyRequest
+{
+    PayTaxRequest() : ModifyRequest(Type::PAY_TAX) {}
+    void ParseFrom(string_view input) override
+    {
+        date_from = Date::FromString(ReadToken(input));
+        date_to = Date::FromString(ReadToken(input));
+        percentage = ConvertToInt(input);
+    }
+
+    void Process(BudgetManager &manager) const override
+    {
+        const BulkTaxApplier bulk_tax_applier{.tax_percentage = percentage, .count = 1};
+        manager.AddBulkOperation(MakeDateSegment(date_from, date_to), bulk_tax_applier);
+    }
+
+    Date date_from = START_DATE;
+    Date date_to = START_DATE;
+    size_t percentage = 0;
+};
+
+RequestHolder Request::Create(Request::Type type)
+{
+    switch (type)
+    {
+    case Request::Type::COMPUTE_INCOME:
+        return make_unique<ComputeIncomeRequest>();
+    case Request::Type::EARN:
+        return make_unique<EarnRequest>();
+    case Request::Type::SPEND:
+        return make_unique<SpendRequest>();
+    case Request::Type::PAY_TAX:
+        return make_unique<PayTaxRequest>();
+    default:
+        return nullptr;
+    }
+}
+
+template <typename Number>
+Number ReadNumberOnLine(istream &stream)
+{
+    Number number;
+    stream >> number;
+    string dummy;
+    getline(stream, dummy);
+    return number;
+}
+
+optional<Request::Type> ConvertRequestTypeFromString(string_view type_str)
+{
+    if (const auto it = STR_TO_REQUEST_TYPE.find(type_str);
+        it != STR_TO_REQUEST_TYPE.end())
+    {
+        return it->second;
+    }
+    else
+    {
+        return nullopt;
+    }
+}
+
+RequestHolder ParseRequest(string_view request_str)
+{
+    const auto request_type = ConvertRequestTypeFromString(ReadToken(request_str));
+    if (!request_type)
+    {
+        return nullptr;
+    }
+    RequestHolder request = Request::Create(*request_type);
+    if (request)
+    {
+        request->ParseFrom(request_str);
+    };
+    return request;
+}
+
+vector<RequestHolder> ReadRequests(istream &in_stream = cin)
+{
+    const size_t request_count = ReadNumberOnLine<size_t>(in_stream);
+
+    vector<RequestHolder> requests;
+    requests.reserve(request_count);
+
+    for (size_t i = 0; i < request_count; ++i)
+    {
+        string request_str;
+        getline(in_stream, request_str);
+        if (auto request = ParseRequest(request_str))
         {
-            double value = 0.0;
-            is >> value;
-            pb.Earn(from, to, value);
+            requests.push_back(move(request));
         }
-        else if (query == "Spend")
+    }
+    return requests;
+}
+
+vector<double> ProcessRequests(const vector<RequestHolder> &requests)
+{
+    vector<double> responses;
+    BudgetManager manager;
+    for (const auto &request_holder : requests)
+    {
+        if (request_holder->type == Request::Type::COMPUTE_INCOME)
         {
-            double value = 0.0;
-            is >> value;
-            pb.Spend(from, to, value);
+            const auto &request = static_cast<const ComputeIncomeRequest &>(*request_holder);
+            responses.push_back(request.Process(manager));
         }
-        else if (query == "ComputeIncome")
+        else
         {
-            os << setprecision(25) << pb.ComputeIncome(from, to) << '\n';
+            const auto &request = static_cast<const ModifyRequest &>(*request_holder);
+            request.Process(manager);
         }
-        else if (query == "PayTax")
-        {
-            int percentage = 0;
-            is >> percentage;
-            pb.PayTax(from, to, percentage);
-        }
+    }
+    return responses;
+}
+
+void PrintResponses(const vector<double> &responses, ostream &stream = cout)
+{
+    for (const double response : responses)
+    {
+        stream << response << endl;
     }
 }
 
 int main()
 {
-    // для ускорения чтения данных отключается синхронизация
-    // cin и cout с stdio,
-    // а также выполняется отвязка cin от cout
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-
     TestAll();
 
-    ProcessQuery(cin, cout);
+    cout.precision(25);
+    const auto requests = ReadRequests();
+    const auto responses = ProcessRequests(requests);
+    PrintResponses(responses);
 
     return 0;
-}
-
-class PersonalBudjetTester
-{
-public:
-    static void TestEarn()
-    {
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 1, .month = 1, .year = 2000},
-                9.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned, 9.0);
-        }
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 3, .month = 1, .year = 2000},
-                9.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned, 3.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).earned, 3.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).earned, 3.0);
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 3, .month = 1, .year = 2000},
-                9.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned, 6.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).earned, 6.0);
-            ASSERT_EQUAL(pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).earned, 6.0);
-        }
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 3, .month = 1, .year = 2000},
-                8.4);
-            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned;
-            ASSERT(value > 2.7 and value < 2.9);
-            value = pb._budjet.at(Date{.day = 2, .month = 1, .year = 2000}).earned;
-            ASSERT(value > 2.7 and value < 2.9);
-            value = pb._budjet.at(Date{.day = 3, .month = 1, .year = 2000}).earned;
-            ASSERT(value > 2.7 and value < 2.9);
-        }
-    }
-
-    static void TestSpend()
-    {
-        {
-            PersonalBudjet pb;
-            Date date{.day = 1, .month = 1, .year = 2000};
-            pb.Earn(date, date, 10.0);
-            pb.Spend(date, date, 10.0);
-            int income = pb.ComputeIncome(date, date);
-            ASSERT_EQUAL(income, 0.0);
-        }
-        {
-            PersonalBudjet pb;
-            Date date{.day = 1, .month = 1, .year = 2000};
-            pb.Earn(date, date, 10.0);
-            pb.Spend(date, date, 4.0);
-            int income = pb.ComputeIncome(date, date);
-            ASSERT_EQUAL(income, 6.0);
-            pb.Earn(date, date, 5.0);
-            income = pb.ComputeIncome(date, date);
-            ASSERT_EQUAL(income, 11.0);
-            pb.Spend(date, date, 2.0);
-            income = pb.ComputeIncome(date, date);
-            ASSERT_EQUAL(income, 9.0);
-        }
-        {
-            PersonalBudjet pb;
-            Date date{.day = 1, .month = 1, .year = 2000};
-            pb.Spend(date, date, 4.0);
-            int income = pb.ComputeIncome(date, date);
-            ASSERT_EQUAL(income, -4.0);
-        }
-        {
-            PersonalBudjet pb;
-            Date date1{.day = 1, .month = 1, .year = 2000};
-            Date date2{.day = 10, .month = 1, .year = 2000};
-            pb.Earn(date1, date2, 10.0);
-            double income = pb.ComputeIncome(date1, date2);
-            ASSERT_EQUAL(income, 10.0);
-            Date date3 = {.day = 4, .month = 1, .year = 2000};
-            Date date4 = {.day = 5, .month = 1, .year = 2000};
-            Date date5 = {.day = 3, .month = 1, .year = 2000};
-            pb.Spend(date3, date4, 1);
-            pb.Spend(date5, date5, 0.5);
-            income = pb.ComputeIncome(date1, date2);
-            ASSERT_EQUAL(income, 8.5);
-            Date date6 = {.day = 4, .month = 1, .year = 2000};
-            pb.Spend(date6, date6, 0.25);
-            income = pb.ComputeIncome(date1, date2);
-            ASSERT_EQUAL(income, 8.25);
-        }
-    }
-
-    static void TestPayTax()
-    {
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 1, .month = 1, .year = 2000},
-                10.0);
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2000}, 13);
-
-            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned;
-            ASSERT_EQUAL(value, 8.7);
-        }
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 3, .month = 1, .year = 2000},
-                9.0);
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 3, .month = 1, .year = 2000}, 13);
-
-            double value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned;
-            ASSERT(value > 2.6 and value < 2.62);
-
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 3, .month = 1, .year = 2000}, 13);
-
-            value = pb._budjet.at(Date{.day = 1, .month = 1, .year = 2000}).earned;
-            ASSERT(value > 2.26 and value < 2.28);
-        }
-    }
-
-    static void TestComputeIncome()
-    {
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 1, .month = 1, .year = 2000},
-                9.0);
-
-            double income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                             Date{.day = 1, .month = 1, .year = 2001});
-            ASSERT_EQUAL(income, 9.0);
-
-            pb.Earn(
-                Date{.day = 2, .month = 1, .year = 2000},
-                Date{.day = 2, .month = 1, .year = 2000},
-                9.0);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 1, .month = 1, .year = 2001});
-            ASSERT_EQUAL(income, 18.0);
-
-            income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
-                                      Date{.day = 2, .month = 1, .year = 2000});
-            ASSERT_EQUAL(income, 9.0);
-
-            income = pb.ComputeIncome(Date{.day = 3, .month = 1, .year = 2000},
-                                      Date{.day = 1, .month = 1, .year = 2001});
-            ASSERT_EQUAL(income, 0.0);
-
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 2, .month = 1, .year = 2001}, 13);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 1, .month = 1, .year = 2000});
-            ASSERT(income > 7.82 and income < 7.84);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 2, .month = 1, .year = 2000});
-            ASSERT(income > 15.65 and income < 15.67);
-
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 2, .month = 1, .year = 2001}, 13);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 2, .month = 1, .year = 2000});
-            ASSERT(income > 13.61 and income < 13.63);
-
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 1999},
-                      Date{.day = 31, .month = 12, .year = 1999}, 13);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 2, .month = 1, .year = 2000});
-            ASSERT(income > 13.61 and income < 13.63);
-        }
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 3, .month = 1, .year = 2000},
-                8.4);
-            double income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                             Date{.day = 1, .month = 1, .year = 2001});
-            ASSERT(income > 8.3 and income < 8.5);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 2, .month = 1, .year = 2000});
-            ASSERT(income > 5.5 and income < 5.7);
-        }
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 2, .month = 1, .year = 2000},
-                4.0);
-            pb.Earn(
-                Date{.day = 4, .month = 1, .year = 2000},
-                Date{.day = 4, .month = 1, .year = 2000},
-                2.0);
-            double income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                             Date{.day = 3, .month = 1, .year = 2000});
-            ASSERT_EQUAL(income, 4.0);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 4, .month = 1, .year = 2000});
-            ASSERT_EQUAL(income, 6.0);
-        }
-        {
-            PersonalBudjet pb;
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 31, .month = 12, .year = 2000},
-                366.0);
-            double income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                             Date{.day = 1, .month = 1, .year = 2000});
-            ASSERT_EQUAL(income, 1.0);
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2001},
-                Date{.day = 31, .month = 12, .year = 2001},
-                365.0);
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2001},
-                                      Date{.day = 1, .month = 1, .year = 2001});
-            ASSERT_EQUAL(income, 1.0);
-        }
-        {
-            PersonalBudjet pb;
-            for (int year = 2000; year <= 2099; ++year)
-            {
-                pb.Earn(
-                    Date{.day = 1, .month = 1, .year = year},
-                    Date{.day = 1, .month = 1, .year = year},
-                    5.0);
-            }
-
-            double income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                             Date{.day = 1, .month = 1, .year = 2099});
-            ASSERT_EQUAL(income, 500.0);
-
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2099}, 13);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 1, .month = 1, .year = 2099});
-            ASSERT(income > 434.0 and income < 436.0);
-
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2099}, 13);
-
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 1, .month = 1, .year = 2099});
-            ASSERT(income > 378.3 and income < 378.5);
-
-            for (int year = 2000; year <= 2099; ++year)
-            {
-                pb.Earn(
-                    Date{.day = 1, .month = 1, .year = year},
-                    Date{.day = 1, .month = 1, .year = year},
-                    5.0);
-            }
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 1, .month = 1, .year = 2099});
-            ASSERT(income > 878.3 and income < 878.5);
-        }
-        {
-            PersonalBudjet pb;
-
-            pb.Earn(
-                Date{.day = 2, .month = 1, .year = 2000},
-                Date{.day = 2, .month = 1, .year = 2000},
-                2.0);
-            pb.Earn(
-                Date{.day = 3, .month = 1, .year = 2000},
-                Date{.day = 3, .month = 1, .year = 2000},
-                2.0);
-            pb.Earn(
-                Date{.day = 4, .month = 1, .year = 2000},
-                Date{.day = 4, .month = 1, .year = 2000},
-                2.0);
-            pb.PayTax(Date{.day = 2, .month = 1, .year = 2000},
-                      Date{.day = 2, .month = 1, .year = 2000}, 13);
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2000}, 13);
-            pb.PayTax(Date{.day = 5, .month = 1, .year = 2000},
-                      Date{.day = 5, .month = 1, .year = 2000}, 13);
-            pb.PayTax(Date{.day = 5, .month = 1, .year = 2000},
-                      Date{.day = 5, .month = 1, .year = 2099}, 13);
-
-            double income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
-                                             Date{.day = 2, .month = 1, .year = 2000});
-            ASSERT(income > 1.73 and income < 1.75);
-
-            income = pb.ComputeIncome(Date{.day = 3, .month = 1, .year = 2000},
-                                      Date{.day = 3, .month = 1, .year = 2000});
-            ASSERT(income > 1.9 and income < 2.1);
-
-            income = pb.ComputeIncome(Date{.day = 4, .month = 1, .year = 2000},
-                                      Date{.day = 4, .month = 1, .year = 2000});
-            ASSERT(income > 1.9 and income < 2.1);
-
-            income = pb.ComputeIncome(Date{.day = 5, .month = 1, .year = 2000},
-                                      Date{.day = 5, .month = 1, .year = 2000});
-            ASSERT(income == 0.0);
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 1, .month = 1, .year = 2000});
-            ASSERT(income == 0.0);
-            income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
-                                      Date{.day = 4, .month = 1, .year = 2000});
-            ASSERT(income > 5.73 and income < 5.75);
-            income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2001},
-                                      Date{.day = 4, .month = 1, .year = 2099});
-            ASSERT(income == 0.0);
-            pb.PayTax(Date{.day = 3, .month = 1, .year = 2000},
-                      Date{.day = 1, .month = 1, .year = 2099}, 13);
-            income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
-                                      Date{.day = 4, .month = 1, .year = 2000});
-            ASSERT(income > 5.21 and income < 5.23);
-        }
-        {
-            PersonalBudjet pb;
-
-            pb.Earn(
-                Date{.day = 1, .month = 1, .year = 2000},
-                Date{.day = 31, .month = 12, .year = 2099},
-                36525);
-            double income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                             Date{.day = 1, .month = 1, .year = 2000});
-            ASSERT_EQUAL(income, 1.0);
-            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
-                      Date{.day = 31, .month = 12, .year = 2099}, 13);
-            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
-                                      Date{.day = 1, .month = 1, .year = 2000});
-            ASSERT_EQUAL(income, 0.87);
-        }
-    }
-
-    static void TestComputeIncomeFromValueStat()
-    {
-        PersonalBudjet pb;
-
-        {
-            PersonalBudjet::ValueStat from{.earned = 5, .partial_sum = 5};
-            PersonalBudjet::ValueStat to{.earned = 5, .partial_sum = 10};
-            ASSERT_EQUAL(pb.ComputeIncome(from, to), 10);
-        }
-        {
-            PersonalBudjet::ValueStat from{.earned = 5, .partial_sum = 5};
-            PersonalBudjet::ValueStat to{.earned = 5, .partial_sum = 5};
-            ASSERT_EQUAL(pb.ComputeIncome(from, to), 5);
-        }
-    }
-
-    static void TestUpdatePartialSum()
-    {
-        PersonalBudjet pb;
-
-        {
-            Date date1{.day = 1, .month = 1, .year = 2000};
-            Date date2{.day = 2, .month = 1, .year = 2000};
-            Date date3{.day = 3, .month = 1, .year = 2000};
-
-            pb.Earn(date1, date1, 5);
-            pb.UpdatePartialSum(pb._budjet);
-            ASSERT_EQUAL(pb._budjet[date1].partial_sum, 0);
-
-            pb.Earn(date2, date2, 10);
-            pb.UpdatePartialSum(pb._budjet);
-            ASSERT_EQUAL(pb._budjet[date1].partial_sum, 0);
-            ASSERT_EQUAL(pb._budjet[date2].partial_sum, 5);
-
-            pb.Earn(date3, date3, 15);
-            pb.UpdatePartialSum(pb._budjet);
-            ASSERT_EQUAL(pb._budjet[date1].partial_sum, 0);
-            ASSERT_EQUAL(pb._budjet[date2].partial_sum, 5);
-            ASSERT_EQUAL(pb._budjet[date3].partial_sum, 15);
-        }
-    }
-};
-
-void TestDateAddDay()
-{
-    {
-        Date date{.day = 31, .month = 3, .year = 2000};
-        date.AddDay();
-        ASSERT_EQUAL(date.day, 1);
-        ASSERT_EQUAL(date.month, 4);
-        ASSERT_EQUAL(date.year, 2000);
-    }
-    {
-        Date date{.day = 28, .month = 2, .year = 2000};
-        date.AddDay();
-        ASSERT_EQUAL(date.day, 29);
-        ASSERT_EQUAL(date.month, 2);
-        ASSERT_EQUAL(date.year, 2000);
-    }
-    {
-        Date date{.day = 28, .month = 2, .year = 2001};
-        date.AddDay();
-        ASSERT_EQUAL(date.day, 1);
-        ASSERT_EQUAL(date.month, 3);
-        ASSERT_EQUAL(date.year, 2001);
-    }
-}
-
-void TestProcessQuery()
-{
-    {
-        istringstream iss(R"(
-            8
-            Earn 2000-01-02 2000-01-06 20
-            ComputeIncome 2000-01-01 2001-01-01
-            PayTax 2000-01-02 2000-01-03 13
-            ComputeIncome 2000-01-01 2001-01-01
-            Earn 2000-01-03 2000-01-03 10
-            ComputeIncome 2000-01-01 2001-01-01
-            PayTax 2000-01-03 2000-01-03 13
-            ComputeIncome 2000-01-01 2001-01-01
-        )");
-
-        ostringstream oss;
-
-        ProcessQuery(iss, oss);
-
-        string expect = "20\n18.96000000000000085265128\n28.96000000000000085265128\n27.20759999999999934061634\n";
-
-        ASSERT_EQUAL(oss.str(), expect);
-    }
-    {
-        istringstream iss(R"(
-            8
-            Earn 2000-01-02 2000-01-06 20
-            ComputeIncome 2000-01-01 2001-01-01
-            PayTax 2000-01-02 2000-01-03 13
-            ComputeIncome 2000-01-01 2001-01-01
-            Spend 2000-12-30 2001-01-02 14
-            ComputeIncome 2000-01-01 2001-01-01
-            PayTax 2000-12-30 2000-12-30 13
-            ComputeIncome 2000-01-01 2001-01-01
-        )");
-
-        ostringstream oss;
-
-        ProcessQuery(iss, oss);
-
-        string expect = "20\n18.96000000000000085265128\n8.460000000000000852651283\n8.460000000000000852651283\n";
-
-        ASSERT_EQUAL(oss.str(), expect);
-    }
 }
 
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestProcessQuery);
-    RUN_TEST(tr, TestDateAddDay);
-    RUN_TEST(tr, PersonalBudjetTester::TestEarn);
-    RUN_TEST(tr, PersonalBudjetTester::TestSpend);
-    RUN_TEST(tr, PersonalBudjetTester::TestPayTax);
-    RUN_TEST(tr, PersonalBudjetTester::TestComputeIncome);
-    RUN_TEST(tr, PersonalBudjetTester::TestComputeIncomeFromValueStat);
-    RUN_TEST(tr, PersonalBudjetTester::TestUpdatePartialSum);
 }
 
 void Profile()
