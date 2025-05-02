@@ -177,6 +177,9 @@ public:
 
     void CombineWith(const BulkLinearUpdater &other)
     {
+        if (*this == BulkLinearUpdater{} and other == BulkLinearUpdater{})
+            return;
+
         cout << '\n';
         cout << "tax_.count = " << tax_.count << '\n';
         cout << "other.tax_.count = " << other.tax_.count << '\n';
@@ -208,7 +211,8 @@ public:
         cout << "origin.add = " << origin.add << '\n';
         cout << "origin.spend = " << origin.spend << '\n';
         cout << "tax_.ComputeFactor() = " << tax_.ComputeFactor() << '\n';
-        MoneyData result;
+        cout << "segment.length() = " << segment.length() << '\n';
+        MoneyData result{};
         result.add = origin.add * tax_.ComputeFactor() + add_.delta * segment.length();
         result.spend = origin.spend + spend_.delta * segment.length();
         // cout << "origin = " << origin << '\n';
@@ -228,6 +232,12 @@ private:
     BulkTaxApplier tax_;
     BulkMoneyAdder add_;
     BulkMoneySpender spend_;
+
+    bool operator==(const BulkLinearUpdater &o) const
+    {
+        return tax_.ComputeFactor() == o.tax_.ComputeFactor() && tax_.count == o.tax_.count &&
+               add_.delta == o.add_.delta && spend_.delta == o.spend_.delta;
+    }
 };
 
 template <typename Data, typename BulkOperation>
