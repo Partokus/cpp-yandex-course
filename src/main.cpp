@@ -122,6 +122,17 @@ bool AreSegmentsIntersected(IndexSegment lhs, IndexSegment rhs)
     return !(lhs.right <= rhs.left || rhs.right <= lhs.left);
 }
 
+struct MoneyData
+{
+    double add = 0.0;
+    double spend = 0.0;
+
+    MoneyData operator+(const MoneyData &o) const
+    {
+        return {add + o.add, spend + o.spend};
+    }
+};
+
 struct BulkMoneyAdder
 {
     double delta = 0.0;
@@ -166,14 +177,50 @@ public:
 
     void CombineWith(const BulkLinearUpdater &other)
     {
+        cout << '\n';
+        cout << "tax_.count = " << tax_.count << '\n';
+        cout << "other.tax_.count = " << other.tax_.count << '\n';
+        cout << "add_.delta = " << add_.delta << '\n';
+        cout << "other.add_.delta = " << other.add_.delta << '\n';
+        cout << "spend_.delta = " << spend_.delta << '\n';
+        cout << "other.spend_.delta = " << other.spend_.delta << '\n';
+        cout << '\n';
         tax_.count += other.tax_.count;
         add_.delta = add_.delta * other.tax_.ComputeFactor() + other.add_.delta;
         spend_.delta += other.spend_.delta;
     }
 
-    double Collapse(double origin, IndexSegment segment) const
+    MoneyData Collapse(MoneyData origin, IndexSegment segment) const
     {
-        return origin * tax_.ComputeFactor() + add_.delta * segment.length() - spend_.delta * segment.length();
+        // static size_t counter = 0U;
+        // cout << "counter = " << counter++ << '\n';
+        // cout << "origin = " << origin << '\n';
+        // cout << "origin * tax_.ComputeFactor() = " << origin * tax_.ComputeFactor() << '\n';
+        // cout << "tax_.ComputeFactor() = " << tax_.ComputeFactor() << '\n';
+        // cout << "segment.length() = " << segment.length() << '\n';
+        // cout << "add_.delta = " << add_.delta << '\n';
+        // cout << "add_.delta * segment.length() = " << add_.delta * segment.length() << '\n';
+        // cout << "spend_.delta = " << spend_.delta << '\n';
+        // cout << "spend_.delta * segment.length() = " << spend_.delta * segment.length() << '\n';
+        // cout << "result = " << origin * tax_.ComputeFactor() + add_.delta * segment.length() - spend_.delta * segment.length() << '\n';
+        // cout << endl;
+
+        cout << "origin.add = " << origin.add << '\n';
+        cout << "origin.spend = " << origin.spend << '\n';
+        cout << "tax_.ComputeFactor() = " << tax_.ComputeFactor() << '\n';
+        MoneyData result;
+        result.add = origin.add * tax_.ComputeFactor() + add_.delta * segment.length();
+        result.spend = origin.spend + spend_.delta * segment.length();
+        // cout << "origin = " << origin << '\n';
+        // cout << "tax_.ComputeFactor() = " << tax_.ComputeFactor() << '\n';
+        // cout << "spend_.delta = " << spend_.delta << '\n';
+        // double result = 0.0;
+        // result += origin * tax_.ComputeFactor();
+        // result += add_.delta * segment.length();
+        // result -= spend_.delta * segment.length();
+        // cout << "result = " << result << '\n';
+        // return origin * tax_.ComputeFactor() + add_.delta * segment.length();
+        return result;
     }
 
 private:
@@ -208,7 +255,7 @@ private:
         NodeHolder left;
         NodeHolder right;
         IndexSegment segment;
-        Data data;
+        MoneyData data;
         BulkOperation postponed_bulk_operation;
     };
 
@@ -284,11 +331,13 @@ private:
 
         Data ProcessFull(const NodeHolder &node) const
         {
-            return node->data;
+            MoneyData data = node->data;
+            return data.add - data.spend;
         }
 
         Data ProcessPartial(const NodeHolder &, IndexSegment, const Data &left_result, const Data &right_result) const
         {
+            // cout << "process partial = " << left_result + right_result << "\n\n";
             return left_result + right_result;
         }
     };
@@ -313,7 +362,7 @@ private:
 
         void ProcessPartial(const NodeHolder &node, IndexSegment) const
         {
-            node->data = (node->left ? node->left->data : Data()) + (node->right ? node->right->data : Data());
+            node->data = (node->left ? node->left->data : MoneyData()) + (node->right ? node->right->data : MoneyData());
         }
 
     private:
@@ -630,17 +679,283 @@ int main()
 {
     TestAll();
 
-    cout.precision(25);
-    const auto requests = ReadRequests();
-    const auto responses = ProcessRequests(requests);
-    PrintResponses(responses);
+    // cout.precision(25);
+    // const auto requests = ReadRequests();
+    // const auto responses = ProcessRequests(requests);
+    // PrintResponses(responses);
 
     return 0;
+}
+
+/*
+ComputeIncome 2000-01-01 2001-01-01
+Spend 2000-01-02 2000-01-06 14
+ComputeIncome 2000-01-02 2000-01-06
+*/
+void TestBasic()
+{
+//     istringstream iss(R"(
+// 13
+// Earn 2000-01-01 2000-01-05 5
+// PayTax 2000-01-01 2000-01-05 10
+// Spend 2000-01-05 2000-01-06 2
+// Earn 2000-01-11 2000-01-15 5
+// PayTax 2000-01-11 2000-01-15 10
+// Spend 2000-01-15 2000-01-16 2
+// PayTax 2000-01-16 2000-01-16 10
+// Earn 2000-01-16 2000-01-16 1
+// Earn 2000-01-01 2000-01-05 5
+// Spend 2000-06-05 2000-06-06 6
+// PayTax 2000-06-05 2000-06-06 10
+// Earn 2000-06-05 2000-06-06 5
+// ComputeIncome 2000-01-01 2001-06-05
+//     )");
+//     istringstream iss(R"(
+// 8
+// Earn 2000-01-02 2000-01-06 20
+// ComputeIncome 2000-01-01 2001-01-01
+// PayTax 2000-01-02 2000-01-03 13
+// ComputeIncome 2000-01-01 2001-01-01
+// Earn 2000-01-03 2000-01-03 10
+// ComputeIncome 2000-01-01 2001-01-01
+// PayTax 2000-01-03 2000-01-03 13
+// ComputeIncome 2000-01-01 2001-01-01
+//     )");
+//     istringstream iss(R"(
+// 6
+// PayTax 2000-01-01 2000-01-01 10
+// Earn 2000-01-01 2000-01-01 20
+// Spend 2000-01-02 2000-01-02 10
+// ComputeIncome 2000-01-01 2001-01-01
+// PayTax 2000-01-02 2000-01-02 10
+// ComputeIncome 2000-01-01 2001-01-01
+//     )");
+
+//     istringstream iss(R"(
+// 8
+// Earn 2000-01-02 2000-01-06 20
+// ComputeIncome 2000-01-01 2001-01-01
+// PayTax 2000-01-02 2000-01-03 13
+// ComputeIncome 2000-01-01 2001-01-01
+// Spend 2000-12-30 2001-01-02 14
+// ComputeIncome 2000-01-01 2001-01-01
+// PayTax 2000-12-30 2000-12-30 13
+// ComputeIncome 2000-01-01 2001-01-01
+//     )");
+//     {
+//         istringstream iss(R"(
+// 16
+// Earn 2000-01-02 2000-01-02 2
+// Earn 2000-01-03 2000-01-03 2
+// Earn 2000-01-04 2000-01-04 2
+// PayTax 2000-01-02 2000-01-02 13
+// PayTax 2000-01-01 2000-01-01 13
+// PayTax 2000-01-05 2000-01-05 13
+// PayTax 2000-01-05 2099-01-05 13
+// ComputeIncome 2000-01-02 2000-01-02
+// ComputeIncome 2000-01-03 2000-01-03
+// ComputeIncome 2000-01-04 2000-01-04
+// ComputeIncome 2000-01-05 2000-01-05
+// ComputeIncome 2000-01-01 2000-01-01
+// ComputeIncome 2000-01-02 2000-01-04
+// ComputeIncome 2001-01-02 2099-01-04
+// PayTax 2000-01-03 2099-01-01 13
+// ComputeIncome 2000-01-02 2000-01-04
+//         )");
+//         ostringstream oss;
+//         oss.precision(25);
+//         const auto requests = ReadRequests(iss);
+//         const auto responses = ProcessRequests(requests);
+//         PrintResponses(responses, oss);
+//         string expect = "1.739999999999999991118216\n2\n2\n0\n0\n5.740000000000000213162821\n0\n5.219999999999999751310042\n";
+//         ASSERT_EQUAL(oss.str(), expect);
+//     }
+//     {
+//         istringstream iss(R"(
+// 3
+// Earn 2000-01-01 2000-01-01 10
+// Spend 2000-01-01 2000-01-01 10
+// ComputeIncome 2000-01-01 2000-01-01
+//         )");
+//         ostringstream oss;
+//         oss.precision(25);
+//         const auto requests = ReadRequests(iss);
+//         const auto responses = ProcessRequests(requests);
+//         PrintResponses(responses, oss);
+//         string expect = "0\n";
+//         ASSERT_EQUAL(oss.str(), expect);
+//     }
+//     {
+//         istringstream iss(R"(
+// 7
+// Earn 2000-01-01 2000-01-01 10
+// Spend 2000-01-01 2000-01-01 4
+// ComputeIncome 2000-01-01 2000-01-01
+// Earn 2000-01-01 2000-01-01 5
+// ComputeIncome 2000-01-01 2000-01-01
+// Spend 2000-01-01 2000-01-01 2
+// ComputeIncome 2000-01-01 2000-01-01
+//         )");
+//         ostringstream oss;
+//         oss.precision(25);
+//         const auto requests = ReadRequests(iss);
+//         const auto responses = ProcessRequests(requests);
+//         PrintResponses(responses, oss);
+//         string expect = "6\n11\n9\n";
+//         ASSERT_EQUAL(oss.str(), expect);
+//     }
+    {
+        /*
+            PersonalBudjet pb;
+            pb.Earn(
+                Date{.day = 1, .month = 1, .year = 2000},
+                Date{.day = 1, .month = 1, .year = 2000},
+                9.0);
+
+            double income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
+                                             Date{.day = 1, .month = 1, .year = 2001});
+            ASSERT_EQUAL(income, 9.0);
+
+            pb.Earn(
+                Date{.day = 2, .month = 1, .year = 2000},
+                Date{.day = 2, .month = 1, .year = 2000},
+                9.0);
+
+            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
+                                      Date{.day = 1, .month = 1, .year = 2001});
+            ASSERT_EQUAL(income, 18.0);
+
+            income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
+                                      Date{.day = 2, .month = 1, .year = 2000});
+            ASSERT_EQUAL(income, 9.0);
+
+            income = pb.ComputeIncome(Date{.day = 3, .month = 1, .year = 2000},
+                                      Date{.day = 1, .month = 1, .year = 2001});
+            ASSERT_EQUAL(income, 0.0);
+
+            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
+                      Date{.day = 2, .month = 1, .year = 2001}, 13);
+
+            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
+                                      Date{.day = 1, .month = 1, .year = 2000});
+            ASSERT(income > 7.82 and income < 7.84);
+
+            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
+                                      Date{.day = 2, .month = 1, .year = 2000});
+            ASSERT(income > 15.65 and income < 15.67);
+
+            pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
+                      Date{.day = 2, .month = 1, .year = 2001}, 13);
+
+            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
+                                      Date{.day = 2, .month = 1, .year = 2000});
+            ASSERT(income > 13.61 and income < 13.63);
+
+            pb.PayTax(Date{.day = 1, .month = 1, .year = 1999},
+                      Date{.day = 31, .month = 12, .year = 1999}, 13);
+
+            income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
+                                      Date{.day = 2, .month = 1, .year = 2000});
+            ASSERT(income > 13.61 and income < 13.63);
+        */
+        istringstream iss(R"(
+3
+Earn 2000-01-01 2000-01-01 9
+PayTax 2000-01-01 2000-01-02 13
+ComputeIncome 2000-01-01 2000-01-01
+        )");
+//         istringstream iss(R"(
+// 11
+// Earn 2000-01-01 2000-01-01 9
+// ComputeIncome 2000-01-01 2000-01-01
+// Earn 2000-01-02 2000-01-02 9
+// ComputeIncome 2000-01-01 2001-01-01
+// ComputeIncome 2000-01-02 2000-01-02
+// ComputeIncome 2000-01-03 2001-01-01
+// PayTax 2000-01-01 2001-01-02 13
+// ComputeIncome 2000-01-01 2000-01-01
+// ComputeIncome 2000-01-01 2000-01-02
+// PayTax 2000-01-01 2001-01-02 13
+// ComputeIncome 2000-01-01 2000-01-02
+//         )");
+        ostringstream oss;
+        oss.precision(25);
+        const auto requests = ReadRequests(iss);
+        const auto responses = ProcessRequests(requests);
+        PrintResponses(responses, oss);
+        string expect = "7.830000000000000071054274\n";
+        ASSERT_EQUAL(oss.str(), expect);
+    }
+
+/*
+pb.Earn(
+    Date{.day = 2, .month = 1, .year = 2000},
+    Date{.day = 2, .month = 1, .year = 2000},
+    2.0);
+pb.Earn(
+    Date{.day = 3, .month = 1, .year = 2000},
+    Date{.day = 3, .month = 1, .year = 2000},
+    2.0);
+pb.Earn(
+    Date{.day = 4, .month = 1, .year = 2000},
+    Date{.day = 4, .month = 1, .year = 2000},
+    2.0);
+pb.PayTax(Date{.day = 2, .month = 1, .year = 2000},
+          Date{.day = 2, .month = 1, .year = 2000}, 13);
+pb.PayTax(Date{.day = 1, .month = 1, .year = 2000},
+          Date{.day = 1, .month = 1, .year = 2000}, 13);
+pb.PayTax(Date{.day = 5, .month = 1, .year = 2000},
+          Date{.day = 5, .month = 1, .year = 2000}, 13);
+pb.PayTax(Date{.day = 5, .month = 1, .year = 2000},
+          Date{.day = 5, .month = 1, .year = 2099}, 13);
+
+double income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
+                                 Date{.day = 2, .month = 1, .year = 2000});
+ASSERT(income > 1.73 and income < 1.75);
+
+income = pb.ComputeIncome(Date{.day = 3, .month = 1, .year = 2000},
+                          Date{.day = 3, .month = 1, .year = 2000});
+ASSERT(income > 1.9 and income < 2.1);
+
+income = pb.ComputeIncome(Date{.day = 4, .month = 1, .year = 2000},
+                          Date{.day = 4, .month = 1, .year = 2000});
+ASSERT(income > 1.9 and income < 2.1);
+
+income = pb.ComputeIncome(Date{.day = 5, .month = 1, .year = 2000},
+                          Date{.day = 5, .month = 1, .year = 2000});
+ASSERT(income == 0.0);
+income = pb.ComputeIncome(Date{.day = 1, .month = 1, .year = 2000},
+                          Date{.day = 1, .month = 1, .year = 2000});
+ASSERT(income == 0.0);
+income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
+                          Date{.day = 4, .month = 1, .year = 2000});
+ASSERT(income > 5.73 and income < 5.75);
+income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2001},
+                          Date{.day = 4, .month = 1, .year = 2099});
+ASSERT(income == 0.0);
+pb.PayTax(Date{.day = 3, .month = 1, .year = 2000},
+          Date{.day = 1, .month = 1, .year = 2099}, 13);
+income = pb.ComputeIncome(Date{.day = 2, .month = 1, .year = 2000},
+                          Date{.day = 4, .month = 1, .year = 2000});
+ASSERT(income > 5.21 and income < 5.23);
+*/
+    // ostringstream oss;
+    // oss.precision(25);
+
+    // const auto requests = ReadRequests(iss);
+    // const auto responses = ProcessRequests(requests);
+    // PrintResponses(responses, oss);
+
+    // // string expect = "20\n18.96000000000000085265128\n8.460000000000000852651283\n8.460000000000000852651283\n";
+    // string expect = "10\n10\n";
+
+    // ASSERT_EQUAL(oss.str(), expect);
 }
 
 void TestAll()
 {
     TestRunner tr{};
+    RUN_TEST(tr, TestBasic);
 }
 
 void Profile()
