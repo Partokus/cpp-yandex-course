@@ -81,7 +81,7 @@ private:
 };
 
 // Stop X: latitude, longitude
-Stop ParseStopQuery(istream &is)
+Stop ParseAddStopQuery(istream &is)
 {
     Stop result;
 
@@ -100,7 +100,7 @@ Stop ParseStopQuery(istream &is)
     return result;
 }
 
-Bus ParseBusQuery(istream &is, Stops &stops)
+Bus ParseAddBusQuery(istream &is, Stops &stops)
 {
     Bus result;
 
@@ -175,11 +175,11 @@ int main()
     return 0;
 }
 
-void TestParseStopQuery()
+void TestParseAddStopQuery()
 {
     {
         istringstream is("Stop Empire Street Building 5: 55.611087, 2.34");
-        Stop stop = ParseStopQuery(is);
+        Stop stop = ParseAddStopQuery(is);
         Stop expect{
             .name = "Empire Street Building 5",
             .latitude = 55.611087,
@@ -191,7 +191,7 @@ void TestParseStopQuery()
     }
     {
         istringstream is("Stop E: 21, 89.5");
-        Stop stop = ParseStopQuery(is);
+        Stop stop = ParseAddStopQuery(is);
         Stop expect{
             .name = "E",
             .latitude = 21.0,
@@ -203,7 +203,7 @@ void TestParseStopQuery()
     }
 }
 
-void TestParseBusQuery()
+void TestParseAddBusQuery()
 {
     {
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
@@ -212,7 +212,7 @@ void TestParseBusQuery()
         StopPtr stop4 = make_shared<Stop>(Stop{"Biryulyovo Tovarnaya"});
         Stops stops{stop1, stop2, stop3, stop4};
         istringstream is("Bus 256: Biryulyovo Zapadnoye - Biryusinka - Universam - Biryulyovo Tovarnaya");
-        Bus bus = ParseBusQuery(is, stops);
+        Bus bus = ParseAddBusQuery(is, stops);
         Bus expect{
             .name = "256",
             .stops{stop1, stop2, stop3, stop4},
@@ -234,7 +234,7 @@ void TestParseBusQuery()
         StopPtr stop5 = make_shared<Stop>(Stop{"Biryulyovo Passazhirskaya"});
         Stops stops{stop1, stop2, stop3, stop4, stop5};
         istringstream is("Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye");
-        Bus bus = ParseBusQuery(is, stops);
+        Bus bus = ParseAddBusQuery(is, stops);
         Bus expect{
             .name = "256",
             .stops{stop1, stop2, stop3, stop4, stop5},
@@ -250,7 +250,7 @@ void TestParseBusQuery()
         StopPtr stop = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
         Stops stops{stop};
         istringstream is("Bus My Bus: Biryulyovo Zapadnoye");
-        Bus bus = ParseBusQuery(is, stops);
+        Bus bus = ParseAddBusQuery(is, stops);
         Bus expect{
             .name = "My Bus",
             .stops{stop},
@@ -264,7 +264,7 @@ void TestParseBusQuery()
         StopPtr stop = make_shared<Stop>(Stop{"Biryulyovo"});
         Stops stops{stop};
         istringstream is("Bus My Bus: Biryulyovo");
-        Bus bus = ParseBusQuery(is, stops);
+        Bus bus = ParseAddBusQuery(is, stops);
         Bus expect{
             .name = "My Bus",
             .stops{stop},
@@ -279,8 +279,8 @@ void TestParseBusQuery()
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestParseStopQuery);
-    RUN_TEST(tr, TestParseBusQuery);
+    RUN_TEST(tr, TestParseAddStopQuery);
+    RUN_TEST(tr, TestParseAddBusQuery);
 }
 
 void Profile()
