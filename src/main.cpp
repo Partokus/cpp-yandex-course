@@ -20,11 +20,32 @@
 #include <random>
 #include <stdexcept>
 #include <ctime>
+#include <cmath>
 
 using namespace std;
 
 void TestAll();
 void Profile();
+
+template <typename PtrWithName>
+struct NamePtrHasher
+{
+    size_t operator()(const PtrWithName &value) const
+    {
+        return str_hasher(value->name);
+    }
+
+    hash<string> str_hasher;
+};
+
+template <typename PtrWithName>
+struct NamePtrKeyEqual
+{
+    bool operator()(const PtrWithName &lhs, const PtrWithName &rhs) const
+    {
+        return lhs->name == rhs->name;
+    }
+};
 
 struct Stop
 {
@@ -33,51 +54,137 @@ struct Stop
     double longitude = 0.0;
 
     bool operator==(const Stop &o) const
-    { return tie(name, latitude, longitude) == tie(o.name, o.latitude, o.longitude); }
+    { return name == o.name; }
 };
-
 using StopPtr = shared_ptr<Stop>;
-
-struct StopPtrHasher
-{
-    size_t operator()(const StopPtr &value) const
-    {
-        return str_hasher(value->name);
-    }
-
-    hash<string> str_hasher;
-};
-
-
-struct StopPtrKeyEqual
-{
-    bool operator()(const StopPtr& lhs, const StopPtr& rhs) const
-    {
-        return lhs->name == rhs->name;
-    }
-};
-
-using Stops = unordered_set<StopPtr, StopPtrHasher, StopPtrKeyEqual>;
 
 struct Bus
 {
     string name;
     vector<StopPtr> stops;
     bool ring = false;
+
+    bool operator==(const Stop &o) const
+    { return name == o.name; }
 };
+using BusPtr = shared_ptr<Bus>;
+
+using Stops = unordered_set<StopPtr, NamePtrHasher<StopPtr>, NamePtrKeyEqual<StopPtr>>;
+using Buses = unordered_set<BusPtr, NamePtrHasher<BusPtr>, NamePtrKeyEqual<BusPtr>>;
+
+bool pred(const StopPtr &lhs, const StopPtr &rhs)
+{
+    return lhs->name == rhs->name;
+}
+
+double ToRadians(double deg)
+{
+    static constexpr double Pi = 3.1415926535;
+    return deg * Pi / 180.0;
+}
+
+// Возвращает метры
+// Haversine formula implementation
+double CalcDistance(double lat1, double lon1, double lat2, double lon2)
+{
+    static constexpr double EearthRaduis = 6'371'000.0; // m
+
+    double dLat = ToRadians(lat2 - lat1);
+    double dLon = ToRadians(lon2 - lon1);
+
+    lat1 = ToRadians(lat1);
+    lat2 = ToRadians(lat2);
+
+    double a = sin(dLat / 2.0) * sin(dLat / 2.0) +
+                cos(lat1) * cos(lat2) *
+                sin(dLon / 2.0) * sin(dLon / 2.0);
+    double c = 2.0 * atan2(sqrt(a), sqrt(1 - a));
+    return EearthRaduis * c;
+}
 
 struct DataBase
 {
     Stops stops;
-    vector<Bus> buses;
+    Buses buses;
+
+    struct BusInfo
+    {
+        size_t stops_on_route = 0U;
+        size_t unique_stops = 0U;
+        double route_length = 0.0;
+    };
+
+    unordered_map<BusPtr, BusInfo, NamePtrHasher<BusPtr>, NamePtrKeyEqual<BusPtr>> buses_info;
+
+    void CreateBusesInfo()
+    {
+        const Stops not_unique_stops = [this]() {
+            Stops unique_stops;
+            Stops result;
+
+            for (const BusPtr &bus : buses)
+            {
+                for (const StopPtr &stop : bus->stops)
+                {
+                    auto [it, inserted] = unique_stops.insert(stop);
+                    if (not inserted)
+                        result.insert(stop);
+                }
+            }
+            return result;
+        }();
+
+        for (const BusPtr &bus : buses)
+        {
+            auto &info = buses_info[bus];
+
+            if (bus->ring)
+            {
+                info.stops_on_route = bus->stops.size() + 1U;
+            }
+            else
+            {
+                info.stops_on_route = bus->stops.size() * 2U - 1U;
+            }
+
+            for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
+            {
+                if (not_unique_stops.find(*it) == not_unique_stops.end())
+                {
+                    ++info.unique_stops;
+                }
+
+                auto it_next = next(it);
+                if (it_next != bus->stops.end())
+                {
+                    info.route_length += CalcDistance(
+                        it->get()->latitude,      it->get()->longitude,
+                        it_next->get()->latitude, it_next->get()->longitude
+                    );
+                }
+            }
+
+            if (bus->ring)
+            {
+                info.route_length += CalcDistance(
+                    bus->stops.back()->latitude,   bus->stops.back()->longitude,
+                    bus->stops.front()->latitude, bus->stops.front()->longitude
+                );
+            }
+            else
+                info.route_length *= 2.0;
+        }
+
+
+    }
 };
 
 class TransportGuide
 {
 public:
-
+    
 private:
-    DataBase _base;
+    DataBase _data_base;
 };
 
 // Stop X: latitude, longitude
@@ -161,6 +268,11 @@ Bus ParseAddBusQuery(istream &is, Stops &stops)
         push_stop(move(stop_name));
     }
     return result;
+}
+
+void ParseGetBusInfo(istream &is)
+{
+
 }
 
 void Parse(istream &is = cin, ostream &os = cout)
@@ -276,11 +388,89 @@ void TestParseAddBusQuery()
     }
 }
 
+void TestDataBaseCreateBusesInfo()
+{
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Biryulyovo Tovarnaya"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Biryulyovo Passazhirskaya"});
+        StopPtr stop6 = make_shared<Stop>(Stop{"Nekrasovka"});
+        StopPtr stop7 = make_shared<Stop>(Stop{"Lepeshkina"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5, stop6}});
+        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop6, stop5, stop4, stop3, stop7}});
+        bus3->ring = true;
+
+        // уникальные остановки: Biryulyovo Zapadnoye, Biryusinka, Lepeshkina
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7};
+        db.buses = {bus1, bus2, bus3};
+
+        db.CreateBusesInfo();
+
+        ASSERT_EQUAL(db.buses_info[bus1].stops_on_route, 5U);
+        ASSERT_EQUAL(db.buses_info[bus2].stops_on_route, 7U);
+        ASSERT_EQUAL(db.buses_info[bus3].stops_on_route, 6U);
+
+        ASSERT_EQUAL(db.buses_info[bus1].unique_stops, 2U);
+        ASSERT_EQUAL(db.buses_info[bus2].unique_stops, 0U);
+        ASSERT_EQUAL(db.buses_info[bus3].unique_stops, 1U);
+    }
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"Tolstopaltsevo", 55.611087, 37.20829});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Marushkino", 55.595884, 37.209755});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Rasskazovka", 55.632761, 37.333324});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye", 55.574371, 37.6517});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Biryusinka", 55.581065, 37.64839});
+        StopPtr stop6 = make_shared<Stop>(Stop{"Universam", 55.587655, 37.645687});
+        StopPtr stop7 = make_shared<Stop>(Stop{"Biryulyovo Tovarnaya", 55.592028, 37.653656});
+        StopPtr stop8 = make_shared<Stop>(Stop{"Biryulyovo Passazhirskaya", 55.580999, 37.659164});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"256", {stop4, stop5, stop6, stop7, stop8}});
+        bus1->ring = true;
+        BusPtr bus2 = make_shared<Bus>(Bus{"750", {stop1, stop2, stop3}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7, stop8};
+        db.buses = {bus1, bus2};
+
+        db.CreateBusesInfo();
+
+        ASSERT_EQUAL(db.buses_info[bus1].stops_on_route, 6U);
+        ASSERT_EQUAL(db.buses_info[bus2].stops_on_route, 5U);
+
+        ASSERT_EQUAL(db.buses_info[bus1].unique_stops, 5U);
+        ASSERT_EQUAL(db.buses_info[bus2].unique_stops, 3U);
+
+        ASSERT(db.buses_info[bus1].route_length > 4370.0 and db.buses_info[bus1].route_length < 4372.0);
+        ASSERT(db.buses_info[bus2].route_length > 20938.0 and db.buses_info[bus2].route_length < 20940.0);
+    }
+}
+
+void TestCalcDistance()
+{
+    {
+        double lat1 = 55.611087;
+        double lon1 = 37.20829;
+        double lat2 = 55.595884;
+        double lon2 = 37.209755;
+
+        double length = CalcDistance(lat1, lon1, lat2, lon2);
+        ASSERT(length > 1692.0 and length < 1694.0);
+    }
+}
+
 void TestAll()
 {
     TestRunner tr{};
     RUN_TEST(tr, TestParseAddStopQuery);
     RUN_TEST(tr, TestParseAddBusQuery);
+    RUN_TEST(tr, TestCalcDistance);
+    RUN_TEST(tr, TestDataBaseCreateBusesInfo);
 }
 
 void Profile()
