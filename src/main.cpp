@@ -312,24 +312,31 @@ void Parse(istream &is, ostream &os)
 
     for (size_t i = 0U; i < requests_count; ++i)
     {
-        string skip;
-        auto bus = make_shared<Bus>(Bus{});
-        is >> skip >> bus->name;
+        string request;
+        is >> request;
 
-        os << "Bus " << bus->name << ": ";
+        is.ignore(1); // ignore space
 
-        if (db.buses.find(bus) != db.buses.end())
+        if (request == "Bus")
         {
-            auto &info = db.buses_info[bus];
-            os << info.stops_on_route << " stops on route, "
-               << info.unique_stops   << " unique stops, "
-               << info.route_length   << " route length";
-        }
-        else
-            os << "not found";
+            auto bus = make_shared<Bus>(Bus{});
+            getline(is, bus->name);
 
-        if ((i + 1) != requests_count)
-            os << '\n';
+            os << "Bus " << bus->name << ": ";
+
+            if (auto it = db.buses_info.find(bus); it != db.buses_info.end())
+            {
+                auto &info = it->second;
+                os << info.stops_on_route << " stops on route, "
+                << info.unique_stops   << " unique stops, "
+                << info.route_length   << " route length";
+            }
+            else
+                os << "not found";
+
+            if ((i + 1) != requests_count)
+                os << '\n';
+        }
     }
 }
 
@@ -444,6 +451,8 @@ void TestCalcDistance()
 
         double length = CalcDistance(lat1, lon1, lat2, lon2);
         ASSERT(length > 1692.0 and length < 1694.0);
+        length = CalcDistance(lat2, lon2, lat1, lon1);
+        ASSERT(length > 1692.0 and length < 1694.0);
     }
 }
 
@@ -537,6 +546,72 @@ Bus 751
 
         istringstream iss_expect(R"(Bus 256: 6 stops on route, 5 unique stops, 4371.02 route length
 Bus 750: 5 stops on route, 3 unique stops, 20939.5 route length
+Bus 751: not found)");
+
+        string str = oss.str();
+        string str_expect = iss_expect.str();
+
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"(
+12
+Stop Tolstopaltsevo: 55.611087, 37.20829
+Stop Marushkino: 55.595884, 37.209755
+Bus Malina Kalina: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye
+Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka
+Stop Rasskazovka: 55.632761, 37.333324
+Stop Biryulyovo Zapadnoye: 55.574371, 37.6517
+Stop Biryusinka: 55.581065, 37.64839
+Stop Universam: 55.587655, 37.645687
+Stop Biryulyovo Tovarnaya: 55.592028, 37.653656
+Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164
+Bus 257: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Universam > Biryusinka > Biryulyovo Zapadnoye
+Bus 258: Biryulyovo Zapadnoye - Biryusinka - Universam - Biryulyovo Tovarnaya
+5
+Bus Malina Kalina
+Bus 750
+Bus 751
+Bus 257
+Bus 258
+        )");
+
+        ostringstream oss;
+
+        Parse(iss, oss);
+
+        istringstream iss_expect(R"(Bus Malina Kalina: 6 stops on route, 1 unique stops, 4371.02 route length
+Bus 750: 5 stops on route, 3 unique stops, 20939.5 route length
+Bus 751: not found
+Bus 257: 7 stops on route, 0 unique stops, 4446.15 route length
+Bus 258: 7 stops on route, 0 unique stops, 4446.15 route length)");
+
+        string str = oss.str();
+        string str_expect = iss_expect.str();
+
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"(
+4
+Stop Tolstopaltsevo: 55.611087, 37.20829
+Stop Marushkino: 56.60, 50.35
+Bus 256: Tolstopaltsevo > Marushkino > Tolstopaltsevo
+Bus 750: Tolstopaltsevo - Marushkino
+4
+Bus 256
+Bus 750
+Bus 256
+Bus 751
+        )");
+
+        ostringstream oss;
+
+        Parse(iss, oss);
+
+        istringstream iss_expect(R"(Bus 256: 3 stops on route, 0 unique stops, 1.642e+06 route length
+Bus 750: 3 stops on route, 0 unique stops, 1.642e+06 route length
+Bus 256: 3 stops on route, 0 unique stops, 1.642e+06 route length
 Bus 751: not found)");
 
         string str = oss.str();
