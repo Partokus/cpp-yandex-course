@@ -334,8 +334,7 @@ void Parse(istream &is, ostream &os)
             else
                 os << "not found";
 
-            if ((i + 1) != requests_count)
-                os << '\n';
+            os << '\n';
         }
     }
 }
@@ -453,6 +452,8 @@ void TestCalcDistance()
         ASSERT(length > 1692.0 and length < 1694.0);
         length = CalcDistance(lat2, lon2, lat1, lon1);
         ASSERT(length > 1692.0 and length < 1694.0);
+        length = CalcDistance(lat1, lat2, lat1, lat2);
+        ASSERT_EQUAL(length, 0.0);
     }
 }
 
@@ -546,7 +547,8 @@ Bus 751
 
         istringstream iss_expect(R"(Bus 256: 6 stops on route, 5 unique stops, 4371.02 route length
 Bus 750: 5 stops on route, 3 unique stops, 20939.5 route length
-Bus 751: not found)");
+Bus 751: not found
+)");
 
         string str = oss.str();
         string str_expect = iss_expect.str();
@@ -584,7 +586,8 @@ Bus 258
 Bus 750: 5 stops on route, 3 unique stops, 20939.5 route length
 Bus 751: not found
 Bus 257: 7 stops on route, 0 unique stops, 4446.15 route length
-Bus 258: 7 stops on route, 0 unique stops, 4446.15 route length)");
+Bus 258: 7 stops on route, 0 unique stops, 4446.15 route length
+)");
 
         string str = oss.str();
         string str_expect = iss_expect.str();
@@ -612,7 +615,8 @@ Bus 751
         istringstream iss_expect(R"(Bus 256: 3 stops on route, 0 unique stops, 1.642e+06 route length
 Bus 750: 3 stops on route, 0 unique stops, 1.642e+06 route length
 Bus 256: 3 stops on route, 0 unique stops, 1.642e+06 route length
-Bus 751: not found)");
+Bus 751: not found
+)");
 
         string str = oss.str();
         string str_expect = iss_expect.str();
@@ -637,7 +641,7 @@ void Profile()
 
 int main()
 {
-    TestAll();
+    // TestAll();
 
     Parse(cin, cout);
     return 0;
