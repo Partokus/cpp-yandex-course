@@ -47,11 +47,25 @@ struct NamePtrKeyEqual
     }
 };
 
+template <typename PtrWithName>
+struct NamePtrKeyLess
+{
+    bool operator()(const PtrWithName &lhs, const PtrWithName &rhs) const
+    {
+        return lhs->name < rhs->name;
+    }
+};
+
+struct Bus;
+using BusPtr = shared_ptr<Bus>;
+using BusesSorted = set<BusPtr, NamePtrKeyLess<BusPtr>>;
+
 struct Stop
 {
     string name;
     double latitude = 0.0;
     double longitude = 0.0;
+    BusesSorted buses;
 
     bool operator==(const Stop &o) const
     { return name == o.name; }
@@ -67,7 +81,6 @@ struct Bus
     bool operator==(const Stop &o) const
     { return name == o.name; }
 };
-using BusPtr = shared_ptr<Bus>;
 
 using Stops = unordered_set<StopPtr, NamePtrHasher<StopPtr>, NamePtrKeyEqual<StopPtr>>;
 using Buses = unordered_set<BusPtr, NamePtrHasher<BusPtr>, NamePtrKeyEqual<BusPtr>>;
@@ -151,33 +164,35 @@ struct DataBase
             else
                 info.route_length *= 2.0;
         }
+
+
     }
 };
 
 // X: latitude, longitude
-Stop ParseAddStopQuery(istream &is)
+StopPtr ParseAddStopQuery(istream &is)
 {
-    Stop result;
+    StopPtr result = make_shared<Stop>();
 
     string s;
     if (is.peek() == ' ')
         is.ignore(1); // skip " "
     getline(is, s, ':');
-    result.name = move(s);
+    result->name = move(s);
     is.ignore(1); // skip " "
 
     getline(is, s, ',');
-    result.latitude = stod(s);
+    result->latitude = stod(s);
     is.ignore(1); // skip " "
-    is >> result.longitude;
+    is >> result->longitude;
 
     return result;
 }
 
 // Bus X: описание маршрута
-Bus ParseAddBusQuery(istream &is, Stops &stops)
+BusPtr ParseAddBusQuery(istream &is, Stops &stops)
 {
-    Bus result;
+    BusPtr result = make_shared<Bus>();
 
     string s;
     getline(is, s);
@@ -186,7 +201,7 @@ Bus ParseAddBusQuery(istream &is, Stops &stops)
     if (iss.peek() == ' ')
         iss.ignore(1); // skip " "
     getline(iss, s, ':');
-    result.name = move(s);
+    result->name = move(s);
     iss.ignore(1); // skip " "
 
     string stop_name;
@@ -203,24 +218,17 @@ Bus ParseAddBusQuery(istream &is, Stops &stops)
         separator = iss.peek();
         if (separator != '>' and separator != '-')
             throw runtime_error("Invalid separator");
-        result.ring = separator == '>';
+        result->ring = separator == '>';
     }
 
     iss.ignore(2); // skip separator and space
 
     auto push_stop = [&stops, &result](string && name)
     {
-        StopPtr stop = make_shared<Stop>(move(Stop{move(name)}));
-        auto it = stops.find(stop);
-        if (it != stops.end())
-        {
-            result.stops.push_back(*it);
-        }
-        else
-        {
-            stops.insert(stop);
-            result.stops.push_back(move(stop));
-        }
+        StopPtr stop = make_shared<Stop>(move(Stop{ move(name) }));
+        auto [it, inserted] = stops.insert(stop);
+        result->stops.push_back(*it);
+        it->get()->buses.insert(result);
     };
 
     push_stop(move(stop_name));
@@ -235,7 +243,7 @@ Bus ParseAddBusQuery(istream &is, Stops &stops)
 
         // последнюю остановку не надо добавлять
         // для кольцевого маршрута
-        if (result.ring and not iss)
+        if (result->ring and not iss)
             break;
 
         push_stop(move(stop_name));
@@ -264,18 +272,18 @@ void Parse(istream &is, ostream &os)
 
         if (first_word == "Stop")
         {
-            Stop stop = ParseAddStopQuery(is);
-            auto [it, inserted] = db.stops.insert(make_shared<Stop>( move(stop) ));
+            StopPtr stop = ParseAddStopQuery(is);
+            auto [it, inserted] = db.stops.insert(stop);
             if (not inserted)
             {
-                it->get()->latitude = stop.latitude;
-                it->get()->longitude = stop.longitude;
+                it->get()->latitude = stop->latitude;
+                it->get()->longitude = stop->longitude;
             }
         }
         else if (first_word == "Bus")
         {
-            Bus bus = ParseAddBusQuery(is, db.stops);
-            db.buses.insert(make_shared<Bus>( move(bus) ));
+            BusPtr bus = ParseAddBusQuery(is, db.stops);
+            db.buses.insert(move(bus));
         }
     }
 
@@ -306,9 +314,38 @@ void Parse(istream &is, ostream &os)
             }
             else
                 os << "not found";
-
-            os << '\n';
         }
+        else if (request == "Stop")
+        {
+            auto stop = make_shared<Stop>(Stop{});
+            getline(is, stop->name);
+
+            os << "Stop " << stop->name << ": ";
+
+            if (auto it = db.stops.find(stop); it != db.stops.end())
+            {
+                const StopPtr &stop = *it;
+                if (not stop->buses.empty())
+                {
+                    os << "buses ";
+                    bool first = true;
+                    for (const auto &bus : stop->buses)
+                    {
+                        if (first)
+                            first = false;
+                        else
+                            os << " ";
+                        os << bus->name;
+                    }
+                }
+                else
+                    os << "no buses";
+            }
+            else
+                os << "not found";
+        }
+
+        os << '\n';
     }
 }
 
@@ -316,27 +353,27 @@ void TestParseAddStopQuery()
 {
     {
         istringstream is("Empire   Street Building 5: 55.611087, 2.34");
-        Stop stop = ParseAddStopQuery(is);
+        StopPtr stop = ParseAddStopQuery(is);
         Stop expect{
             .name = "Empire   Street Building 5",
             .latitude = 55.611087,
             .longitude = 2.34
         };
-        ASSERT_EQUAL(stop.name, expect.name);
-        ASSERT_EQUAL(stop.latitude, expect.latitude);
-        ASSERT_EQUAL(stop.longitude, expect.longitude);
+        ASSERT_EQUAL(stop->name, expect.name);
+        ASSERT_EQUAL(stop->latitude, expect.latitude);
+        ASSERT_EQUAL(stop->longitude, expect.longitude);
     }
     {
         istringstream is("E: 21, 89.5");
-        Stop stop = ParseAddStopQuery(is);
+        StopPtr stop = ParseAddStopQuery(is);
         Stop expect{
             .name = "E",
             .latitude = 21.0,
             .longitude = 89.5
         };
-        ASSERT_EQUAL(stop.name, expect.name);
-        ASSERT_EQUAL(stop.latitude, expect.latitude);
-        ASSERT_EQUAL(stop.longitude, expect.longitude);
+        ASSERT_EQUAL(stop->name, expect.name);
+        ASSERT_EQUAL(stop->latitude, expect.latitude);
+        ASSERT_EQUAL(stop->longitude, expect.longitude);
     }
 }
 
@@ -349,19 +386,19 @@ void TestParseAddBusQuery()
         StopPtr stop4 = make_shared<Stop>(Stop{"Biryulyovo  Tovarnaya"});
         Stops stops{stop1, stop2, stop3, stop4};
         istringstream is("256: Biryulyovo  Zapadnoye - Biryusinka - Universam - Biryulyovo  Tovarnaya");
-        Bus bus = ParseAddBusQuery(is, stops);
+        BusPtr bus = ParseAddBusQuery(is, stops);
         Bus expect{
             .name = "256",
             .stops = {stop1, stop2, stop3, stop4},
             .ring = false
         };
-        ASSERT_EQUAL(bus.name, expect.name);
+        ASSERT_EQUAL(bus->name, expect.name);
         for (int i = 0; i < 4; ++i)
         {
-            ASSERT(bus.stops[i].get() == expect.stops[i].get());
-            ASSERT(*bus.stops[i] == *expect.stops[i]);
+            ASSERT(bus->stops[i].get() == expect.stops[i].get());
+            ASSERT(*bus->stops[i] == *expect.stops[i]);
         }
-        ASSERT_EQUAL(bus.ring, expect.ring);
+        ASSERT_EQUAL(bus->ring, expect.ring);
     }
     {
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
@@ -371,49 +408,49 @@ void TestParseAddBusQuery()
         StopPtr stop5 = make_shared<Stop>(Stop{"Biryulyovo Passazhirskaya"});
         Stops stops{stop1, stop2, stop3, stop4, stop5};
         istringstream is("256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye");
-        Bus bus = ParseAddBusQuery(is, stops);
+        BusPtr bus = ParseAddBusQuery(is, stops);
         Bus expect{
             .name = "256",
             .stops = {stop1, stop2, stop3, stop4, stop5},
             .ring = true
         };
-        ASSERT_EQUAL(bus.stops.size(), expect.stops.size());
-        ASSERT_EQUAL(bus.name, expect.name);
+        ASSERT_EQUAL(bus->stops.size(), expect.stops.size());
+        ASSERT_EQUAL(bus->name, expect.name);
         for (int i = 0; i < 5; ++i)
-            ASSERT(bus.stops[i].get() == expect.stops[i].get());
-        ASSERT_EQUAL(bus.ring, expect.ring);
+            ASSERT(bus->stops[i].get() == expect.stops[i].get());
+        ASSERT_EQUAL(bus->ring, expect.ring);
     }
     {
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
         StopPtr stop2 = make_shared<Stop>(Stop{"Tomash"});
         Stops stops{stop1, stop2};
         istringstream is("My Bus: Biryulyovo Zapadnoye - Tomash");
-        Bus bus = ParseAddBusQuery(is, stops);
+        BusPtr bus = ParseAddBusQuery(is, stops);
         Bus expect{
             .name = "My Bus",
             .stops = {stop1, stop2},
             .ring = false
         };
-        ASSERT_EQUAL(bus.name, expect.name);
-        ASSERT(bus.stops[0].get() == expect.stops[0].get());
-        ASSERT(bus.stops[1].get() == expect.stops[1].get());
-        ASSERT_EQUAL(bus.ring, expect.ring);
+        ASSERT_EQUAL(bus->name, expect.name);
+        ASSERT(bus->stops[0].get() == expect.stops[0].get());
+        ASSERT(bus->stops[1].get() == expect.stops[1].get());
+        ASSERT_EQUAL(bus->ring, expect.ring);
     }
     {
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo"});
         StopPtr stop2 = make_shared<Stop>(Stop{"Tomash"});
         Stops stops{stop1, stop2};
         istringstream is("My Bus  HardBass: Biryulyovo - Tomash");
-        Bus bus = ParseAddBusQuery(is, stops);
+        BusPtr bus = ParseAddBusQuery(is, stops);
         Bus expect{
             .name = "My Bus  HardBass",
             .stops = {stop1, stop2},
             .ring = false
         };
-        ASSERT_EQUAL(bus.name, expect.name);
-        ASSERT(bus.stops[0].get() == expect.stops[0].get());
-        ASSERT(bus.stops[1].get() == expect.stops[1].get());
-        ASSERT_EQUAL(bus.ring, expect.ring);
+        ASSERT_EQUAL(bus->name, expect.name);
+        ASSERT(bus->stops[0].get() == expect.stops[0].get());
+        ASSERT(bus->stops[1].get() == expect.stops[1].get());
+        ASSERT_EQUAL(bus->ring, expect.ring);
     }
 }
 
@@ -671,6 +708,48 @@ Bus X
 
         istringstream iss_expect(R"(Bus X: 19 stops on route, 10 unique stops, 11017.9 route length
 Bus X: 19 stops on route, 10 unique stops, 11017.9 route length
+)");
+
+        string str = oss.str();
+        string str_expect = iss_expect.str();
+
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"(
+13
+Stop Tolstopaltsevo: 55.611087, 37.20829
+Stop Marushkino: 55.595884, 37.209755
+Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye
+Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka
+Stop Rasskazovka: 55.632761, 37.333324
+Stop Biryulyovo Zapadnoye: 55.574371, 37.6517
+Stop Biryusinka: 55.581065, 37.64839
+Stop Universam: 55.587655, 37.645687
+Stop Biryulyovo Tovarnaya: 55.592028, 37.653656
+Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164
+Bus 828: Biryulyovo Zapadnoye > Universam > Rossoshanskaya ulitsa > Biryulyovo Zapadnoye
+Stop Rossoshanskaya ulitsa: 55.595579, 37.605757
+Stop Prazhskaya: 55.611678, 37.603831
+6
+Bus 256
+Bus 750
+Bus 751
+Stop Samara
+Stop Prazhskaya
+Stop Biryulyovo Zapadnoye
+        )");
+
+        ostringstream oss;
+
+        Parse(iss, oss);
+
+        istringstream iss_expect(R"(Bus 256: 6 stops on route, 5 unique stops, 4371.02 route length
+Bus 750: 5 stops on route, 3 unique stops, 20939.5 route length
+Bus 751: not found
+Stop Samara: not found
+Stop Prazhskaya: no buses
+Stop Biryulyovo Zapadnoye: buses 256 828
 )");
 
         string str = oss.str();
