@@ -93,7 +93,7 @@ double ToRadians(double deg)
 
 // Возвращает метры
 // Haversine formula implementation
-double CalcDistance(double lat1, double lon1, double lat2, double lon2)
+double CalcGeoDistance(double lat1, double lon1, double lat2, double lon2)
 {
     static constexpr double EearthRaduis = 6'371'000.0; // m
 
@@ -158,17 +158,17 @@ struct DataBase
                     const StopPtr &lhs = *it;
                     const StopPtr &rhs = *it_next;
 
-                    info.route_length_geo += CalcDistance(
+                    info.route_length_geo += CalcGeoDistance(
                         lhs->latitude, lhs->longitude,
                         rhs->latitude, rhs->longitude
                     );
 
-                    std::optional<size_t> road_distance = calc_road_distance(lhs, rhs);
+                    std::optional<size_t> road_distance = CalcRoadDistance(lhs, rhs);
                     if (road_distance)
                         info.route_length_road += *road_distance;
                     if (not bus->ring)
                     {
-                        road_distance = calc_road_distance(rhs, lhs);
+                        road_distance = CalcRoadDistance(rhs, lhs);
                         if (road_distance)
                             info.route_length_road += *road_distance;
                     }
@@ -179,12 +179,12 @@ struct DataBase
 
             if (bus->ring)
             {
-                info.route_length_geo += CalcDistance(
+                info.route_length_geo += CalcGeoDistance(
                     bus->stops.back()->latitude,   bus->stops.back()->longitude,
                     bus->stops.front()->latitude, bus->stops.front()->longitude
                 );
 
-                std::optional<size_t> road_distance = calc_road_distance(bus->stops.back(), bus->stops.front());
+                std::optional<size_t> road_distance = CalcRoadDistance(bus->stops.back(), bus->stops.front());
                 if (road_distance)
                     info.route_length_road += *road_distance;
             }
@@ -197,7 +197,7 @@ struct DataBase
 
 private:
     // return meters
-    std::optional<size_t> calc_road_distance(const StopPtr &lhs, const StopPtr &rhs) const
+    std::optional<size_t> CalcRoadDistance(const StopPtr &lhs, const StopPtr &rhs) const
     {
         std::optional<size_t> result = std::nullopt;
         auto it_lhs = road_route_length.find(lhs);
@@ -591,7 +591,7 @@ void TestParseAddBusQuery()
     }
 }
 
-void TestCalcDistance()
+void TestCalcGeoDistance()
 {
     {
         double lat1 = 55.611087;
@@ -599,11 +599,11 @@ void TestCalcDistance()
         double lat2 = 55.595884;
         double lon2 = 37.209755;
 
-        double length = CalcDistance(lat1, lon1, lat2, lon2);
+        double length = CalcGeoDistance(lat1, lon1, lat2, lon2);
         ASSERT(length > 1692.0 and length < 1694.0);
-        length = CalcDistance(lat2, lon2, lat1, lon1);
+        length = CalcGeoDistance(lat2, lon2, lat1, lon1);
         ASSERT(length > 1692.0 and length < 1694.0);
-        length = CalcDistance(lat1, lat2, lat1, lat2);
+        length = CalcGeoDistance(lat1, lat2, lat1, lat2);
         ASSERT_EQUAL(length, 0.0);
     }
 }
@@ -963,7 +963,7 @@ void TestAll()
     TestRunner tr{};
     RUN_TEST(tr, TestParseAddStopQuery);
     RUN_TEST(tr, TestParseAddBusQuery);
-    RUN_TEST(tr, TestCalcDistance);
+    RUN_TEST(tr, TestCalcGeoDistance);
     RUN_TEST(tr, TestDataBaseCreateBusesInfo);
     RUN_TEST(tr, TestParse);
 }
