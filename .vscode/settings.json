@@ -100,7 +100,12 @@
         "unordered_set": "cpp",
         "*.ipp": "cpp",
         "execution": "cpp",
-        "resumable": "cpp"
+        "resumable": "cpp",
+        "cwctype": "cpp",
+        "memory_resource": "cpp",
+        "semaphore": "cpp",
+        "*.def": "cpp",
+        "*.inc": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "C:/WorkPrograms/msys64/ucrt64/bin/g++.exe"
