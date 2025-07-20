@@ -1,6 +1,8 @@
 #include <profile.h>
 #include <test_runner.h>
 
+#include "json.h"
+
 #include <vector>
 #include <string>
 #include <iostream>
@@ -425,6 +427,12 @@ void Parse(istream &is, ostream &os)
 
         os << '\n';
     }
+}
+
+
+bool AssertDouble(double lhs, double rhs)
+{
+    return lhs > (rhs - 0.1) and lhs < (rhs + 0.1);
 }
 
 void TestParseAddStopQuery()
@@ -958,9 +966,545 @@ Stop Biryulyovo Zapadnoye: buses 256 828
     }
 }
 
+void TestParseJson()
+{
+    istringstream input(R"({
+  "base_requests": [
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Marushkino": 3900
+      },
+      "longitude": 37.20829,
+      "name": "Tolstopaltsevo",
+      "latitude": 55.611087
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Rasskazovka": 9900
+      },
+      "longitude": 37.209755,
+      "name": "Marushkino",
+      "latitude": 55.595884
+    },
+    {
+      "type": "Bus",
+      "name": "256",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo Tovarnaya",
+        "Biryulyovo Passazhirskaya",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "stops": [
+        "Tolstopaltsevo",
+        "Marushkino",
+        "Rasskazovka"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "longitude": 37.333324,
+      "name": "Rasskazovka",
+      "latitude": 55.632761
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Rossoshanskaya ulitsa": 7500,
+        "Biryusinka": 1800,
+        "Universam": 2400
+      },
+      "longitude": 37.6517,
+      "name": "Biryulyovo Zapadnoye",
+      "latitude": 55.574371
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Universam": 750
+      },
+      "longitude": 37.64839,
+      "name": "Biryusinka",
+      "latitude": 55.581065
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Rossoshanskaya ulitsa": 5600,
+        "Biryulyovo Tovarnaya": 900
+      },
+      "longitude": 37.645687,
+      "name": "Universam",
+      "latitude": 55.587655
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryulyovo Passazhirskaya": 1300
+      },
+      "longitude": 37.653656,
+      "name": "Biryulyovo Tovarnaya",
+      "latitude": 55.592028
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryulyovo Zapadnoye": 1200
+      },
+      "longitude": 37.659164,
+      "name": "Biryulyovo Passazhirskaya",
+      "latitude": 55.580999
+    },
+    {
+      "type": "Bus",
+      "name": "828",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Universam",
+        "Rossoshanskaya ulitsa",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "longitude": 37.605757,
+      "name": "Rossoshanskaya ulitsa",
+      "latitude": 55.595579
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "longitude": 37.603831,
+      "name": "Prazhskaya",
+      "latitude": 55.611678
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "256",
+      "id": 1965312327
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "id": 519139350
+    },
+    {
+      "type": "Bus",
+      "name": "751",
+      "id": 194217464
+    },
+    {
+      "type": "Stop",
+      "name": "Samara",
+      "id": 746888088
+    },
+    {
+      "type": "Stop",
+      "name": "Prazhskaya",
+      "id": 65100610
+    },
+    {
+      "type": "Stop",
+      "name": "Biryulyovo Zapadnoye",
+      "id": 1042838872
+    }
+  ]
+}
+)");
+    using namespace Json;
+    Document doc = Load(input);
+    const map<string, Node> &root = doc.GetRoot().AsMap();
+    ASSERT_EQUAL(root.size(), 2U);
+
+    const vector<Node> &base_requests = root.at("base_requests"s).AsArray();
+    ASSERT_EQUAL(base_requests.size(), 13U);
+
+    size_t node_num = 0U;
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {
+                "Marushkino": 3900
+            },
+            "longitude": 37.20829,
+            "name": "Tolstopaltsevo",
+            "latitude": 55.611087
+        },
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 1U );
+        ASSERT_EQUAL( road_distances.at("Marushkino"s).AsInt(), 3900 );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.20829) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.611087) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Tolstopaltsevo"s );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {
+                "Rasskazovka": 9900
+            },
+            "longitude": 37.209755,
+            "name": "Marushkino",
+            "latitude": 55.595884
+        },
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 1U );
+        ASSERT_EQUAL( road_distances.at("Rasskazovka"s).AsInt(), 9900 );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.209755) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.595884) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Marushkino"s );
+    }
+    {
+        /*
+        {
+            "type": "Bus",
+            "name": "256",
+            "stops": [
+                "Biryulyovo Zapadnoye",
+                "Biryusinka",
+                "Universam",
+                "Biryulyovo Tovarnaya",
+                "Biryulyovo Passazhirskaya",
+                "Biryulyovo Zapadnoye"
+            ],
+            "is_roundtrip": true
+        },
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Bus"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "256"s );
+        const vector<Node> &stops = req.at("stops"s).AsArray();
+        ASSERT_EQUAL( stops.at(0).AsString(), "Biryulyovo Zapadnoye"s );
+        ASSERT_EQUAL( stops.at(1).AsString(), "Biryusinka"s );
+        ASSERT_EQUAL( stops.at(2).AsString(), "Universam"s );
+        ASSERT_EQUAL( stops.at(3).AsString(), "Biryulyovo Tovarnaya"s );
+        ASSERT_EQUAL( stops.at(4).AsString(), "Biryulyovo Passazhirskaya"s );
+        ASSERT_EQUAL( stops.at(5).AsString(), "Biryulyovo Zapadnoye"s );
+        ASSERT_EQUAL( req.at("is_roundtrip"s).AsBool(), true );
+    }
+    {
+        /*
+        {
+            "type": "Bus",
+            "name": "750",
+            "stops": [
+                "Tolstopaltsevo",
+                "Marushkino",
+                "Rasskazovka"
+            ],
+            "is_roundtrip": false
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Bus"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "750"s );
+        const vector<Node> &stops = req.at("stops"s).AsArray();
+        ASSERT_EQUAL( stops.at(0).AsString(), "Tolstopaltsevo"s );
+        ASSERT_EQUAL( stops.at(1).AsString(), "Marushkino"s );
+        ASSERT_EQUAL( stops.at(2).AsString(), "Rasskazovka"s );
+        ASSERT_EQUAL( req.at("is_roundtrip"s).AsBool(), false );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {},
+            "longitude": 37.333324,
+            "name": "Rasskazovka",
+            "latitude": 55.632761
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 0U );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.333324) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.632761) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Rasskazovka"s );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {
+                "Rossoshanskaya ulitsa": 7500,
+                "Biryusinka": 1800,
+                "Universam": 2400
+            },
+            "longitude": 37.6517,
+            "name": "Biryulyovo Zapadnoye",
+            "latitude": 55.574371
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 3U );
+        ASSERT_EQUAL( road_distances.at("Rossoshanskaya ulitsa"s).AsInt(), 7500 );
+        ASSERT_EQUAL( road_distances.at("Biryusinka"s).AsInt(), 1800 );
+        ASSERT_EQUAL( road_distances.at("Universam"s).AsInt(), 2400 );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.6517) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.574371) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Biryulyovo Zapadnoye"s );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {
+                "Universam": 750
+            },
+            "longitude": 37.64839,
+            "name": "Biryusinka",
+            "latitude": 55.581065
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 1U );
+        ASSERT_EQUAL( road_distances.at("Universam"s).AsInt(), 750 );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.64839) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.581065) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Biryusinka"s );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {
+                "Rossoshanskaya ulitsa": 5600,
+                "Biryulyovo Tovarnaya": 900
+            },
+            "longitude": 37.645687,
+            "name": "Universam",
+            "latitude": 55.587655
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 2U );
+        ASSERT_EQUAL( road_distances.at("Rossoshanskaya ulitsa"s).AsInt(), 5600 );
+        ASSERT_EQUAL( road_distances.at("Biryulyovo Tovarnaya"s).AsInt(), 900 );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.645687) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.587655) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Universam"s );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {
+                "Biryulyovo Passazhirskaya": 1300
+            },
+            "longitude": 37.653656,
+            "name": "Biryulyovo Tovarnaya",
+            "latitude": 55.592028
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 1U );
+        ASSERT_EQUAL( road_distances.at("Biryulyovo Passazhirskaya"s).AsInt(), 1300 );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.653656) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.592028) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Biryulyovo Tovarnaya"s );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {
+                "Biryulyovo Zapadnoye": 1200
+            },
+            "longitude": 37.659164,
+            "name": "Biryulyovo Passazhirskaya",
+            "latitude": 55.580999
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 1U );
+        ASSERT_EQUAL( road_distances.at("Biryulyovo Zapadnoye"s).AsInt(), 1200 );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.659164) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.580999) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Biryulyovo Passazhirskaya"s );
+    }
+    {
+        /*
+        {
+            "type": "Bus",
+            "name": "828",
+            "stops": [
+                "Biryulyovo Zapadnoye",
+                "Universam",
+                "Rossoshanskaya ulitsa",
+                "Biryulyovo Zapadnoye"
+            ],
+            "is_roundtrip": true
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Bus"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "828"s );
+        const vector<Node> &stops = req.at("stops"s).AsArray();
+        ASSERT_EQUAL( stops.size(), 4U );
+        ASSERT_EQUAL( stops.at(0).AsString(), "Biryulyovo Zapadnoye"s );
+        ASSERT_EQUAL( stops.at(1).AsString(), "Universam"s );
+        ASSERT_EQUAL( stops.at(2).AsString(), "Rossoshanskaya ulitsa"s );
+        ASSERT_EQUAL( stops.at(3).AsString(), "Biryulyovo Zapadnoye"s );
+        ASSERT_EQUAL( req.at("is_roundtrip"s).AsBool(), true );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {},
+            "longitude": 37.605757,
+            "name": "Rossoshanskaya ulitsa",
+            "latitude": 55.595579
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 0U );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.605757) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.595579) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Rossoshanskaya ulitsa"s );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "road_distances": {},
+            "longitude": 37.603831,
+            "name": "Prazhskaya",
+            "latitude": 55.611678
+        }
+        */
+        const map<string, Node> &req = base_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        const map<string, Node> &road_distances = req.at("road_distances"s).AsMap();
+        ASSERT_EQUAL( road_distances.size(), 0U );
+        ASSERT( AssertDouble(req.at("longitude"s).AsDouble(), 37.603831) );
+        ASSERT( AssertDouble(req.at("latitude"s).AsDouble(), 55.611678) );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Prazhskaya"s );
+    }
+
+    node_num = 0U;
+    const vector<Node> &stat_requests = root.at("stat_requests"s).AsArray();
+
+    {
+        /*
+        {
+            "type": "Bus",
+            "name": "256",
+            "id": 1965312327
+        }
+        */
+        const map<string, Node> &req = stat_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Bus"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "256"s );
+        ASSERT_EQUAL( req.at("id"s).AsInt(), 1965312327 );
+    }
+    {
+        /*
+        {
+            "type": "Bus",
+            "name": "750",
+            "id": 519139350
+        },
+        */
+        const map<string, Node> &req = stat_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Bus"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "750"s );
+        ASSERT_EQUAL( req.at("id"s).AsInt(), 519139350 );
+    }
+    {
+        /*
+        {
+            "type": "Bus",
+            "name": "751",
+            "id": 194217464
+        }
+        */
+        const map<string, Node> &req = stat_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Bus"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "751"s );
+        ASSERT_EQUAL( req.at("id"s).AsInt(), 194217464 );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "name": "Samara",
+            "id": 746888088
+        }
+        */
+        const map<string, Node> &req = stat_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Samara"s );
+        ASSERT_EQUAL( req.at("id"s).AsInt(), 746888088 );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "name": "Prazhskaya",
+            "id": 65100610
+        }
+        */
+        const map<string, Node> &req = stat_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Prazhskaya"s );
+        ASSERT_EQUAL( req.at("id"s).AsInt(), 65100610 );
+    }
+    {
+        /*
+        {
+            "type": "Stop",
+            "name": "Biryulyovo Zapadnoye",
+            "id": 1042838872
+        }
+        */
+        const map<string, Node> &req = stat_requests.at(node_num++).AsMap();
+        ASSERT_EQUAL( req.at("type"s).AsString(), "Stop"s );
+        ASSERT_EQUAL( req.at("name"s).AsString(), "Biryulyovo Zapadnoye"s );
+        ASSERT_EQUAL( req.at("id"s).AsInt(), 1042838872 );
+    }
+}
+
 void TestAll()
 {
     TestRunner tr{};
+    RUN_TEST(tr, TestParseJson);
     RUN_TEST(tr, TestParseAddStopQuery);
     RUN_TEST(tr, TestParseAddBusQuery);
     RUN_TEST(tr, TestCalcGeoDistance);
@@ -976,6 +1520,5 @@ int main()
 {
     TestAll();
 
-    Parse(cin, cout);
     return 0;
 }
