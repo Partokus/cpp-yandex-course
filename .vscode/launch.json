@@ -29,37 +29,5 @@
             }
         ]
     },
-        {
-            "name": "openocd debug",
-            "cwd": "${workspaceRoot}",
-            "executable": "./debug/src/stw-obcu.elf",
-            "request": "launch",
-            "type": "cortex-debug",
-            "servertype": "openocd",
-            "configFiles": [
-                "interface\\stlink.cfg",
-                "target\\stm32f7x.cfg"
-            ],
-            "preRestartCommands": [
-                "load",
-                "enable breakpoint",
-                "monitor reset",
-                "c"
-            ],
-            "runToMain": true,
-            "showDevDebugOutput": true,
-        },
-        {
-            "type": "jlink debug",
-            "request": "launch",
-            "name": "Debug J-Link",
-            "cwd": "${workspaceRoot}",
-            "executable": "./debug/src/hw/stw-obcu.elf",
-            "servertype": "jlink",
-            "device": "STM32F767ZI",
-            "interface": "swd",
-            "runToMain": true,
-            "svdFile": "STM32F767.svd"
-        }
     ]
 }
