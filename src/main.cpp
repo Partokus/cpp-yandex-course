@@ -213,7 +213,6 @@ private:
     }
 };
 
-// X: latitude, longitude
 StopPtr ParseAddStopQuery(istream &is, DataBase &db)
 {
     string s;
@@ -267,6 +266,55 @@ StopPtr ParseAddStopQuery(istream &is, DataBase &db)
             it == road_route_length_rhs.end())
         {
             road_route_length_rhs[result] = meters;
+        }
+    }
+
+    return result;
+}
+
+/*
+{
+    "type": "Stop",
+    "road_distances": {
+        "Rossoshanskaya ulitsa": 7500,
+        "Biryusinka": 1800,
+        "Universam": 2400
+    },
+    "longitude": 37.6517,
+    "name": "Biryulyovo Zapadnoye",
+    "latitude": 55.574371
+}
+*/
+StopPtr ParseAddStopQuery(const map<string, Json::Node> &req, DataBase &db)
+{
+    StopPtr result = make_shared<Stop>();
+
+    result->name = req.at("name"s).AsString();
+    result->latitude = req.at("latitude"s).AsDouble();
+    result->longitude = req.at("longitude"s).AsDouble();
+
+    const map<string, Json::Node> &road_distances = req.at("road_distances").AsMap();
+
+    if (road_distances.empty())
+        return result;
+
+    auto &road_route_length = db.road_route_length[result];
+
+    for (const auto &p : road_distances)
+    {
+        const string &stop_name = p.first;
+        const size_t road_distance = p.second.AsInt();
+
+        auto [it_stop, inserted] = db.stops.insert(make_shared<Stop>(Stop{ stop_name }));
+
+        road_route_length[*it_stop] = road_distance;
+
+        auto &road_route_length_rhs = db.road_route_length[*it_stop];
+
+        if (auto it = road_route_length_rhs.find(result);
+            it == road_route_length_rhs.end())
+        {
+            road_route_length_rhs[result] = road_distance;
         }
     }
 
@@ -437,10 +485,19 @@ bool AssertDouble(double lhs, double rhs)
 
 void TestParseAddStopQuery()
 {
+    using namespace Json;
     {
+        istringstream input(R"({
+    "type": "Stop",
+    "road_distances": {},
+    "longitude": 2.34,
+    "name": "Empire   Street Building 5",
+    "latitude": 55.611087
+}
+)");
+        Document doc = Load(input);
         DataBase db;
-        istringstream is("Empire   Street Building 5: 55.611087, 2.34");
-        StopPtr stop = ParseAddStopQuery(is, db);
+        StopPtr stop = ParseAddStopQuery(doc.GetRoot().AsMap(), db);
         Stop expect{
             .name = "Empire   Street Building 5",
             .latitude = 55.611087,
@@ -449,11 +506,20 @@ void TestParseAddStopQuery()
         ASSERT_EQUAL(stop->name, expect.name);
         ASSERT_EQUAL(stop->latitude, expect.latitude);
         ASSERT_EQUAL(stop->longitude, expect.longitude);
+        ASSERT_EQUAL(db.road_route_length.size(), 0U);
     }
     {
+        istringstream input(R"({
+    "type": "Stop",
+    "road_distances": {},
+    "longitude": 89.5,
+    "name": "E",
+    "latitude": 21.0
+}
+)");
+        Document doc = Load(input);
         DataBase db;
-        istringstream is("E: 21, 89.5");
-        StopPtr stop = ParseAddStopQuery(is, db);
+        StopPtr stop = ParseAddStopQuery(doc.GetRoot().AsMap(), db);
         Stop expect{
             .name = "E",
             .latitude = 21.0,
@@ -462,13 +528,24 @@ void TestParseAddStopQuery()
         ASSERT_EQUAL(stop->name, expect.name);
         ASSERT_EQUAL(stop->latitude, expect.latitude);
         ASSERT_EQUAL(stop->longitude, expect.longitude);
+        ASSERT_EQUAL(db.road_route_length.size(), 0U);
     }
 
     // with Dim to stop#
     {
+        istringstream input(R"({
+    "type": "Stop",
+    "road_distances": {
+        "Marushkino": 3900
+    },
+    "longitude": 89.591,
+    "name": "Univer",
+    "latitude": 21.666
+}
+)");
+        Document doc = Load(input);
         DataBase db;
-        istringstream is("Univer: 21.666, 89.591, 3900m to Marushkino");
-        StopPtr stop = ParseAddStopQuery(is, db);
+        StopPtr stop = ParseAddStopQuery(doc.GetRoot().AsMap(), db);
         Stop expect{
             .name = "Univer",
             .latitude = 21.666,
@@ -483,11 +560,33 @@ void TestParseAddStopQuery()
         ASSERT_EQUAL(it->second[make_shared<Stop>(Stop{"Marushkino"})], 3900U);
     }
     {
+        istringstream input(R"([
+    {
+        "type": "Stop",
+        "road_distances": {
+            "Marushkino": 3900,
+            "Sabotajnaya": 1000,
+            "Meteornaya": 100000
+        },
+        "longitude": 89.591,
+        "name": "Univer",
+        "latitude": 21.666
+    },
+    {
+        "type": "Stop",
+        "road_distances": {
+            "Univer": 500
+        },
+        "longitude": 89.2,
+        "name": "Meteornaya",
+        "latitude": 21.1
+    }
+]
+)");
+        Document doc = Load(input);
         DataBase db;
-        istringstream is("Univer: 21.666, 89.591, 3900m to Marushkino, 1000m to Sabotajnaya, 100000m to Meteornaya");
-        StopPtr stop_univer = ParseAddStopQuery(is, db);
-        is = istringstream("Meteornaya: 21.1, 89.2, 500m to Univer");
-        StopPtr stop_meteornaya = ParseAddStopQuery(is, db);
+        StopPtr stop_univer = ParseAddStopQuery(doc.GetRoot().AsArray().at(0).AsMap(), db);
+        StopPtr stop_meteornaya = ParseAddStopQuery(doc.GetRoot().AsArray().at(1).AsMap(), db);
         Stop expect{
             .name = "Univer",
             .latitude = 21.666,
@@ -498,6 +597,12 @@ void TestParseAddStopQuery()
         ASSERT_EQUAL(stop_univer->name, expect.name);
         ASSERT_EQUAL(stop_univer->latitude, expect.latitude);
         ASSERT_EQUAL(stop_univer->longitude, expect.longitude);
+        expect.name = "Meteornaya";
+        expect.latitude = 21.1;
+        expect.longitude = 89.2;
+        ASSERT_EQUAL(stop_meteornaya->name, expect.name);
+        ASSERT_EQUAL(stop_meteornaya->latitude, expect.latitude);
+        ASSERT_EQUAL(stop_meteornaya->longitude, expect.longitude);
         auto it = db.road_route_length.find(stop_univer);
         ASSERT(it != db.road_route_length.end());
         ASSERT_EQUAL(it->second.size(), 3U);
