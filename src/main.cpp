@@ -383,6 +383,49 @@ BusPtr ParseAddBusQuery(istream &is, Stops &stops)
     return result;
 }
 
+/*
+{
+    "type": "Bus",
+    "name": "828",
+    "stops": [
+    "Biryulyovo Zapadnoye",
+    "Universam",
+    "Rossoshanskaya ulitsa",
+    "Biryulyovo Zapadnoye"
+    ],
+    "is_roundtrip": true
+}
+*/
+BusPtr ParseAddBusQuery(const map<string, Json::Node> &req, Stops &stops)
+{
+    using namespace Json;
+
+    BusPtr result = make_shared<Bus>();
+    result->name = req.at("name"s).AsString();
+    result->ring = req.at("is_roundtrip"s).AsBool();
+
+    auto push_stop = [&stops, &result](string name)
+    {
+        StopPtr stop = make_shared<Stop>(move(Stop{ move(name) }));
+        auto [it, inserted] = stops.insert(stop);
+        result->stops.push_back(*it);
+        it->get()->buses.insert(result);
+    };
+
+    const vector<Node> json_stops = req.at("stops"s).AsArray();
+
+    // последнюю остановку не надо добавлять
+    // для кольцевого маршрута
+    auto end = result->ring ? prev(json_stops.end()) : json_stops.end();
+
+    for (auto it = json_stops.begin(); it != end; ++it)
+    {
+        push_stop(it->AsString());
+    }
+
+    return result;
+}
+
 void Parse(istream &is, ostream &os)
 {
     DataBase db{};
@@ -629,14 +672,27 @@ void TestParseAddStopQuery()
 
 void TestParseAddBusQuery()
 {
+    using namespace Json;
     {
+        istringstream input(R"({
+    "type": "Bus",
+    "name": "256",
+    "stops": [
+        "Biryulyovo  Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo  Tovarnaya"
+    ],
+    "is_roundtrip": false
+}
+)");
+        Document doc = Load(input);
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo  Zapadnoye"});
         StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
         StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
         StopPtr stop4 = make_shared<Stop>(Stop{"Biryulyovo  Tovarnaya"});
         Stops stops{stop1, stop2, stop3, stop4};
-        istringstream is("256: Biryulyovo  Zapadnoye - Biryusinka - Universam - Biryulyovo  Tovarnaya");
-        BusPtr bus = ParseAddBusQuery(is, stops);
+        BusPtr bus = ParseAddBusQuery(doc.GetRoot().AsMap(), stops);
         Bus expect{
             .name = "256",
             .stops = {stop1, stop2, stop3, stop4},
@@ -651,14 +707,28 @@ void TestParseAddBusQuery()
         ASSERT_EQUAL(bus->ring, expect.ring);
     }
     {
+        istringstream input(R"({
+    "type": "Bus",
+    "name": "256",
+    "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo Tovarnaya",
+        "Biryulyovo Passazhirskaya",
+        "Biryulyovo Zapadnoye"
+    ],
+    "is_roundtrip": true
+}
+)");
+        Document doc = Load(input);
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
         StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
         StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
         StopPtr stop4 = make_shared<Stop>(Stop{"Biryulyovo Tovarnaya"});
         StopPtr stop5 = make_shared<Stop>(Stop{"Biryulyovo Passazhirskaya"});
         Stops stops{stop1, stop2, stop3, stop4, stop5};
-        istringstream is("256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye");
-        BusPtr bus = ParseAddBusQuery(is, stops);
+        BusPtr bus = ParseAddBusQuery(doc.GetRoot().AsMap(), stops);
         Bus expect{
             .name = "256",
             .stops = {stop1, stop2, stop3, stop4, stop5},
@@ -671,11 +741,21 @@ void TestParseAddBusQuery()
         ASSERT_EQUAL(bus->ring, expect.ring);
     }
     {
+        istringstream input(R"({
+    "type": "Bus",
+    "name": "My Bus",
+    "stops": [
+        "Biryulyovo Zapadnoye",
+        "Tomash"
+    ],
+    "is_roundtrip": false
+}
+)");
+        Document doc = Load(input);
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
         StopPtr stop2 = make_shared<Stop>(Stop{"Tomash"});
         Stops stops{stop1, stop2};
-        istringstream is("My Bus: Biryulyovo Zapadnoye - Tomash");
-        BusPtr bus = ParseAddBusQuery(is, stops);
+        BusPtr bus = ParseAddBusQuery(doc.GetRoot().AsMap(), stops);
         Bus expect{
             .name = "My Bus",
             .stops = {stop1, stop2},
@@ -687,11 +767,21 @@ void TestParseAddBusQuery()
         ASSERT_EQUAL(bus->ring, expect.ring);
     }
     {
+        istringstream input(R"({
+    "type": "Bus",
+    "name": "My Bus  HardBass",
+    "stops": [
+        "Biryulyovo",
+        "Tomash"
+    ],
+    "is_roundtrip": false
+}
+)");
+        Document doc = Load(input);
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo"});
         StopPtr stop2 = make_shared<Stop>(Stop{"Tomash"});
         Stops stops{stop1, stop2};
-        istringstream is("My Bus  HardBass: Biryulyovo - Tomash");
-        BusPtr bus = ParseAddBusQuery(is, stops);
+        BusPtr bus = ParseAddBusQuery(doc.GetRoot().AsMap(), stops);
         Bus expect{
             .name = "My Bus  HardBass",
             .stops = {stop1, stop2},
