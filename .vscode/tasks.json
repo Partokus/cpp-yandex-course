@@ -29,7 +29,7 @@
             "group": "build",
             "command": "meson",
             "args": [
-                "compile"
+                "compile",
             ],
             "options": {
                 "cwd": "${workspaceRoot}/build-win",

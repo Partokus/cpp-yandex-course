@@ -45,14 +45,14 @@ Node LoadDouble(istream &input)
 Node LoadBool(istream &input)
 {
     string s;
-    input >> s;
-    if (s.back() == ',')
+    if (input.peek() == 't')
     {
-        input.putback(s.back());
-        s.pop_back();
+        input.ignore(4); // true
+        return Node(true);
     }
-    bool result = s.front() == 't' ? true : false;
-    return Node(result);
+
+    input.ignore(5); // false
+    return Node(false);
 }
 
 Node LoadString(istream &input)
