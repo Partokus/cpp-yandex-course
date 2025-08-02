@@ -35,10 +35,14 @@ Node LoadArray(istream &input)
 Node LoadDouble(istream &input)
 {
     string s;
-    while (isdigit(input.peek()) or input.peek() == '.')
+
+    while (isdigit(input.peek()) or
+           input.peek() == '.' or
+           input.peek() == '-')
     {
         s.push_back(input.get());
     }
+
     return Node(stod(s));
 }
 

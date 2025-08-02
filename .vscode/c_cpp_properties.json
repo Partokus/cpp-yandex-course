@@ -12,7 +12,8 @@
             ],
             "intelliSenseMode": "windows-gcc-x64",
             "compilerPath": "C:/WorkPrograms/msys64/ucrt64/bin/g++.exe",
-            "cppStandard": "c++20"
+            "cppStandard": "c++20",
+            "cStandard": "c99"
         }
     ],
     "version": 4
