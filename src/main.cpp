@@ -84,7 +84,7 @@ struct Bus
     vector<StopPtr> stops;
     bool ring = false;
 
-    bool operator==(const Stop &o) const
+    bool operator==(const Bus &o) const
     { return name == o.name; }
 };
 
@@ -154,7 +154,18 @@ struct DataBase
     {
         size_t bus_wait_time = 0U; // мин
         double bus_velocity = 0.0; // км/час
+        double bus_velocity_meters_min = 0.0; // м/мин
+        double meters_past_while_wait_bus = 0.0;
     } routing_settings{};
+
+    void CreateRoutingSettings(size_t bus_wait_time, double bus_velocity)
+    {
+        routing_settings.bus_wait_time = bus_wait_time;
+        routing_settings.bus_velocity = bus_velocity;
+        routing_settings.bus_velocity_meters_min = bus_velocity * 1000.0 / 60.0;
+        routing_settings.meters_past_while_wait_bus = bus_wait_time *
+                                                      routing_settings.bus_velocity_meters_min;
+    }
 
     template <typename Key, typename Value>
     using Map = unordered_map<Key, Value, NamePtrHasher<Key>, NamePtrKeyEqual<Key>>;
@@ -162,7 +173,10 @@ struct DataBase
     using Set = unordered_set<Key, NamePtrHasher<Key>, NamePtrKeyEqual<Key>>;
 
     Map<BusPtr, BusInfo> buses_info;
-    Map<StopPtr, Map<StopPtr, size_t>> road_route_length;
+    Map<StopPtr, Map<StopPtr, size_t>> road_route_length; // в метрах
+
+    DirectedWeightedGraph graph{0};
+    Router router{graph};
 
     void CreateInfo()
     {
@@ -182,7 +196,10 @@ struct DataBase
             const Stops unique_stops{ bus->stops.begin(), bus->stops.end() };
             info.unique_stops = unique_stops.size();
 
-            _unique_stops_count += info.unique_stops;
+            for (const StopPtr &stop : unique_stops)
+            {
+                stop_to_vertex_info.insert({ stop, VertexInfo{ _vertex_id++, bus } });
+            }
 
             for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
             {
@@ -213,11 +230,19 @@ struct DataBase
                 info.route_length_geo *= 2.0;
         }
 
-        CreateRouteInfo();
+        CreateGraph();
     }
 
+    struct VertexInfo
+    {
+        Graph::VertexId id = 0U;
+        BusPtr bus;
+    };
+
+    multimap<StopPtr, VertexInfo> stop_to_vertex_info; // TODO: unordered
+
 private:
-    size_t _unique_stops_count = 0U;
+    Graph::VertexId _vertex_id = 0U;
 
     // return meters
     std::optional<size_t> CalcRoadDistance(const StopPtr &lhs, const StopPtr &rhs) const
@@ -233,54 +258,90 @@ private:
         return result;
     }
 
-    void CreateRouteInfo()
+    void CreateGraph()
     {
-        DirectedWeightedGraph graph(_unique_stops_count);
+        graph = DirectedWeightedGraph{ stop_to_vertex_info.size() };
 
-        multimap<StopPtr, Graph::VertexId> stop_to_vertex_id;
+        for (const BusPtr &bus : buses)
+        {
+            for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
+            {
+                auto it_next = next(it);
+                if (it_next == bus->stops.end())
+                    break;
 
-        // vector<StopPtr> vertex_id_to_stop{ stops.begin(), stops.end() };
-        // Map<StopPtr, Graph::VertexId> stop_to_vertex_id;
+                StopPtr &from = *it;
+                StopPtr &to = *it_next;
 
-        // for (size_t i = 0U; i < vertex_id_to_stop.size(); ++i)
-        //     stop_to_vertex_id[ vertex_id_to_stop[i] ] = i;
+                // находим вершины, которые принаджлежат именно этому маршруту
+                auto it_vertex_info_from = stop_to_vertex_info.find(from);
+                auto it_vertex_info_to = stop_to_vertex_info.find(to);
+                while (it_vertex_info_from->second.bus.get() != bus.get())
+                    ++it_vertex_info_from;
+                while (it_vertex_info_to->second.bus.get() != bus.get())
+                    ++it_vertex_info_to;
 
-        // unordered_set<Edge, EdgeHasher> edges;
+                auto it_road_route = road_route_length.find(from);
+                if (it_road_route == road_route_length.end())
+                    return;
+                auto it_length = it_road_route->second.find(to);
+                if (it_length == it_road_route->second.end())
+                    return;
+                double road_distance = it_length->second; // weight, в метрах
 
-        // for (const BusPtr &bus : buses)
-        // {
-        //     auto &info = buses_info[bus];
+                // если начальная остановка, то увеличиваем вес, так как
+                // необходимо ещё ждать автобус
+                if (it == bus->stops.begin())
+                {
+                    road_distance += routing_settings.meters_past_while_wait_bus;
+                }
 
-        //     for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
-        //     {
-        //         auto it_next = next(it);
-        //         if (it_next == bus->stops.end())
-        //             break;
+                Edge edge{
+                    .from = it_vertex_info_from->second.id,
+                    .to = it_vertex_info_to->second.id,
+                    .weight = road_distance
+                };
 
-        //         StopPtr &from = *it;
-        //         StopPtr &to = *it_next;
+                graph.AddEdge(edge);
 
-        //         optional<Weight> road_distance = CalcRoadDistance(from, to);
-        //         if (not road_distance)
-        //             return; // throw runtime_error("in optional must be value");
+                if (not bus->ring)
+                {
+                    road_distance = road_route_length.at(to).at(from);
+                    edge = {
+                        .from = it_vertex_info_to->second.id,
+                        .to = it_vertex_info_from->second.id,
+                        .weight = road_distance
+                    };
+                    graph.AddEdge(edge);
+                }
+            }
+        }
 
-        //         Edge edge{
-        //             .from = stop_to_vertex_id[from],
-        //             .to = stop_to_vertex_id[to],
-        //             .weight = *road_distance
-        //         };
+        // формируем рёбра пересадок для смены автобуса
+        for (auto it = stop_to_vertex_info.begin();
+                it != stop_to_vertex_info.end();
+                ++it)
+        {
+            auto it_next = next(it);
+            if (it_next == stop_to_vertex_info.end())
+                break;
 
-        //         auto [it_edge, inserted] = edges.insert(edge);
-        //         if (inserted)
-        //         {
-        //             graph.AddEdge(edge);
-        //         }
-        //     }
-        // }
+            while (it_next != stop_to_vertex_info.end() and it->first == it_next->first)
+            {
+                Edge edge{
+                    .from = it->second.id,
+                    .to = it_next->second.id,
+                    .weight = routing_settings.meters_past_while_wait_bus
+                };
+                graph.AddEdge(edge);
 
-        // Router router(graph);
+                edge.from = it_next->second.id;
+                edge.to = it->second.id;
+                graph.AddEdge(edge);
 
-
+                ++it_next;
+            }
+        }
     }
 };
 
@@ -384,8 +445,9 @@ void Parse(istream &is, ostream &os)
     const map<string, Node> &root = doc.GetRoot().AsMap();
 
     const map<string, Node> &routing_settings = root.at("routing_settings"s).AsMap();
-    db.routing_settings.bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
-    db.routing_settings.bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
+    const size_t bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
+    const double bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
+    db.CreateRoutingSettings(bus_wait_time, bus_velocity);
 
     const vector<Node> &base_requests = root.at("base_requests"s).AsArray();
 
@@ -848,13 +910,237 @@ void TestDataBaseCreateInfo()
         db.buses = {bus1};
 
         db.road_route_length[stop1][stop2] = 1000;
+        db.road_route_length[stop2][stop1] = 1000;
         db.road_route_length[stop2][stop3] = 1500;
+        db.road_route_length[stop3][stop2] = 1500;
 
         db.CreateInfo();
 
         ASSERT_EQUAL(db.buses_info[bus1].stops_on_route, 5U);
         ASSERT_EQUAL(db.buses_info[bus1].unique_stops, 3U);
         ASSERT(db.buses_info[bus1].route_length_geo > 20938.0 and db.buses_info[bus1].route_length_geo < 20940.0);
+    }
+}
+
+void TestDataBaseCreateGraph()
+{
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5};
+        db.buses = {bus1, bus2};
+
+        db.road_route_length[stop1][stop2] = 1000;
+        db.road_route_length[stop2][stop1] = 1000;
+        db.road_route_length[stop2][stop3] = 500;
+        db.road_route_length[stop3][stop2] = 500;
+        db.road_route_length[stop3][stop4] = 800;
+        db.road_route_length[stop4][stop3] = 800;
+        db.road_route_length[stop4][stop5] = 300;
+        db.road_route_length[stop5][stop4] = 300;
+
+        db.CreateRoutingSettings(6, 40.0);
+
+        ASSERT_EQUAL(db.routing_settings.bus_wait_time, 6U);
+        ASSERT_EQUAL(db.routing_settings.bus_velocity, 40.0);
+        ASSERT(AssertDouble(db.routing_settings.bus_velocity_meters_min, 666.6));
+        ASSERT(AssertDouble(db.routing_settings.meters_past_while_wait_bus, 4000.0));
+
+        db.CreateInfo();
+
+        /* bus1: 1 <-> 2 <-> 3
+         * bus2: 3 <-> 4 <-> 5
+         * bus1-bus2: 3 <-> 3
+        */
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 6U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 10U);
+    }
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop2, stop3, stop4, stop5}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5};
+        db.buses = {bus1, bus2};
+
+        db.road_route_length[stop1][stop2] = 1000;
+        db.road_route_length[stop2][stop1] = 1000;
+        db.road_route_length[stop2][stop3] = 500;
+        db.road_route_length[stop3][stop2] = 500;
+        db.road_route_length[stop3][stop4] = 800;
+        db.road_route_length[stop4][stop3] = 800;
+        db.road_route_length[stop4][stop5] = 300;
+        db.road_route_length[stop5][stop4] = 300;
+
+        db.CreateInfo();
+
+        /* bus1: 1 <-> 2 <-> 3
+         * bus2: 2 <-> 3 <-> 4 <-> 5
+         * bus1-bus2: 2 <-> 2, 3 <-> 3
+        */
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 7U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 14U);
+    }
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop4, stop5}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5};
+        db.buses = {bus1, bus2};
+
+        db.road_route_length[stop1][stop2] = 1000;
+        db.road_route_length[stop2][stop1] = 1000;
+        db.road_route_length[stop2][stop3] = 500;
+        db.road_route_length[stop3][stop2] = 500;
+        db.road_route_length[stop4][stop5] = 300;
+        db.road_route_length[stop5][stop4] = 300;
+
+        db.CreateInfo();
+
+        /* bus1: 1 <-> 2 <-> 3
+         * bus2: 4 <-> 5
+        */
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 5U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 6U);
+    }
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5, stop3}});
+        bus2->ring = true;
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5};
+        db.buses = {bus1, bus2};
+
+        db.road_route_length[stop1][stop2] = 1000;
+        db.road_route_length[stop2][stop1] = 1000;
+        db.road_route_length[stop2][stop3] = 500;
+        db.road_route_length[stop3][stop2] = 500;
+        db.road_route_length[stop3][stop4] = 800;
+        db.road_route_length[stop4][stop3] = 800;
+        db.road_route_length[stop4][stop5] = 300;
+        db.road_route_length[stop5][stop4] = 300;
+        db.road_route_length[stop5][stop3] = 400;
+
+        db.CreateInfo();
+
+        /* bus1: 1 <-> 2 <-> 3
+         * bus2: 3 -> 4 -> 5 -> 3
+         * bus1-bus2: 3 <-> 3
+        */
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 6U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 9U);
+    }
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
+        StopPtr stop6 = make_shared<Stop>(Stop{"Ejevikovka"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5}});
+        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop3, stop6}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5, stop6};
+        db.buses = {bus1, bus2, bus3};
+
+        db.road_route_length[stop1][stop2] = 1000;
+        db.road_route_length[stop2][stop1] = 1000;
+        db.road_route_length[stop2][stop3] = 500;
+        db.road_route_length[stop3][stop2] = 500;
+        db.road_route_length[stop3][stop4] = 800;
+        db.road_route_length[stop4][stop3] = 800;
+        db.road_route_length[stop4][stop5] = 300;
+        db.road_route_length[stop5][stop4] = 300;
+        db.road_route_length[stop3][stop6] = 200;
+        db.road_route_length[stop6][stop3] = 200;
+
+        db.CreateInfo();
+
+        /* bus1: 1 <-> 2 <-> 3
+         * bus2: 3 <-> 4 <-> 5
+         * bus3: 3 <-> 6
+         * bus1-bus2: 3 <-> 3
+         * bus1-bus3: 3 <-> 3
+         * bus2-bus3: 3 <-> 3
+        */
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 8U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 16U);
+    }
+}
+
+void TestBuildRoute()
+{
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
+        StopPtr stop6 = make_shared<Stop>(Stop{"Ejevikovka"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5}});
+        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop3, stop6}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5, stop6};
+        db.buses = {bus1, bus2, bus3};
+
+        db.road_route_length[stop1][stop2] = 1000;
+        db.road_route_length[stop2][stop1] = 1000;
+        db.road_route_length[stop2][stop3] = 500;
+        db.road_route_length[stop3][stop2] = 500;
+        db.road_route_length[stop3][stop4] = 800;
+        db.road_route_length[stop4][stop3] = 800;
+        db.road_route_length[stop4][stop5] = 300;
+        db.road_route_length[stop5][stop4] = 300;
+        db.road_route_length[stop3][stop6] = 200;
+        db.road_route_length[stop6][stop3] = 200;
+
+        db.CreateInfo();
+
+        /* bus1: 1 <-> 2 <-> 3
+         * bus2: 3 <-> 4 <-> 5
+         * bus3: 3 <-> 6
+         * bus1-bus2: 3 <-> 3
+         * bus1-bus3: 3 <-> 3
+         * bus2-bus3: 3 <-> 3
+        */
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 8U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 16U);
+
+        // db.router.BuildRoute();
     }
 }
 
@@ -1396,7 +1682,7 @@ void TestParseJson()
 void TestParse()
 {
     {
-        istringstream iss(R"({
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
   "base_requests": [
     {
       "type": "Stop",
@@ -1529,7 +1815,7 @@ void TestParse()
         ASSERT_EQUAL(str, str_expect);
     }
     {
-        istringstream iss(R"({
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
   "base_requests": [
     {
       "type": "Stop",
@@ -1711,7 +1997,7 @@ void TestParse()
         ASSERT_EQUAL(str, str_expect);
     }
     {
-        istringstream iss(R"({
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
   "base_requests": [
     {
       "type": "Stop",
@@ -1912,7 +2198,7 @@ void TestParse()
         ASSERT_EQUAL(str, str_expect);
     }
     {
-        istringstream iss(R"({
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
   "base_requests": [
     {
       "type": "Stop",
@@ -2045,7 +2331,7 @@ void TestParse()
     }
     {
         istringstream iss(R"(
-{
+{ "routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
   "base_requests": [
     {
       "type": "Stop",
@@ -2233,7 +2519,7 @@ void TestParse()
         ASSERT_EQUAL(str, str_expect);
     }
     {
-        istringstream iss(R"({
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
   "base_requests": [
     {
       "type": "Stop",
@@ -2438,7 +2724,7 @@ void TestParse()
         ASSERT_EQUAL(str, str_expect);
     }
     {
-        istringstream iss(R"({"base_requests": [{"latitude": 55.611087, "longitude": 37.20829, "type": "Stop", "road_distances": {"+++": 3900}, "name": "Tolstopaltsevo"}, {"type": "Stop", "name": "+++", "latitude": 55.595884, "longitude": 37.209755, "road_distances": {"Rasskazovka": 9900}}, {"type": "Bus", "name": "256", "stops": ["Biryulyovo Zapadnoye", "Biryusinka", "Universam", "Biryulyovo Tovarnaya", "Biryulyovo Passazhirskaya", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Bus", "name": "750", "is_roundtrip": false, "stops": ["Tolstopaltsevo", "Marushkino", "Rasskazovka"]}, {"type": "Stop", "name": "Rasskazovka", "latitude": 55.632761, "longitude": 37.333324, "road_distances": {}}, {"type": "Stop", "name": "Biryulyovo Zapadnoye", "latitude": 55.574371, "longitude": 37.6517, "road_distances": {"Biryusinka": 1800, "Universam": 2400, "Rossoshanskaya ulitsa": 7500}}, {"type": "Stop", "name": "Biryusinka", "latitude": 55.581065, "longitude": 37.64839, "road_distances": {"Universam": 750}}, {"type": "Stop", "name": "Universam", "latitude": 55.587655, "longitude": 37.645687, "road_distances": {"Biryulyovo Tovarnaya": 900, "Rossoshanskaya ulitsa": 5600}}, {"type": "Stop", "name": "Biryulyovo Tovarnaya", "latitude": 55.592028, "longitude": 37.653656, "road_distances": {"Biryulyovo Passazhirskaya": 1300}}, {"type": "Stop", "name": "Biryulyovo Passazhirskaya", "latitude": 55.580999, "longitude": 37.659164, "road_distances": {"Biryulyovo Zapadnoye": 1200}}, {"type": "Bus", "name": "828", "stops": ["Biryulyovo Zapadnoye", "Universam", "Rossoshanskaya ulitsa", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Stop", "name": "Rossoshanskaya ulitsa", "latitude": 55.595579, "longitude": 37.605757, "road_distances": {}}, {"type": "Stop", "name": "Prazhskaya", "latitude": 55.611678, "longitude": 37.603831, "road_distances": {}}], "stat_requests": [{"id": 599708471, "type": "Bus", "name": "256"}, {"id": 2059890189, "type": "Bus", "name": "750"}, {"id": 222058974, "type": "Bus", "name": "751"}, {"id": 1038752326, "type": "Stop", "name": "Samara"}, {"id": 986197773, "type": "Stop", "name": "Prazhskaya"}, {"id": 932894250, "type": "Stop", "name": "Biryulyovo Zapadnoye"}]})");
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40}, "base_requests": [{"latitude": 55.611087, "longitude": 37.20829, "type": "Stop", "road_distances": {"+++": 3900}, "name": "Tolstopaltsevo"}, {"type": "Stop", "name": "+++", "latitude": 55.595884, "longitude": 37.209755, "road_distances": {"Rasskazovka": 9900}}, {"type": "Bus", "name": "256", "stops": ["Biryulyovo Zapadnoye", "Biryusinka", "Universam", "Biryulyovo Tovarnaya", "Biryulyovo Passazhirskaya", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Bus", "name": "750", "is_roundtrip": false, "stops": ["Tolstopaltsevo", "Marushkino", "Rasskazovka"]}, {"type": "Stop", "name": "Rasskazovka", "latitude": 55.632761, "longitude": 37.333324, "road_distances": {}}, {"type": "Stop", "name": "Biryulyovo Zapadnoye", "latitude": 55.574371, "longitude": 37.6517, "road_distances": {"Biryusinka": 1800, "Universam": 2400, "Rossoshanskaya ulitsa": 7500}}, {"type": "Stop", "name": "Biryusinka", "latitude": 55.581065, "longitude": 37.64839, "road_distances": {"Universam": 750}}, {"type": "Stop", "name": "Universam", "latitude": 55.587655, "longitude": 37.645687, "road_distances": {"Biryulyovo Tovarnaya": 900, "Rossoshanskaya ulitsa": 5600}}, {"type": "Stop", "name": "Biryulyovo Tovarnaya", "latitude": 55.592028, "longitude": 37.653656, "road_distances": {"Biryulyovo Passazhirskaya": 1300}}, {"type": "Stop", "name": "Biryulyovo Passazhirskaya", "latitude": 55.580999, "longitude": 37.659164, "road_distances": {"Biryulyovo Zapadnoye": 1200}}, {"type": "Bus", "name": "828", "stops": ["Biryulyovo Zapadnoye", "Universam", "Rossoshanskaya ulitsa", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Stop", "name": "Rossoshanskaya ulitsa", "latitude": 55.595579, "longitude": 37.605757, "road_distances": {}}, {"type": "Stop", "name": "Prazhskaya", "latitude": 55.611678, "longitude": 37.603831, "road_distances": {}}], "stat_requests": [{"id": 599708471, "type": "Bus", "name": "256"}, {"id": 2059890189, "type": "Bus", "name": "750"}, {"id": 222058974, "type": "Bus", "name": "751"}, {"id": 1038752326, "type": "Stop", "name": "Samara"}, {"id": 986197773, "type": "Stop", "name": "Prazhskaya"}, {"id": 932894250, "type": "Stop", "name": "Biryulyovo Zapadnoye"}]})");
 
         ostringstream oss;
 
@@ -2486,7 +2772,7 @@ void TestParse()
         ASSERT_EQUAL(str, str_expect);
     }
     {
-        istringstream iss(R"({"base_requests": [{"type": "Stop", "name": "A", "latitude": 0.5, "longitude": -1, "road_distances": {"B": 100000}}, {"type": "Stop", "name": "B", "latitude": 0, "longitude": -1.1, "road_distances": {}}, {"type": "Bus", "name": "256", "stops": ["B", "A"], "is_roundtrip": false}], "stat_requests": [{"id": 1317873202, "type": "Bus", "name": "256"}, {"id": 853807922, "type": "Stop", "name": "A"}, {"id": 1416389015, "type": "Stop", "name": "B"}, {"id": 1021316791, "type": "Stop", "name": "C"}]})");
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40}, "base_requests": [{"type": "Stop", "name": "A", "latitude": 0.5, "longitude": -1, "road_distances": {"B": 100000}}, {"type": "Stop", "name": "B", "latitude": 0, "longitude": -1.1, "road_distances": {}}, {"type": "Bus", "name": "256", "stops": ["B", "A"], "is_roundtrip": false}], "stat_requests": [{"id": 1317873202, "type": "Bus", "name": "256"}, {"id": 853807922, "type": "Stop", "name": "A"}, {"id": 1416389015, "type": "Stop", "name": "B"}, {"id": 1021316791, "type": "Stop", "name": "C"}]})");
 
         ostringstream oss;
 
@@ -2533,6 +2819,8 @@ void TestAll()
     RUN_TEST(tr, TestParseAddBusQuery);
     RUN_TEST(tr, TestCalcGeoDistance);
     RUN_TEST(tr, TestDataBaseCreateInfo);
+    RUN_TEST(tr, TestDataBaseCreateGraph);
+    RUN_TEST(tr, TestBuildRoute);
     RUN_TEST(tr, TestParse);
 }
 
