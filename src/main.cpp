@@ -26,6 +26,7 @@
 #include <cmath>
 #include <istream>
 #include <variant>
+#include <tuple>
 
 using namespace std;
 
@@ -115,6 +116,24 @@ double CalcGeoDistance(double lat1, double lon1, double lat2, double lon2)
     return EearthRaduis * c;
 }
 
+using Weight = double;
+using DirectedWeightedGraph = Graph::DirectedWeightedGraph<Weight>;
+using Router = Graph::Router<Weight>;
+using RouteInfo = Router::RouteInfo;
+using Edge = Graph::Edge<Weight>;
+
+struct EdgeHasher
+{
+    size_t operator()(const Edge &value) const
+    {
+        size_t x1 = hasher(value.from);
+        size_t x2 = hasher(value.to);
+        return x1 * x1 + x2;
+    }
+
+    hash<Graph::VertexId> hasher;
+};
+
 struct DataBase
 {
     Stops stops;
@@ -131,13 +150,21 @@ struct DataBase
         { return route_length_road / route_length_geo; }
     };
 
+    struct RoutingSettings
+    {
+        size_t bus_wait_time = 0U; // мин
+        double bus_velocity = 0.0; // км/час
+    } routing_settings{};
+
     template <typename Key, typename Value>
     using Map = unordered_map<Key, Value, NamePtrHasher<Key>, NamePtrKeyEqual<Key>>;
+    template <typename Key>
+    using Set = unordered_set<Key, NamePtrHasher<Key>, NamePtrKeyEqual<Key>>;
 
     Map<BusPtr, BusInfo> buses_info;
     Map<StopPtr, Map<StopPtr, size_t>> road_route_length;
 
-    void CreateBusesInfo()
+    void CreateInfo()
     {
         for (const BusPtr &bus : buses)
         {
@@ -145,7 +172,7 @@ struct DataBase
 
             if (bus->ring)
             {
-                info.stops_on_route = bus->stops.size() + 1U;
+                info.stops_on_route = bus->stops.size();
             }
             else
             {
@@ -155,52 +182,43 @@ struct DataBase
             const Stops unique_stops{ bus->stops.begin(), bus->stops.end() };
             info.unique_stops = unique_stops.size();
 
+            _unique_stops_count += info.unique_stops;
+
             for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
             {
                 auto it_next = next(it);
-                if (it_next != bus->stops.end())
-                {
-                    const StopPtr &lhs = *it;
-                    const StopPtr &rhs = *it_next;
-
-                    info.route_length_geo += CalcGeoDistance(
-                        lhs->latitude, lhs->longitude,
-                        rhs->latitude, rhs->longitude
-                    );
-
-                    std::optional<size_t> road_distance = CalcRoadDistance(lhs, rhs);
-                    if (road_distance)
-                        info.route_length_road += *road_distance;
-                    if (not bus->ring)
-                    {
-                        road_distance = CalcRoadDistance(rhs, lhs);
-                        if (road_distance)
-                            info.route_length_road += *road_distance;
-                    }
-                }
-                else
+                if (it_next == bus->stops.end())
                     break;
-            }
 
-            if (bus->ring)
-            {
+                const StopPtr &lhs = *it;
+                const StopPtr &rhs = *it_next;
+
                 info.route_length_geo += CalcGeoDistance(
-                    bus->stops.back()->latitude,   bus->stops.back()->longitude,
-                    bus->stops.front()->latitude, bus->stops.front()->longitude
+                    lhs->latitude, lhs->longitude,
+                    rhs->latitude, rhs->longitude
                 );
 
-                std::optional<size_t> road_distance = CalcRoadDistance(bus->stops.back(), bus->stops.front());
+                std::optional<size_t> road_distance = CalcRoadDistance(lhs, rhs);
                 if (road_distance)
                     info.route_length_road += *road_distance;
+                if (not bus->ring)
+                {
+                    road_distance = CalcRoadDistance(rhs, lhs);
+                    if (road_distance)
+                        info.route_length_road += *road_distance;
+                }
             }
-            else
-            {
+
+            if (not bus->ring)
                 info.route_length_geo *= 2.0;
-            }
         }
+
+        CreateRouteInfo();
     }
 
 private:
+    size_t _unique_stops_count = 0U;
+
     // return meters
     std::optional<size_t> CalcRoadDistance(const StopPtr &lhs, const StopPtr &rhs) const
     {
@@ -213,6 +231,56 @@ private:
                 result = it_rhs->second;
         }
         return result;
+    }
+
+    void CreateRouteInfo()
+    {
+        DirectedWeightedGraph graph(_unique_stops_count);
+
+        multimap<StopPtr, Graph::VertexId> stop_to_vertex_id;
+
+        // vector<StopPtr> vertex_id_to_stop{ stops.begin(), stops.end() };
+        // Map<StopPtr, Graph::VertexId> stop_to_vertex_id;
+
+        // for (size_t i = 0U; i < vertex_id_to_stop.size(); ++i)
+        //     stop_to_vertex_id[ vertex_id_to_stop[i] ] = i;
+
+        // unordered_set<Edge, EdgeHasher> edges;
+
+        // for (const BusPtr &bus : buses)
+        // {
+        //     auto &info = buses_info[bus];
+
+        //     for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
+        //     {
+        //         auto it_next = next(it);
+        //         if (it_next == bus->stops.end())
+        //             break;
+
+        //         StopPtr &from = *it;
+        //         StopPtr &to = *it_next;
+
+        //         optional<Weight> road_distance = CalcRoadDistance(from, to);
+        //         if (not road_distance)
+        //             return; // throw runtime_error("in optional must be value");
+
+        //         Edge edge{
+        //             .from = stop_to_vertex_id[from],
+        //             .to = stop_to_vertex_id[to],
+        //             .weight = *road_distance
+        //         };
+
+        //         auto [it_edge, inserted] = edges.insert(edge);
+        //         if (inserted)
+        //         {
+        //             graph.AddEdge(edge);
+        //         }
+        //     }
+        // }
+
+        // Router router(graph);
+
+
     }
 };
 
@@ -296,11 +364,7 @@ BusPtr ParseAddBusQuery(const map<string, Json::Node> &req, Stops &stops)
 
     const vector<Node> json_stops = req.at("stops"s).AsArray();
 
-    // последнюю остановку не надо добавлять
-    // для кольцевого маршрута
-    auto end = result->ring ? prev(json_stops.end()) : json_stops.end();
-
-    for (auto it = json_stops.begin(); it != end; ++it)
+    for (auto it = json_stops.begin(); it != json_stops.end(); ++it)
     {
         push_stop(it->AsString());
     }
@@ -318,6 +382,10 @@ void Parse(istream &is, ostream &os)
     Document doc = Load(is);
 
     const map<string, Node> &root = doc.GetRoot().AsMap();
+
+    const map<string, Node> &routing_settings = root.at("routing_settings"s).AsMap();
+    db.routing_settings.bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
+    db.routing_settings.bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
 
     const vector<Node> &base_requests = root.at("base_requests"s).AsArray();
 
@@ -343,7 +411,7 @@ void Parse(istream &is, ostream &os)
         }
     }
 
-    db.CreateBusesInfo();
+    db.CreateInfo();
 
     const vector<Node> &stat_requests = root.at("stat_requests"s).AsArray();
 
@@ -627,7 +695,7 @@ void TestParseAddBusQuery()
         BusPtr bus = ParseAddBusQuery(doc.GetRoot().AsMap(), stops);
         Bus expect{
             .name = "256",
-            .stops = {stop1, stop2, stop3, stop4, stop5},
+            .stops = {stop1, stop2, stop3, stop4, stop5, stop1},
             .ring = true
         };
         ASSERT_EQUAL(bus->stops.size(), expect.stops.size());
@@ -707,7 +775,7 @@ void TestCalcGeoDistance()
     }
 }
 
-void TestDataBaseCreateBusesInfo()
+void TestDataBaseCreateInfo()
 {
     {
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
@@ -720,7 +788,7 @@ void TestDataBaseCreateBusesInfo()
 
         BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
         BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5, stop6}});
-        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop6, stop5, stop4, stop3, stop7}});
+        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop6, stop5, stop4, stop3, stop7, stop6}});
         bus3->ring = true;
 
         // уникальные остановки: Biryulyovo Zapadnoye, Biryusinka, Lepeshkina
@@ -729,7 +797,7 @@ void TestDataBaseCreateBusesInfo()
         db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7};
         db.buses = {bus1, bus2, bus3};
 
-        db.CreateBusesInfo();
+        db.CreateInfo();
 
         ASSERT_EQUAL(db.buses_info[bus1].stops_on_route, 5U);
         ASSERT_EQUAL(db.buses_info[bus2].stops_on_route, 7U);
@@ -749,7 +817,7 @@ void TestDataBaseCreateBusesInfo()
         StopPtr stop7 = make_shared<Stop>(Stop{"Biryulyovo Tovarnaya", 55.592028, 37.653656});
         StopPtr stop8 = make_shared<Stop>(Stop{"Biryulyovo Passazhirskaya", 55.580999, 37.659164});
 
-        BusPtr bus1 = make_shared<Bus>(Bus{"256", {stop4, stop5, stop6, stop7, stop8}});
+        BusPtr bus1 = make_shared<Bus>(Bus{"256", {stop4, stop5, stop6, stop7, stop8, stop4}});
         bus1->ring = true;
         BusPtr bus2 = make_shared<Bus>(Bus{"750", {stop1, stop2, stop3}});
 
@@ -757,7 +825,7 @@ void TestDataBaseCreateBusesInfo()
         db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7, stop8};
         db.buses = {bus1, bus2};
 
-        db.CreateBusesInfo();
+        db.CreateInfo();
 
         ASSERT_EQUAL(db.buses_info[bus1].stops_on_route, 6U);
         ASSERT_EQUAL(db.buses_info[bus2].stops_on_route, 5U);
@@ -782,7 +850,7 @@ void TestDataBaseCreateBusesInfo()
         db.road_route_length[stop1][stop2] = 1000;
         db.road_route_length[stop2][stop3] = 1500;
 
-        db.CreateBusesInfo();
+        db.CreateInfo();
 
         ASSERT_EQUAL(db.buses_info[bus1].stops_on_route, 5U);
         ASSERT_EQUAL(db.buses_info[bus1].unique_stops, 3U);
@@ -2464,7 +2532,7 @@ void TestAll()
     RUN_TEST(tr, TestParseAddStopQuery);
     RUN_TEST(tr, TestParseAddBusQuery);
     RUN_TEST(tr, TestCalcGeoDistance);
-    RUN_TEST(tr, TestDataBaseCreateBusesInfo);
+    RUN_TEST(tr, TestDataBaseCreateInfo);
     RUN_TEST(tr, TestParse);
 }
 
@@ -2476,6 +2544,50 @@ int main()
 {
     TestAll();
 
-    Parse(cin, cout);
+    // Parse(cin, cout);
+
+    // using namespace Graph;
+
+    // vector<string> stops(4);
+
+    // DirectedWeightedGraph<double> graph(stops.size());
+
+    // Edge<double> edge{};
+
+    // // 0
+    // edge = { 0, 1, 2600 };
+    // graph.AddEdge(edge);
+
+    // // 0
+    // edge = { 1, 2, 890 };
+    // graph.AddEdge(edge);
+
+    // edge = { 2, 0, 2500 };
+    // graph.AddEdge(edge);
+
+    // edge = { 2, 3, 4650 };
+    // graph.AddEdge(edge);
+
+    // edge = { 2, 1, 1380 };
+    // graph.AddEdge(edge);
+
+    // using RouteInfo = Router<double>::RouteInfo;
+    // Router router(graph);
+
+    // optional<RouteInfo> route_info = router.BuildRoute(0, 3);
+
+    // if (route_info)
+    // {
+    //     cout << "route id = " << route_info->id << '\n' <<
+    //             "weight = " << route_info->weight << '\n' <<
+    //             "edge count = " << route_info->edge_count << '\n';
+
+    //     for (size_t i = 0U; i < route_info->edge_count; ++i)
+    //     {
+    //         cout << "edge id = " << router.GetRouteEdge(route_info->id, i) << '\n';
+    //     }
+    // }
+    // else
+    //     cout << "No route info" << endl;
     return 0;
 }

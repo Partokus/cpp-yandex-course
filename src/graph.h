@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <deque>
 #include <vector>
+#include <tuple>
 
 template <typename It>
 class Range
@@ -30,6 +31,16 @@ struct Edge
     VertexId from;
     VertexId to;
     Weight weight;
+
+    bool operator==(const Edge<Weight> &o) const
+    {
+        return tie(from, to) == tie(o.from, o.to);
+    }
+
+    bool operator<(const Edge<Weight> &o) const
+    {
+        return tie(from, to) < tie(o.from, o.to);
+    }
 };
 
 template <typename Weight>
