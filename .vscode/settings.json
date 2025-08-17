@@ -105,7 +105,8 @@
         "memory_resource": "cpp",
         "semaphore": "cpp",
         "*.def": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "text_encoding": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "C:/WorkPrograms/msys64/ucrt64/bin/g++.exe"

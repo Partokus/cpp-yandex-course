@@ -27,6 +27,7 @@
 #include <istream>
 #include <variant>
 #include <tuple>
+#include <bitset>   // For std::bitset
 
 using namespace std;
 
@@ -176,7 +177,6 @@ struct DataBase
     Map<StopPtr, Map<StopPtr, size_t>> road_route_length; // в метрах
 
     DirectedWeightedGraph graph{0};
-    Router router{graph};
 
     void CreateInfo()
     {
@@ -198,7 +198,8 @@ struct DataBase
 
             for (const StopPtr &stop : unique_stops)
             {
-                stop_to_vertex_info.insert({ stop, VertexInfo{ _vertex_id++, bus } });
+                stop_to_vertex_id[stop][bus] = _vertex_id++;
+                ++_vertex_count;
             }
 
             for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
@@ -239,7 +240,8 @@ struct DataBase
         BusPtr bus;
     };
 
-    multimap<StopPtr, VertexInfo> stop_to_vertex_info; // TODO: unordered
+    Map<StopPtr, Map<BusPtr, Graph::VertexId>> stop_to_vertex_id;
+    size_t _vertex_count = 0U;
 
 private:
     Graph::VertexId _vertex_id = 0U;
@@ -260,7 +262,7 @@ private:
 
     void CreateGraph()
     {
-        graph = DirectedWeightedGraph{ stop_to_vertex_info.size() };
+        graph = DirectedWeightedGraph{ _vertex_count };
 
         for (const BusPtr &bus : buses)
         {
@@ -273,14 +275,6 @@ private:
                 StopPtr &from = *it;
                 StopPtr &to = *it_next;
 
-                // находим вершины, которые принаджлежат именно этому маршруту
-                auto it_vertex_info_from = stop_to_vertex_info.find(from);
-                auto it_vertex_info_to = stop_to_vertex_info.find(to);
-                while (it_vertex_info_from->second.bus.get() != bus.get())
-                    ++it_vertex_info_from;
-                while (it_vertex_info_to->second.bus.get() != bus.get())
-                    ++it_vertex_info_to;
-
                 auto it_road_route = road_route_length.find(from);
                 if (it_road_route == road_route_length.end())
                     return;
@@ -289,16 +283,19 @@ private:
                     return;
                 double road_distance = it_length->second; // weight, в метрах
 
-                // если начальная остановка, то увеличиваем вес, так как
-                // необходимо ещё ждать автобус
-                if (it == bus->stops.begin())
-                {
-                    road_distance += routing_settings.meters_past_while_wait_bus;
-                }
+                // // если начальная остановка, то увеличиваем вес, так как
+                // // необходимо ещё ждать автобус
+                // if (it == bus->stops.begin())
+                // {
+                //     road_distance += routing_settings.meters_past_while_wait_bus;
+                // }
+
+                Graph::VertexId vertex_id_from = stop_to_vertex_id[from][bus];
+                Graph::VertexId vertex_id_to = stop_to_vertex_id[to][bus];
 
                 Edge edge{
-                    .from = it_vertex_info_from->second.id,
-                    .to = it_vertex_info_to->second.id,
+                    .from = vertex_id_from,
+                    .to = vertex_id_to,
                     .weight = road_distance
                 };
 
@@ -308,8 +305,8 @@ private:
                 {
                     road_distance = road_route_length.at(to).at(from);
                     edge = {
-                        .from = it_vertex_info_to->second.id,
-                        .to = it_vertex_info_from->second.id,
+                        .from = vertex_id_to,
+                        .to = vertex_id_from,
                         .weight = road_distance
                     };
                     graph.AddEdge(edge);
@@ -318,28 +315,32 @@ private:
         }
 
         // формируем рёбра пересадок для смены автобуса
-        for (auto it = stop_to_vertex_info.begin();
-                it != stop_to_vertex_info.end();
-                ++it)
+        for (const auto &[stop, bus_to_vertex_id] : stop_to_vertex_id)
         {
-            auto it_next = next(it);
-            if (it_next == stop_to_vertex_info.end())
-                break;
-
-            while (it_next != stop_to_vertex_info.end() and it->first == it_next->first)
+            for (auto it = bus_to_vertex_id.begin(); it != bus_to_vertex_id.end(); ++it)
             {
-                Edge edge{
-                    .from = it->second.id,
-                    .to = it_next->second.id,
-                    .weight = routing_settings.meters_past_while_wait_bus
-                };
-                graph.AddEdge(edge);
+                auto it_next = next(it);
+                if (it_next == bus_to_vertex_id.end())
+                    break;
 
-                edge.from = it_next->second.id;
-                edge.to = it->second.id;
-                graph.AddEdge(edge);
+                while (it_next != bus_to_vertex_id.end())
+                {
+                    const auto &[bus_from, vertex_id_from] = *it;
+                    const auto &[bus_to, vertex_id_to] = *it_next;
 
-                ++it_next;
+                    Edge edge{
+                        .from = vertex_id_from,
+                        .to = vertex_id_to,
+                        .weight = routing_settings.meters_past_while_wait_bus
+                    };
+                    graph.AddEdge(edge);
+
+                    edge.from = vertex_id_to;
+                    edge.to = vertex_id_from;
+                    graph.AddEdge(edge);
+
+                    ++it_next;
+                }
             }
         }
     }
@@ -1108,14 +1109,17 @@ void TestBuildRoute()
         StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
         StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
         StopPtr stop6 = make_shared<Stop>(Stop{"Ejevikovka"});
+        StopPtr stop7 = make_shared<Stop>(Stop{"Apelsinovka"});
+        StopPtr stop8 = make_shared<Stop>(Stop{"Kivivka"});
 
         BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
         BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5}});
         BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop3, stop6}});
+        BusPtr bus4 = make_shared<Bus>(Bus{"844", {stop7, stop8}});
 
         DataBase db;
-        db.stops = {stop1, stop2, stop3, stop4, stop5, stop6};
-        db.buses = {bus1, bus2, bus3};
+        db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7, stop8};
+        db.buses = {bus1, bus2, bus3, bus4};
 
         db.road_route_length[stop1][stop2] = 1000;
         db.road_route_length[stop2][stop1] = 1000;
@@ -1127,20 +1131,196 @@ void TestBuildRoute()
         db.road_route_length[stop5][stop4] = 300;
         db.road_route_length[stop3][stop6] = 200;
         db.road_route_length[stop6][stop3] = 200;
+        db.road_route_length[stop7][stop8] = 100;
+        db.road_route_length[stop8][stop7] = 200;
 
+        db.CreateRoutingSettings(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
         db.CreateInfo();
 
         /* bus1: 1 <-> 2 <-> 3
          * bus2: 3 <-> 4 <-> 5
          * bus3: 3 <-> 6
+         * bus4: 7 <-> 8
          * bus1-bus2: 3 <-> 3
          * bus1-bus3: 3 <-> 3
          * bus2-bus3: 3 <-> 3
         */
-        ASSERT_EQUAL(db.graph.GetVertexCount(), 8U);
-        ASSERT_EQUAL(db.graph.GetEdgeCount(), 16U);
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 10U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 18U);
 
-        // db.router.BuildRoute();
+        Router router{db.graph};
+
+        Graph::VertexId stop1_bus1_vertex_id = db.stop_to_vertex_id[stop1][bus1];
+        Graph::VertexId stop2_bus1_vertex_id = db.stop_to_vertex_id[stop2][bus1];
+        Graph::VertexId stop3_bus1_vertex_id = db.stop_to_vertex_id[stop3][bus1];
+
+        Graph::VertexId stop3_bus2_vertex_id = db.stop_to_vertex_id[stop3][bus2];
+        Graph::VertexId stop4_bus2_vertex_id = db.stop_to_vertex_id[stop4][bus2];
+        Graph::VertexId stop5_bus2_vertex_id = db.stop_to_vertex_id[stop5][bus2];
+
+        Graph::VertexId stop3_bus3_vertex_id = db.stop_to_vertex_id[stop3][bus3];
+        Graph::VertexId stop6_bus3_vertex_id = db.stop_to_vertex_id[stop6][bus3];
+
+        Graph::VertexId stop7_bus4_vertex_id = db.stop_to_vertex_id[stop7][bus4];
+        Graph::VertexId stop8_bus4_vertex_id = db.stop_to_vertex_id[stop8][bus4];
+
+        RouteInfo route_info = router.BuildRoute(stop1_bus1_vertex_id, stop3_bus1_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 1500.0));
+        ASSERT_EQUAL(route_info.edge_count, 2U);
+        Graph::EdgeId edge_id = router.GetRouteEdge(route_info.id, 0);
+        Edge edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop1_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop2_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 1);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop2_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus1_vertex_id);
+
+        router.ReleaseRoute(route_info.id);
+
+        route_info = router.BuildRoute(stop3_bus1_vertex_id, stop1_bus1_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 1500.0));
+        ASSERT_EQUAL(route_info.edge_count, 2U);
+        edge_id = router.GetRouteEdge(route_info.id, 0);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop2_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 1);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop2_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop1_bus1_vertex_id);
+
+        router.ReleaseRoute(route_info.id);
+
+        route_info = router.BuildRoute(stop3_bus1_vertex_id, stop3_bus2_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 4000.0));
+        router.ReleaseRoute(route_info.id);
+        route_info = router.BuildRoute(stop3_bus1_vertex_id, stop3_bus3_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 4000.0));
+        router.ReleaseRoute(route_info.id);
+        route_info = router.BuildRoute(stop3_bus2_vertex_id, stop3_bus3_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 4000.0));
+        router.ReleaseRoute(route_info.id);
+
+        route_info = router.BuildRoute(stop1_bus1_vertex_id, stop5_bus2_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 6600.0));
+        ASSERT_EQUAL(route_info.edge_count, 5U);
+        edge_id = router.GetRouteEdge(route_info.id, 0);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop1_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop2_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 1);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop2_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 2);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus2_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 3);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, stop4_bus2_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 4);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop4_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, stop5_bus2_vertex_id);
+
+        route_info = router.BuildRoute(stop5_bus2_vertex_id, stop1_bus1_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 6600.0));
+        ASSERT_EQUAL(route_info.edge_count, 5U);
+        edge_id = router.GetRouteEdge(route_info.id, 0);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop5_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, stop4_bus2_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 1);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop4_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus2_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 2);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 3);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop2_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 4);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop2_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop1_bus1_vertex_id);
+
+        router.ReleaseRoute(route_info.id);
+
+        route_info = router.BuildRoute(stop1_bus1_vertex_id, stop6_bus3_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 5700.0));
+        ASSERT_EQUAL(route_info.edge_count, 4U);
+        edge_id = router.GetRouteEdge(route_info.id, 0);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop1_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop2_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 1);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop2_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 2);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus3_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 3);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus3_vertex_id);
+        ASSERT_EQUAL(edge.to, stop6_bus3_vertex_id);
+
+        router.ReleaseRoute(route_info.id);
+
+        route_info = router.BuildRoute(stop5_bus2_vertex_id, stop6_bus3_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 5300.0));
+        ASSERT_EQUAL(route_info.edge_count, 4U);
+        edge_id = router.GetRouteEdge(route_info.id, 0);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop5_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, stop4_bus2_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 1);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop4_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus2_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 2);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, stop3_bus3_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 3);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop3_bus3_vertex_id);
+        ASSERT_EQUAL(edge.to, stop6_bus3_vertex_id);
+
+        router.ReleaseRoute(route_info.id);
+
+        route_info = router.BuildRoute(stop7_bus4_vertex_id, stop8_bus4_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 100.0));
+        ASSERT_EQUAL(route_info.edge_count, 1U);
+        edge_id = router.GetRouteEdge(route_info.id, 0);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop7_bus4_vertex_id);
+        ASSERT_EQUAL(edge.to, stop8_bus4_vertex_id);
+
+        router.ReleaseRoute(route_info.id);
+
+        route_info = router.BuildRoute(stop8_bus4_vertex_id, stop7_bus4_vertex_id).value();
+        ASSERT(AssertDouble(route_info.weight, 200.0));
+        ASSERT_EQUAL(route_info.edge_count, 1U);
+        edge_id = router.GetRouteEdge(route_info.id, 0);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, stop8_bus4_vertex_id);
+        ASSERT_EQUAL(edge.to, stop7_bus4_vertex_id);
+
+        router.ReleaseRoute(route_info.id);
+
+        ASSERT(not router.BuildRoute(stop7_bus4_vertex_id, stop6_bus3_vertex_id));
+        ASSERT(not router.BuildRoute(stop8_bus4_vertex_id, stop6_bus3_vertex_id));
+        ASSERT(not router.BuildRoute(stop8_bus4_vertex_id, stop1_bus1_vertex_id));
+        ASSERT(not router.BuildRoute(stop8_bus4_vertex_id, stop3_bus2_vertex_id));
+        ASSERT(not router.BuildRoute(stop7_bus4_vertex_id, stop5_bus2_vertex_id));
     }
 }
 
@@ -2830,6 +3010,8 @@ void Profile()
 
 int main()
 {
+    using namespace std::chrono;
+
     TestAll();
 
     // Parse(cin, cout);
