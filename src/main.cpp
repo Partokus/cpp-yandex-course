@@ -159,15 +159,6 @@ struct DataBase
         double meters_past_while_wait_bus = 0.0;
     } routing_settings{};
 
-    void CreateRoutingSettings(size_t bus_wait_time, double bus_velocity)
-    {
-        routing_settings.bus_wait_time = bus_wait_time;
-        routing_settings.bus_velocity = bus_velocity;
-        routing_settings.bus_velocity_meters_min = bus_velocity * 1000.0 / 60.0;
-        routing_settings.meters_past_while_wait_bus = bus_wait_time *
-                                                      routing_settings.bus_velocity_meters_min;
-    }
-
     template <typename Key, typename Value>
     using Map = unordered_map<Key, Value, NamePtrHasher<Key>, NamePtrKeyEqual<Key>>;
     template <typename Key>
@@ -178,8 +169,10 @@ struct DataBase
 
     DirectedWeightedGraph graph{0};
 
-    void CreateInfo()
+    void CreateInfo(size_t bus_wait_time = 0U, double bus_velocity = 0.0)
     {
+        CreateRoutingSettings(bus_wait_time, bus_velocity);
+
         for (const BusPtr &bus : buses)
         {
             auto &info = buses_info[bus];
@@ -199,7 +192,6 @@ struct DataBase
             for (const StopPtr &stop : unique_stops)
             {
                 stop_to_vertex_id[stop][bus] = _vertex_id++;
-                ++_vertex_count;
             }
 
             for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
@@ -241,10 +233,18 @@ struct DataBase
     };
 
     Map<StopPtr, Map<BusPtr, Graph::VertexId>> stop_to_vertex_id;
-    size_t _vertex_count = 0U;
 
 private:
     Graph::VertexId _vertex_id = 0U;
+
+    void CreateRoutingSettings(size_t bus_wait_time, double bus_velocity)
+    {
+        routing_settings.bus_wait_time = bus_wait_time;
+        routing_settings.bus_velocity = bus_velocity;
+        routing_settings.bus_velocity_meters_min = bus_velocity * 1000.0 / 60.0;
+        routing_settings.meters_past_while_wait_bus = bus_wait_time *
+                                                      routing_settings.bus_velocity_meters_min;
+    }
 
     // return meters
     std::optional<size_t> CalcRoadDistance(const StopPtr &lhs, const StopPtr &rhs) const
@@ -262,7 +262,7 @@ private:
 
     void CreateGraph()
     {
-        graph = DirectedWeightedGraph{ _vertex_count };
+        graph = DirectedWeightedGraph{ _vertex_id };
 
         for (const BusPtr &bus : buses)
         {
@@ -445,11 +445,6 @@ void Parse(istream &is, ostream &os)
 
     const map<string, Node> &root = doc.GetRoot().AsMap();
 
-    const map<string, Node> &routing_settings = root.at("routing_settings"s).AsMap();
-    const size_t bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
-    const double bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
-    db.CreateRoutingSettings(bus_wait_time, bus_velocity);
-
     const vector<Node> &base_requests = root.at("base_requests"s).AsArray();
 
     for (const Node &node : base_requests)
@@ -474,7 +469,11 @@ void Parse(istream &is, ostream &os)
         }
     }
 
-    db.CreateInfo();
+    const map<string, Node> &routing_settings = root.at("routing_settings"s).AsMap();
+    const size_t bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
+    const double bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
+
+    db.CreateInfo(bus_wait_time, bus_velocity);
 
     const vector<Node> &stat_requests = root.at("stat_requests"s).AsArray();
 
@@ -948,14 +947,12 @@ void TestDataBaseCreateGraph()
         db.road_route_length[stop4][stop5] = 300;
         db.road_route_length[stop5][stop4] = 300;
 
-        db.CreateRoutingSettings(6, 40.0);
+        db.CreateInfo(6, 40.0);
 
         ASSERT_EQUAL(db.routing_settings.bus_wait_time, 6U);
         ASSERT_EQUAL(db.routing_settings.bus_velocity, 40.0);
         ASSERT(AssertDouble(db.routing_settings.bus_velocity_meters_min, 666.6));
         ASSERT(AssertDouble(db.routing_settings.meters_past_while_wait_bus, 4000.0));
-
-        db.CreateInfo();
 
         /* bus1: 1 <-> 2 <-> 3
          * bus2: 3 <-> 4 <-> 5
@@ -1134,8 +1131,7 @@ void TestBuildRoute()
         db.road_route_length[stop7][stop8] = 100;
         db.road_route_length[stop8][stop7] = 200;
 
-        db.CreateRoutingSettings(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
-        db.CreateInfo();
+        db.CreateInfo(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
 
         /* bus1: 1 <-> 2 <-> 3
          * bus2: 3 <-> 4 <-> 5
