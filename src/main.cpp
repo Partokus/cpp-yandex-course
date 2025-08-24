@@ -3470,6 +3470,104 @@ void TestParseRouteQuery()
             ASSERT(AssertDouble(bus_item->time, 0.3));
         }
     }
+
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"1"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"2"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"3"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop2, stop3}});
+        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop1, stop3}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3};
+        db.buses = {bus1, bus2, bus3};
+
+        db.road_route_length[stop1][stop2] = 100;
+        db.road_route_length[stop2][stop1] = 100;
+
+        db.road_route_length[stop2][stop3] = 200;
+        db.road_route_length[stop3][stop2] = 200;
+
+        db.road_route_length[stop1][stop3] = 4310;
+        db.road_route_length[stop3][stop1] = 4310;
+
+        db.CreateInfo(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
+
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 9U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 24U);
+
+        Router router{db.graph};
+
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop3, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 6 + 6.45));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 0.15));
+            wait_item = get_if<WaitItem>(&items[2]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop2);
+            bus_item = get_if<BusItem>(&items[3]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus2);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 0.3));
+        }
+    }
+
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"1"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"2"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"3"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop2, stop3}});
+        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop1, stop3}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3};
+        db.buses = {bus1, bus2, bus3};
+
+        db.road_route_length[stop1][stop2] = 100;
+        db.road_route_length[stop2][stop1] = 100;
+
+        db.road_route_length[stop2][stop3] = 200;
+        db.road_route_length[stop3][stop2] = 200;
+
+        db.road_route_length[stop1][stop3] = 4295;
+        db.road_route_length[stop3][stop1] = 4295;
+
+        db.CreateInfo(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
+
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 9U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 24U);
+
+        Router router{db.graph};
+
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop3, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 6 + 6.44));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus3);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 6.44));
+        }
+    }
 }
 
 void TestAll()
@@ -3497,49 +3595,5 @@ int main()
     TestAll();
 
     // Parse(cin, cout);
-
-    // using namespace Graph;
-
-    // vector<string> stops(4);
-
-    // DirectedWeightedGraph<double> graph(stops.size());
-
-    // Edge<double> edge{};
-
-    // // 0
-    // edge = { 0, 1, 2600 };
-    // graph.AddEdge(edge);
-
-    // // 0
-    // edge = { 1, 2, 890 };
-    // graph.AddEdge(edge);
-
-    // edge = { 2, 0, 2500 };
-    // graph.AddEdge(edge);
-
-    // edge = { 2, 3, 4650 };
-    // graph.AddEdge(edge);
-
-    // edge = { 2, 1, 1380 };
-    // graph.AddEdge(edge);
-
-    // using RouteInfo = Router<double>::RouteInfo;
-    // Router router(graph);
-
-    // optional<RouteInfo> route_info = router.BuildRoute(0, 3);
-
-    // if (route_info)
-    // {
-    //     cout << "route id = " << route_info->id << '\n' <<
-    //             "weight = " << route_info->weight << '\n' <<
-    //             "edge count = " << route_info->edge_count << '\n';
-
-    //     for (size_t i = 0U; i < route_info->edge_count; ++i)
-    //     {
-    //         cout << "edge id = " << router.GetRouteEdge(route_info->id, i) << '\n';
-    //     }
-    // }
-    // else
-    //     cout << "No route info" << endl;
     return 0;
 }
