@@ -191,7 +191,9 @@ struct DataBase
 
             for (const StopPtr &stop : unique_stops)
             {
-                stop_to_vertex_id[stop][bus] = _vertex_id++;
+                stop_and_bus_to_vertex_id[stop][bus] = _vertex_id;
+                vertex_id_to_stop_and_bus[_vertex_id] = pair{stop, bus};
+                ++_vertex_id;
             }
 
             for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
@@ -226,13 +228,14 @@ struct DataBase
         CreateGraph();
     }
 
-    struct VertexInfo
-    {
-        Graph::VertexId id = 0U;
-        BusPtr bus;
-    };
+    Map<StopPtr, Map<BusPtr, Graph::VertexId>> stop_and_bus_to_vertex_id;
+    unordered_map<Graph::VertexId, pair<StopPtr, BusPtr>> vertex_id_to_stop_and_bus;
 
-    Map<StopPtr, Map<BusPtr, Graph::VertexId>> stop_to_vertex_id;
+    Map<StopPtr, Graph::VertexId> begin_end_transfer; // Для хранения вершин, которые необходимы для
+                                                      // выбора нужного автобуса в начале и в конце пути.
+                                                      // Без этого непонятно будет какой автобус в начале выбрать,
+                                                      // а это в свою очередь приводит к неправильному выбору оптимального пути
+                                                      // за счёт того, что переход между остановками тоже занимает время
 
 private:
     Graph::VertexId _vertex_id = 0U;
@@ -262,6 +265,15 @@ private:
 
     void CreateGraph()
     {
+        // формируем исскуственные вершины для пересадок в начале и в конце пути
+        for (const auto &[stop, bus_to_vertex_id] : stop_and_bus_to_vertex_id)
+        {
+            // Если у остановки больше, чем 1 автобус, то создаём искусственную вершину для
+            // перехода между остановками в начале и в конце пути
+            if (bus_to_vertex_id.size() > 1U)
+                begin_end_transfer[stop] = _vertex_id++;
+        }
+
         graph = DirectedWeightedGraph{ _vertex_id };
 
         for (const BusPtr &bus : buses)
@@ -283,15 +295,8 @@ private:
                     return;
                 double road_distance = it_length->second; // weight, в метрах
 
-                // // если начальная остановка, то увеличиваем вес, так как
-                // // необходимо ещё ждать автобус
-                // if (it == bus->stops.begin())
-                // {
-                //     road_distance += routing_settings.meters_past_while_wait_bus;
-                // }
-
-                Graph::VertexId vertex_id_from = stop_to_vertex_id[from][bus];
-                Graph::VertexId vertex_id_to = stop_to_vertex_id[to][bus];
+                Graph::VertexId vertex_id_from = stop_and_bus_to_vertex_id[from][bus];
+                Graph::VertexId vertex_id_to = stop_and_bus_to_vertex_id[to][bus];
 
                 Edge edge{
                     .from = vertex_id_from,
@@ -315,24 +320,38 @@ private:
         }
 
         // формируем рёбра пересадок для смены автобуса
-        for (const auto &[stop, bus_to_vertex_id] : stop_to_vertex_id)
+        for (const auto &[stop, bus_to_vertex_id] : stop_and_bus_to_vertex_id)
         {
+            bool is_few_buses = bus_to_vertex_id.size() > 1U;
+
+            if (not is_few_buses)
+                continue;
+
             for (auto it = bus_to_vertex_id.begin(); it != bus_to_vertex_id.end(); ++it)
             {
+                const auto &[bus_from, vertex_id_from] = *it;
+
+                Edge edge{
+                    .from = begin_end_transfer[stop],
+                    .to = vertex_id_from,
+                    .weight = routing_settings.meters_past_while_wait_bus
+                };
+                graph.AddEdge(edge);
+
+                edge.from = vertex_id_from;
+                edge.to = begin_end_transfer[stop];
+                graph.AddEdge(edge);
+
                 auto it_next = next(it);
                 if (it_next == bus_to_vertex_id.end())
                     break;
 
                 while (it_next != bus_to_vertex_id.end())
                 {
-                    const auto &[bus_from, vertex_id_from] = *it;
                     const auto &[bus_to, vertex_id_to] = *it_next;
 
-                    Edge edge{
-                        .from = vertex_id_from,
-                        .to = vertex_id_to,
-                        .weight = routing_settings.meters_past_while_wait_bus
-                    };
+                    edge.from = vertex_id_from;
+                    edge.to = vertex_id_to;
                     graph.AddEdge(edge);
 
                     edge.from = vertex_id_to;
@@ -431,6 +450,123 @@ BusPtr ParseAddBusQuery(const map<string, Json::Node> &req, Stops &stops)
         push_stop(it->AsString());
     }
 
+    return result;
+}
+
+struct WaitItem
+{
+    StopPtr stop;
+};
+
+struct BusItem
+{
+    BusPtr bus;
+    size_t span_count = 0U;
+    double time = 0.0;
+};
+
+using Item = variant<WaitItem, BusItem>;
+
+struct RouteQueryAnswer
+{
+    double total_time = 0.0; // суммарное время в минутах, требуемое для прохождения маршрута
+    vector<Item> items;
+};
+
+/*
+{
+  "type": "Route",
+  "from": "Biryulyovo Zapadnoye",
+  "to": "Universam",
+  "id": 4
+}
+*/
+std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBase &db, Router &router)
+{
+    // проверяем, что для остановок имеются вершины
+    if (db.stop_and_bus_to_vertex_id.find(from) == db.stop_and_bus_to_vertex_id.end() or
+        db.stop_and_bus_to_vertex_id.find(to) == db.stop_and_bus_to_vertex_id.end())
+    {
+        return std::nullopt;
+    }
+
+    Graph::VertexId vertex_id_from = 0U;
+    Graph::VertexId vertex_id_to = 0U;
+
+    bool is_from_vertex_transfer = false;
+    bool is_to_vertex_transfer = false;
+
+    if (auto it = db.begin_end_transfer.find(from);
+        it != db.begin_end_transfer.end())
+    {
+        vertex_id_from = it->second;
+        is_from_vertex_transfer = true;
+    }
+    else
+        vertex_id_from = db.stop_and_bus_to_vertex_id[from].begin()->second;
+
+    if (auto it = db.begin_end_transfer.find(to);
+        it != db.begin_end_transfer.end())
+    {
+        vertex_id_to = it->second;
+        is_to_vertex_transfer = true;
+    }
+    else
+        vertex_id_to = db.stop_and_bus_to_vertex_id[to].begin()->second;
+
+    std::optional<RouteInfo> router_info = router.BuildRoute(vertex_id_from, vertex_id_to);
+
+    if (not router_info)
+        return std::nullopt;
+
+    RouteQueryAnswer result{
+        .total_time = router_info->weight / db.routing_settings.bus_velocity_meters_min +
+            db.routing_settings.bus_wait_time
+    };
+
+    size_t edge_count = router_info->edge_count;
+    if (is_to_vertex_transfer)
+        --edge_count;
+
+    result.items.push_back(WaitItem{ .stop = from });
+
+    BusItem bus_item;
+
+    size_t begin_edge_idx = is_from_vertex_transfer ? 1U : 0U;
+
+    for (size_t i = begin_edge_idx; i < edge_count; ++i)
+    {
+        Graph::EdgeId edge_id = router.GetRouteEdge(router_info->id, i);
+        Graph::Edge edge = db.graph.GetEdge(edge_id);
+
+        const auto &[stop_from, bus_from] = db.vertex_id_to_stop_and_bus[edge.from];
+        const auto &[stop_to, bus_to] = db.vertex_id_to_stop_and_bus[edge.to];
+
+        if (bus_from == bus_to)
+        {
+            ++bus_item.span_count;
+            bus_item.time += edge.weight / db.routing_settings.bus_velocity_meters_min;
+        }
+        else
+        {
+            if (bus_item.span_count == 0U)
+                throw runtime_error("span_count must not to be zero");
+
+            bus_item.bus = bus_from;
+            result.items.push_back(bus_item);
+            bus_item = {};
+
+            result.items.push_back(WaitItem{ .stop = stop_to });
+        }
+
+        if (i == (edge_count - 1U))
+        {
+            bus_item.bus = bus_from;
+            result.items.push_back(bus_item);
+        }
+    }
+
+    router.ReleaseRoute(router_info->id);
     return result;
 }
 
@@ -957,9 +1093,11 @@ void TestDataBaseCreateGraph()
         /* bus1: 1 <-> 2 <-> 3
          * bus2: 3 <-> 4 <-> 5
          * bus1-bus2: 3 <-> 3
+         * 3 (transfer) -> 3-bus1
+         * 3 (transfer) -> 3-bus2
         */
-        ASSERT_EQUAL(db.graph.GetVertexCount(), 6U);
-        ASSERT_EQUAL(db.graph.GetEdgeCount(), 10U);
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 7U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 14U);
     }
     {
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
@@ -989,9 +1127,13 @@ void TestDataBaseCreateGraph()
         /* bus1: 1 <-> 2 <-> 3
          * bus2: 2 <-> 3 <-> 4 <-> 5
          * bus1-bus2: 2 <-> 2, 3 <-> 3
+         * 2 (transfer) -> 2-bus1
+         * 2 (transfer) -> 2-bus2
+         * 3 (transfer) -> 3-bus1
+         * 3 (transfer) -> 3-bus2
         */
-        ASSERT_EQUAL(db.graph.GetVertexCount(), 7U);
-        ASSERT_EQUAL(db.graph.GetEdgeCount(), 14U);
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 9U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 22U);
     }
     {
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
@@ -1052,9 +1194,11 @@ void TestDataBaseCreateGraph()
         /* bus1: 1 <-> 2 <-> 3
          * bus2: 3 -> 4 -> 5 -> 3
          * bus1-bus2: 3 <-> 3
+         * 3 (transfer) -> 3-bus1
+         * 3 (transfer) -> 3-bus2
         */
-        ASSERT_EQUAL(db.graph.GetVertexCount(), 6U);
-        ASSERT_EQUAL(db.graph.GetEdgeCount(), 9U);
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 7U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 13U);
     }
     {
         StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
@@ -1091,9 +1235,12 @@ void TestDataBaseCreateGraph()
          * bus1-bus2: 3 <-> 3
          * bus1-bus3: 3 <-> 3
          * bus2-bus3: 3 <-> 3
+         * 3 (transfer) -> 3-bus1
+         * 3 (transfer) -> 3-bus2
+         * 3 (transfer) -> 3-bus3
         */
-        ASSERT_EQUAL(db.graph.GetVertexCount(), 8U);
-        ASSERT_EQUAL(db.graph.GetEdgeCount(), 16U);
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 9U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 22U);
     }
 }
 
@@ -1140,25 +1287,28 @@ void TestBuildRoute()
          * bus1-bus2: 3 <-> 3
          * bus1-bus3: 3 <-> 3
          * bus2-bus3: 3 <-> 3
+         * 3 (transfer) -> 3-bus1
+         * 3 (transfer) -> 3-bus2
+         * 3 (transfer) -> 3-bus3
         */
-        ASSERT_EQUAL(db.graph.GetVertexCount(), 10U);
-        ASSERT_EQUAL(db.graph.GetEdgeCount(), 18U);
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 11U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 24U);
 
         Router router{db.graph};
 
-        Graph::VertexId stop1_bus1_vertex_id = db.stop_to_vertex_id[stop1][bus1];
-        Graph::VertexId stop2_bus1_vertex_id = db.stop_to_vertex_id[stop2][bus1];
-        Graph::VertexId stop3_bus1_vertex_id = db.stop_to_vertex_id[stop3][bus1];
+        Graph::VertexId stop1_bus1_vertex_id = db.stop_and_bus_to_vertex_id[stop1][bus1];
+        Graph::VertexId stop2_bus1_vertex_id = db.stop_and_bus_to_vertex_id[stop2][bus1];
+        Graph::VertexId stop3_bus1_vertex_id = db.stop_and_bus_to_vertex_id[stop3][bus1];
 
-        Graph::VertexId stop3_bus2_vertex_id = db.stop_to_vertex_id[stop3][bus2];
-        Graph::VertexId stop4_bus2_vertex_id = db.stop_to_vertex_id[stop4][bus2];
-        Graph::VertexId stop5_bus2_vertex_id = db.stop_to_vertex_id[stop5][bus2];
+        Graph::VertexId stop3_bus2_vertex_id = db.stop_and_bus_to_vertex_id[stop3][bus2];
+        Graph::VertexId stop4_bus2_vertex_id = db.stop_and_bus_to_vertex_id[stop4][bus2];
+        Graph::VertexId stop5_bus2_vertex_id = db.stop_and_bus_to_vertex_id[stop5][bus2];
 
-        Graph::VertexId stop3_bus3_vertex_id = db.stop_to_vertex_id[stop3][bus3];
-        Graph::VertexId stop6_bus3_vertex_id = db.stop_to_vertex_id[stop6][bus3];
+        Graph::VertexId stop3_bus3_vertex_id = db.stop_and_bus_to_vertex_id[stop3][bus3];
+        Graph::VertexId stop6_bus3_vertex_id = db.stop_and_bus_to_vertex_id[stop6][bus3];
 
-        Graph::VertexId stop7_bus4_vertex_id = db.stop_to_vertex_id[stop7][bus4];
-        Graph::VertexId stop8_bus4_vertex_id = db.stop_to_vertex_id[stop8][bus4];
+        Graph::VertexId stop7_bus4_vertex_id = db.stop_and_bus_to_vertex_id[stop7][bus4];
+        Graph::VertexId stop8_bus4_vertex_id = db.stop_and_bus_to_vertex_id[stop8][bus4];
 
         RouteInfo route_info = router.BuildRoute(stop1_bus1_vertex_id, stop3_bus1_vertex_id).value();
         ASSERT(AssertDouble(route_info.weight, 1500.0));
@@ -2987,6 +3137,61 @@ void TestParse()
     }
 }
 
+void TestParseRouteQuery()
+{
+    StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+    StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+    StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+    StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
+    StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
+    StopPtr stop6 = make_shared<Stop>(Stop{"Ejevikovka"});
+    StopPtr stop7 = make_shared<Stop>(Stop{"Apelsinovka"});
+    StopPtr stop8 = make_shared<Stop>(Stop{"Kivivka"});
+
+    BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+    BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5}});
+    BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop3, stop6}});
+    BusPtr bus4 = make_shared<Bus>(Bus{"844", {stop7, stop8}});
+
+    DataBase db;
+    db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7, stop8};
+    db.buses = {bus1, bus2, bus3, bus4};
+
+    db.road_route_length[stop1][stop2] = 1000;
+    db.road_route_length[stop2][stop1] = 1000;
+    db.road_route_length[stop2][stop3] = 500;
+    db.road_route_length[stop3][stop2] = 500;
+    db.road_route_length[stop3][stop4] = 800;
+    db.road_route_length[stop4][stop3] = 800;
+    db.road_route_length[stop4][stop5] = 300;
+    db.road_route_length[stop5][stop4] = 300;
+    db.road_route_length[stop3][stop6] = 200;
+    db.road_route_length[stop6][stop3] = 200;
+    db.road_route_length[stop7][stop8] = 100;
+    db.road_route_length[stop8][stop7] = 200;
+
+    db.CreateInfo(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
+
+    /* bus1: 1 <-> 2 <-> 3
+     * bus2: 3 <-> 4 <-> 5
+     * bus3: 3 <-> 6
+     * bus4: 7 <-> 8
+     * bus1-bus2: 3 <-> 3
+     * bus1-bus3: 3 <-> 3
+     * bus2-bus3: 3 <-> 3
+     * 3 (transfer) -> 3-bus1
+     * 3 (transfer) -> 3-bus2
+     * 3 (transfer) -> 3-bus3
+    */
+    ASSERT_EQUAL(db.graph.GetVertexCount(), 11U);
+    ASSERT_EQUAL(db.graph.GetEdgeCount(), 24U);
+
+    Router router{db.graph};
+
+    std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop2, db, router);
+    ASSERT(answer.has_value());
+}
+
 void TestAll()
 {
     TestRunner tr{};
@@ -2997,6 +3202,7 @@ void TestAll()
     RUN_TEST(tr, TestDataBaseCreateInfo);
     RUN_TEST(tr, TestDataBaseCreateGraph);
     RUN_TEST(tr, TestBuildRoute);
+    RUN_TEST(tr, TestParseRouteQuery);
     RUN_TEST(tr, TestParse);
 }
 
