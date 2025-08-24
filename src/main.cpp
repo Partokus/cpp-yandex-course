@@ -633,6 +633,8 @@ void Parse(istream &is, ostream &os)
 
     db.CreateInfo(bus_wait_time, bus_velocity);
 
+    Router router{db.graph};
+
     const vector<Node> &stat_requests = root.at("stat_requests"s).AsArray();
 
     os << "[" << '\n';
@@ -641,7 +643,6 @@ void Parse(istream &is, ostream &os)
     {
         const map<string, Node> &req = it->AsMap();
         const string &type = req.at("type"s).AsString();
-        const string &name = req.at("name"s).AsString();
         int id = req.at("id"s).AsInt();
 
         os << "  {" << '\n';
@@ -650,6 +651,7 @@ void Parse(istream &is, ostream &os)
 
         if (type == "Bus")
         {
+            const string &name = req.at("name"s).AsString();
             auto bus = make_shared<Bus>(Bus{});
             bus->name = name;
 
@@ -666,6 +668,7 @@ void Parse(istream &is, ostream &os)
         }
         else if (type == "Stop")
         {
+            const string &name = req.at("name"s).AsString();
             auto stop = make_shared<Stop>(Stop{});
             stop->name = name;
 
@@ -693,6 +696,51 @@ void Parse(istream &is, ostream &os)
             }
             else
                 os << "    \"error_message\": \"not found\"" << '\n';
+        }
+        else if (type == "Route")
+        {
+            const string &from_name = req.at("from"s).AsString();
+            auto stop_from = make_shared<Stop>(Stop{});
+            stop_from->name = from_name;
+
+            const string &to_name = req.at("to"s).AsString();
+            auto stop_to = make_shared<Stop>(Stop{});
+            stop_to->name = to_name;
+
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop_from, stop_to, db, router);
+
+            if (not answer)
+                os << "    \"error_message\": \"not found\"\n";
+            else
+            {
+                os << "    \"total_time\": " << answer->total_time << ",\n";
+
+                os << "    \"items\": [" << '\n';
+                for (auto it = answer->items.begin(); it != answer->items.end(); ++it)
+                {
+                    os << "        {\n";
+
+                    if (WaitItem *item = get_if<WaitItem>(&(*it)); item != nullptr)
+                    {
+                        os << "            \"time\": " << db.routing_settings.bus_wait_time << ",\n";
+                        os << "            \"type\": \"Wait\"" << ",\n";
+                        os << "            \"stop_name\": \"" << item->stop->name << "\"" << "\n";
+                    }
+                    else if (BusItem *item = get_if<BusItem>(&(*it)); item != nullptr)
+                    {
+                        os << "            \"span_count\": "  << item->span_count << ",\n";
+                        os << "            \"bus\": \""       << item->bus->name << "\"" << ",\n";
+                        os << "            \"type\": \"Bus\"" << ",\n";
+                        os << "            \"time\": "        << item->time << "\n";
+                    }
+
+                    if (next(it) != answer->items.end())
+                        os << "        },\n";
+                    else
+                        os << "        }\n";
+                }
+                os << "    ]" << '\n';
+            }
         }
 
         os << "  }";
@@ -3594,6 +3642,6 @@ int main()
 
     TestAll();
 
-    // Parse(cin, cout);
+    Parse(cin, cout);
     return 0;
 }
