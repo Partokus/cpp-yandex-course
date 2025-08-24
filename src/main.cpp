@@ -265,6 +265,9 @@ private:
 
     void CreateGraph()
     {
+        size_t edgs_count = 0U;
+        size_t shadow_edges = 0U;
+        size_t trans_edges = 0U;
         // формируем исскуственные вершины для пересадок в начале и в конце пути
         for (const auto &[stop, bus_to_vertex_id] : stop_and_bus_to_vertex_id)
         {
@@ -305,6 +308,7 @@ private:
                 };
 
                 graph.AddEdge(edge);
+                edgs_count++;
 
                 if (not bus->ring)
                 {
@@ -315,6 +319,7 @@ private:
                         .weight = road_distance
                     };
                     graph.AddEdge(edge);
+                    edgs_count++;
                 }
             }
         }
@@ -331,16 +336,22 @@ private:
             {
                 const auto &[bus_from, vertex_id_from] = *it;
 
+                Graph::VertexId begin_end_transfer_vertex_id = begin_end_transfer[stop];
+
                 Edge edge{
-                    .from = begin_end_transfer[stop],
+                    .from = begin_end_transfer_vertex_id,
                     .to = vertex_id_from,
                     .weight = routing_settings.meters_past_while_wait_bus
                 };
                 graph.AddEdge(edge);
+                edgs_count++;
+                shadow_edges++;
 
                 edge.from = vertex_id_from;
-                edge.to = begin_end_transfer[stop];
+                edge.to = begin_end_transfer_vertex_id;
                 graph.AddEdge(edge);
+                edgs_count++;
+                shadow_edges++;
 
                 auto it_next = next(it);
                 if (it_next == bus_to_vertex_id.end())
@@ -353,10 +364,14 @@ private:
                     edge.from = vertex_id_from;
                     edge.to = vertex_id_to;
                     graph.AddEdge(edge);
+                    edgs_count++;
+                    trans_edges++;
 
                     edge.from = vertex_id_to;
                     edge.to = vertex_id_from;
                     graph.AddEdge(edge);
+                    edgs_count++;
+                    trans_edges++;
 
                     ++it_next;
                 }
@@ -483,6 +498,9 @@ struct RouteQueryAnswer
 */
 std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBase &db, Router &router)
 {
+    if (from == to)
+        throw runtime_error("Same stops passed");
+
     // проверяем, что для остановок имеются вершины
     if (db.stop_and_bus_to_vertex_id.find(from) == db.stop_and_bus_to_vertex_id.end() or
         db.stop_and_bus_to_vertex_id.find(to) == db.stop_and_bus_to_vertex_id.end())
@@ -523,6 +541,8 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
         .total_time = router_info->weight / db.routing_settings.bus_velocity_meters_min +
             db.routing_settings.bus_wait_time
     };
+    if (is_from_vertex_transfer)
+        result.total_time -= db.routing_settings.bus_wait_time;
     if (is_to_vertex_transfer)
         result.total_time -= db.routing_settings.bus_wait_time;
 
@@ -3141,82 +3161,314 @@ void TestParse()
 
 void TestParseRouteQuery()
 {
-    StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
-    StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
-    StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
-    StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
-    StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
-    StopPtr stop6 = make_shared<Stop>(Stop{"Ejevikovka"});
-    StopPtr stop7 = make_shared<Stop>(Stop{"Apelsinovka"});
-    StopPtr stop8 = make_shared<Stop>(Stop{"Kivivka"});
-
-    BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
-    BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5}});
-    BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop3, stop6}});
-    BusPtr bus4 = make_shared<Bus>(Bus{"844", {stop7, stop8}});
-
-    DataBase db;
-    db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7, stop8};
-    db.buses = {bus1, bus2, bus3, bus4};
-
-    db.road_route_length[stop1][stop2] = 1000;
-    db.road_route_length[stop2][stop1] = 1000;
-    db.road_route_length[stop2][stop3] = 500;
-    db.road_route_length[stop3][stop2] = 500;
-    db.road_route_length[stop3][stop4] = 800;
-    db.road_route_length[stop4][stop3] = 800;
-    db.road_route_length[stop4][stop5] = 300;
-    db.road_route_length[stop5][stop4] = 300;
-    db.road_route_length[stop3][stop6] = 200;
-    db.road_route_length[stop6][stop3] = 200;
-    db.road_route_length[stop7][stop8] = 100;
-    db.road_route_length[stop8][stop7] = 200;
-
-    db.CreateInfo(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
-
-    /* bus1: 1 <-> 2 <-> 3
-     * bus2: 3 <-> 4 <-> 5
-     * bus3: 3 <-> 6
-     * bus4: 7 <-> 8
-     * bus1-bus2: 3 <-> 3
-     * bus1-bus3: 3 <-> 3
-     * bus2-bus3: 3 <-> 3
-     * 3 (transfer) -> 3-bus1
-     * 3 (transfer) -> 3-bus2
-     * 3 (transfer) -> 3-bus3
-    */
-    ASSERT_EQUAL(db.graph.GetVertexCount(), 11U);
-    ASSERT_EQUAL(db.graph.GetEdgeCount(), 24U);
-
-    Router router{db.graph};
-
     {
-        std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop2, db, router);
-        ASSERT(answer.has_value());
-        ASSERT(AssertDouble(answer->total_time, 7.5));
-        const vector<Item> &items = answer->items;
-        const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
-        ASSERT(wait_item);
-        ASSERT_EQUAL(wait_item->stop, stop1);
-        const BusItem *bus_item = get_if<BusItem>(&items[1]);
-        ASSERT(bus_item);
-        ASSERT_EQUAL(bus_item->bus, bus1);
-        ASSERT_EQUAL(bus_item->span_count, 1U);
-        ASSERT(AssertDouble(bus_item->time, 1.5));
+        StopPtr stop1 = make_shared<Stop>(Stop{"Biryulyovo Zapadnoye"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"Biryusinka"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"Universam"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"Nekrasovka"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"Malinovka"});
+        StopPtr stop6 = make_shared<Stop>(Stop{"Ejevikovka"});
+        StopPtr stop7 = make_shared<Stop>(Stop{"Apelsinovka"});
+        StopPtr stop8 = make_shared<Stop>(Stop{"Kivivka"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop3, stop4, stop5}});
+        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop3, stop6}});
+        BusPtr bus4 = make_shared<Bus>(Bus{"844", {stop7, stop8}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7, stop8};
+        db.buses = {bus1, bus2, bus3, bus4};
+
+        db.road_route_length[stop1][stop2] = 1000;
+        db.road_route_length[stop2][stop1] = 1000;
+        db.road_route_length[stop2][stop3] = 500;
+        db.road_route_length[stop3][stop2] = 500;
+        db.road_route_length[stop3][stop4] = 800;
+        db.road_route_length[stop4][stop3] = 800;
+        db.road_route_length[stop4][stop5] = 300;
+        db.road_route_length[stop5][stop4] = 300;
+        db.road_route_length[stop3][stop6] = 200;
+        db.road_route_length[stop6][stop3] = 200;
+        db.road_route_length[stop7][stop8] = 100;
+        db.road_route_length[stop8][stop7] = 200;
+
+        db.CreateInfo(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
+
+        /* bus1: 1 <-> 2 <-> 3
+        * bus2: 3 <-> 4 <-> 5
+        * bus3: 3 <-> 6
+        * bus4: 7 <-> 8
+        * bus1-bus2: 3 <-> 3
+        * bus1-bus3: 3 <-> 3
+        * bus2-bus3: 3 <-> 3
+        * 3 (transfer) <-> 3-bus1
+        * 3 (transfer) <-> 3-bus2
+        * 3 (transfer) <-> 3-bus3
+        */
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 11U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 24U);
+
+        Router router{db.graph};
+
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop2, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 7.5));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 1.5));
+        }
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop3, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 8.25));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 2U);
+            ASSERT(AssertDouble(bus_item->time, 2.25));
+        }
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop3, stop1, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 8.25));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop3);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 2U);
+            ASSERT(AssertDouble(bus_item->time, 2.25));
+        }
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop4, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 15.45));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 2U);
+            ASSERT(AssertDouble(bus_item->time, 2.25));
+            wait_item = get_if<WaitItem>(&items[2]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop3);
+            bus_item = get_if<BusItem>(&items[3]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus2);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 1.2));
+        }
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop6, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 14.55));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 2U);
+            ASSERT(AssertDouble(bus_item->time, 2.25));
+            wait_item = get_if<WaitItem>(&items[2]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop3);
+            bus_item = get_if<BusItem>(&items[3]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus3);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 0.3));
+        }
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop6, stop1, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 14.55));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop6);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus3);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 0.3));
+            wait_item = get_if<WaitItem>(&items[2]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop3);
+            bus_item = get_if<BusItem>(&items[3]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 2U);
+            ASSERT(AssertDouble(bus_item->time, 2.25));
+        }
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop7, db, router);
+            ASSERT(not answer.has_value());
+            answer = ParseRouteQuery(stop1, stop8, db, router);
+            ASSERT(not answer.has_value());
+            answer = ParseRouteQuery(stop8, stop1, db, router);
+            ASSERT(not answer.has_value());
+            answer = ParseRouteQuery(stop8, stop2, db, router);
+            ASSERT(not answer.has_value());
+            answer = ParseRouteQuery(stop7, stop4, db, router);
+            ASSERT(not answer.has_value());
+            answer = ParseRouteQuery(stop7, stop3, db, router);
+            ASSERT(not answer.has_value());
+        }
     }
+
     {
-        std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop3, db, router);
-        ASSERT(answer.has_value());
-        ASSERT(AssertDouble(answer->total_time, 8.25));
-        const vector<Item> &items = answer->items;
-        const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
-        ASSERT(wait_item);
-        ASSERT_EQUAL(wait_item->stop, stop1);
-        const BusItem *bus_item = get_if<BusItem>(&items[1]);
-        ASSERT(bus_item);
-        ASSERT_EQUAL(bus_item->bus, bus1);
-        ASSERT_EQUAL(bus_item->span_count, 2U);
-        ASSERT(AssertDouble(bus_item->time, 2.25));
+        StopPtr stop1 = make_shared<Stop>(Stop{"1"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"2"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"3"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"4"});
+        StopPtr stop5 = make_shared<Stop>(Stop{"5"});
+        StopPtr stop6 = make_shared<Stop>(Stop{"6"});
+        StopPtr stop7 = make_shared<Stop>(Stop{"7"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop7}});
+        BusPtr bus2 = make_shared<Bus>(Bus{"842", {stop1, stop3, stop7}});
+        BusPtr bus3 = make_shared<Bus>(Bus{"843", {stop1, stop4, stop7}});
+        BusPtr bus4 = make_shared<Bus>(Bus{"844", {stop1, stop5, stop7}});
+        BusPtr bus5 = make_shared<Bus>(Bus{"845", {stop1, stop6, stop7}});
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7};
+        db.buses = {bus1, bus2, bus3, bus4, bus5};
+
+        db.road_route_length[stop1][stop2] = 100;
+        db.road_route_length[stop2][stop1] = 100;
+        db.road_route_length[stop1][stop3] = 200;
+        db.road_route_length[stop3][stop1] = 200;
+        db.road_route_length[stop1][stop4] = 300;
+        db.road_route_length[stop4][stop1] = 300;
+        db.road_route_length[stop1][stop5] = 99;
+        db.road_route_length[stop5][stop1] = 99;
+        db.road_route_length[stop1][stop6] = 400;
+        db.road_route_length[stop6][stop1] = 400;
+
+        db.road_route_length[stop2][stop7] = 1000;
+        db.road_route_length[stop3][stop7] = 1000;
+        db.road_route_length[stop4][stop7] = 1000;
+        db.road_route_length[stop5][stop7] = 1000;
+        db.road_route_length[stop6][stop7] = 1000;
+        db.road_route_length[stop7][stop2] = 1000;
+        db.road_route_length[stop7][stop3] = 1000;
+        db.road_route_length[stop7][stop4] = 1000;
+        db.road_route_length[stop7][stop5] = 1000;
+        db.road_route_length[stop7][stop6] = 1000;
+
+        db.CreateInfo(6/*bus_wait_time*/, 40.0/*bus_velocity km/hour*/);
+
+        /* bus1: 1 <-> 2 <-> 7
+         * bus2: 1 <-> 3 <-> 7
+         * bus3: 1 <-> 4 <-> 7
+         * bus4: 1 <-> 5 <-> 7
+         * bus5: 1 <-> 6 <-> 7
+         * bus1-bus2: 1 <-> 1
+         * bus1-bus3: 1 <-> 1
+         * bus1-bus4: 1 <-> 1
+         * bus1-bus5: 1 <-> 1
+         * bus2-bus3: 1 <-> 1
+         * bus2-bus4: 1 <-> 1
+         * bus2-bus5: 1 <-> 1
+         * bus3-bus4: 1 <-> 1
+         * bus3-bus5: 1 <-> 1
+         * bus4-bus5: 1 <-> 1
+         * bus1-bus2: 7 <-> 7
+         * bus1-bus3: 7 <-> 7
+         * bus1-bus4: 7 <-> 7
+         * bus1-bus5: 7 <-> 7
+         * bus2-bus3: 7 <-> 7
+         * bus2-bus4: 7 <-> 7
+         * bus2-bus5: 7 <-> 7
+         * bus3-bus4: 7 <-> 7
+         * bus3-bus5: 7 <-> 7
+         * bus4-bus5: 7 <-> 7
+         * 1 (transfer) <-> 1-bus1
+         * 1 (transfer) <-> 1-bus2
+         * 1 (transfer) <-> 1-bus3
+         * 1 (transfer) <-> 1-bus4
+         * 1 (transfer) <-> 1-bus5
+         * 7 (transfer) <-> 7-bus1
+         * 7 (transfer) <-> 7-bus2
+         * 7 (transfer) <-> 7-bus3
+         * 7 (transfer) <-> 7-bus4
+         * 7 (transfer) <-> 7-bus5
+        */
+        ASSERT_EQUAL(db.graph.GetVertexCount(), 17U);
+        ASSERT_EQUAL(db.graph.GetEdgeCount(), 80U);
+
+        Router router{db.graph};
+
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop7, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 6 + 0.148 + 1.5));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus4);
+            ASSERT_EQUAL(bus_item->span_count, 2U);
+            ASSERT(AssertDouble(bus_item->time, 0.148 + 1.5));
+        }
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop7, stop1, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 6 + 0.148 + 1.5));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop7);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus4);
+            ASSERT_EQUAL(bus_item->span_count, 2U);
+            ASSERT(AssertDouble(bus_item->time, 0.148 + 1.5));
+        }
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop6, stop3, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 6 + 0.6 + 6 + 0.3));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop6);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus5);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 0.6));
+            wait_item = get_if<WaitItem>(&items[2]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            bus_item = get_if<BusItem>(&items[3]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus2);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 0.3));
+        }
     }
 }
 
