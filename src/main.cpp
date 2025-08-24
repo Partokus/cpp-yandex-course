@@ -523,6 +523,8 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
         .total_time = router_info->weight / db.routing_settings.bus_velocity_meters_min +
             db.routing_settings.bus_wait_time
     };
+    if (is_to_vertex_transfer)
+        result.total_time -= db.routing_settings.bus_wait_time;
 
     size_t edge_count = router_info->edge_count;
     if (is_to_vertex_transfer)
@@ -3188,8 +3190,34 @@ void TestParseRouteQuery()
 
     Router router{db.graph};
 
-    std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop2, db, router);
-    ASSERT(answer.has_value());
+    {
+        std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop2, db, router);
+        ASSERT(answer.has_value());
+        ASSERT(AssertDouble(answer->total_time, 7.5));
+        const vector<Item> &items = answer->items;
+        const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+        ASSERT(wait_item);
+        ASSERT_EQUAL(wait_item->stop, stop1);
+        const BusItem *bus_item = get_if<BusItem>(&items[1]);
+        ASSERT(bus_item);
+        ASSERT_EQUAL(bus_item->bus, bus1);
+        ASSERT_EQUAL(bus_item->span_count, 1U);
+        ASSERT(AssertDouble(bus_item->time, 1.5));
+    }
+    {
+        std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop1, stop3, db, router);
+        ASSERT(answer.has_value());
+        ASSERT(AssertDouble(answer->total_time, 8.25));
+        const vector<Item> &items = answer->items;
+        const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+        ASSERT(wait_item);
+        ASSERT_EQUAL(wait_item->stop, stop1);
+        const BusItem *bus_item = get_if<BusItem>(&items[1]);
+        ASSERT(bus_item);
+        ASSERT_EQUAL(bus_item->bus, bus1);
+        ASSERT_EQUAL(bus_item->span_count, 2U);
+        ASSERT(AssertDouble(bus_item->time, 2.25));
+    }
 }
 
 void TestAll()
