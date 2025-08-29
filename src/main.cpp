@@ -3199,6 +3199,572 @@ void TestParse()
 
         ASSERT_EQUAL(str, str_expect);
     }
+    {
+        istringstream iss(R"({
+  "routing_settings": {
+    "bus_wait_time": 6,
+    "bus_velocity": 40
+  },
+  "base_requests": [
+    {
+      "type": "Bus",
+      "name": "297",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryulyovo Tovarnaya",
+        "Universam",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "635",
+      "stops": [
+        "Biryulyovo Tovarnaya",
+        "Universam",
+        "Prazhskaya"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryulyovo Tovarnaya": 2600
+      },
+      "longitude": 37.6517,
+      "name": "Biryulyovo Zapadnoye",
+      "latitude": 55.574371
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Prazhskaya": 4650,
+        "Biryulyovo Tovarnaya": 1380,
+        "Biryulyovo Zapadnoye": 2500
+      },
+      "longitude": 37.645687,
+      "name": "Universam",
+      "latitude": 55.587655
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Universam": 890
+      },
+      "longitude": 37.653656,
+      "name": "Biryulyovo Tovarnaya",
+      "latitude": 55.592028
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "longitude": 37.603938,
+      "name": "Prazhskaya",
+      "latitude": 55.611717
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "297",
+      "id": 1
+    },
+    {
+      "type": "Bus",
+      "name": "635",
+      "id": 2
+    },
+    {
+      "type": "Stop",
+      "name": "Universam",
+      "id": 3
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Zapadnoye",
+      "to": "Universam",
+      "id": 4
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Zapadnoye",
+      "to": "Prazhskaya",
+      "id": 5
+    }
+  ]
+})");
+
+        ostringstream oss;
+
+        Parse(iss, oss);
+
+        istringstream iss_expect(R"([
+  {
+    "request_id": 1,
+    "stop_count": 4,
+    "unique_stop_count": 3,
+    "route_length": 5990,
+    "curvature": 1.42963
+  },
+  {
+    "request_id": 2,
+    "stop_count": 5,
+    "unique_stop_count": 3,
+    "route_length": 11570,
+    "curvature": 1.30156
+  },
+  {
+    "request_id": 3,
+    "buses": [
+      "297",
+      "635"
+    ]
+  },
+  {
+    "request_id": 4,
+    "total_time": 11.235,
+    "items": [
+        {
+            "time": 6,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 2,
+            "bus": "297",
+            "type": "Bus",
+            "time": 5.235
+        }
+    ]
+  },
+  {
+    "request_id": 5,
+    "total_time": 24.21,
+    "items": [
+        {
+            "time": 6,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 1,
+            "bus": "297",
+            "type": "Bus",
+            "time": 3.9
+        },
+        {
+            "time": 6,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Tovarnaya"
+        },
+        {
+            "span_count": 2,
+            "bus": "635",
+            "type": "Bus",
+            "time": 8.31
+        }
+    ]
+  }
+])");
+
+        string str = oss.str();
+        string str_expect = iss_expect.str();
+
+        ASSERT_EQUAL(str, str_expect);
+    }
+//     {
+//         istringstream iss(R"({
+//   "routing_settings": {
+//     "bus_wait_time": 2,
+//     "bus_velocity": 30
+//   },
+//   "base_requests": [
+//     {
+//       "type": "Bus",
+//       "name": "297",
+//       "stops": [
+//         "Biryulyovo Zapadnoye",
+//         "Biryulyovo Tovarnaya",
+//         "Universam",
+//         "Biryusinka",
+//         "Apteka",
+//         "Biryulyovo Zapadnoye"
+//       ],
+//       "is_roundtrip": true
+//     },
+//     {
+//       "type": "Bus",
+//       "name": "635",
+//       "stops": [
+//         "Biryulyovo Tovarnaya",
+//         "Universam",
+//         "Biryusinka",
+//         "TETs 26",
+//         "Pokrovskaya",
+//         "Prazhskaya"
+//       ],
+//       "is_roundtrip": false
+//     },
+//     {
+//       "type": "Bus",
+//       "name": "828",
+//       "stops": [
+//         "Biryulyovo Zapadnoye",
+//         "TETs 26",
+//         "Biryusinka",
+//         "Universam",
+//         "Pokrovskaya",
+//         "Rossoshanskaya ulitsa"
+//       ],
+//       "is_roundtrip": false
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Biryulyovo Tovarnaya": 2600,
+//         "TETs 26": 1100
+//       },
+//       "longitude": 37.6517,
+//       "name": "Biryulyovo Zapadnoye",
+//       "latitude": 55.574371
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Biryusinka": 760,
+//         "Biryulyovo Tovarnaya": 1380,
+//         "Pokrovskaya": 2460
+//       },
+//       "longitude": 37.645687,
+//       "name": "Universam",
+//       "latitude": 55.587655
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Universam": 890
+//       },
+//       "longitude": 37.653656,
+//       "name": "Biryulyovo Tovarnaya",
+//       "latitude": 55.592028
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Apteka": 210,
+//         "TETs 26": 400
+//       },
+//       "longitude": 37.64839,
+//       "name": "Biryusinka",
+//       "latitude": 55.581065
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Biryulyovo Zapadnoye": 1420
+//       },
+//       "longitude": 37.652296,
+//       "name": "Apteka",
+//       "latitude": 55.580023
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Pokrovskaya": 2850
+//       },
+//       "longitude": 37.642258,
+//       "name": "TETs 26",
+//       "latitude": 55.580685
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Rossoshanskaya ulitsa": 3140
+//       },
+//       "longitude": 37.635517,
+//       "name": "Pokrovskaya",
+//       "latitude": 55.603601
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Pokrovskaya": 3210
+//       },
+//       "longitude": 37.605757,
+//       "name": "Rossoshanskaya ulitsa",
+//       "latitude": 55.595579
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Pokrovskaya": 2260
+//       },
+//       "longitude": 37.603938,
+//       "name": "Prazhskaya",
+//       "latitude": 55.611717
+//     },
+//     {
+//       "type": "Bus",
+//       "name": "750",
+//       "stops": [
+//         "Tolstopaltsevo",
+//         "Rasskazovka"
+//       ],
+//       "is_roundtrip": false
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {
+//         "Rasskazovka": 13800
+//       },
+//       "longitude": 37.20829,
+//       "name": "Tolstopaltsevo",
+//       "latitude": 55.611087
+//     },
+//     {
+//       "type": "Stop",
+//       "road_distances": {},
+//       "longitude": 37.333324,
+//       "name": "Rasskazovka",
+//       "latitude": 55.632761
+//     }
+//   ],
+//   "stat_requests": [
+//     {
+//       "type": "Bus",
+//       "name": "297",
+//       "id": 1
+//     },
+//     {
+//       "type": "Bus",
+//       "name": "635",
+//       "id": 2
+//     },
+//     {
+//       "type": "Bus",
+//       "name": "828",
+//       "id": 3
+//     },
+//     {
+//       "type": "Stop",
+//       "name": "Universam",
+//       "id": 4
+//     },
+//     {
+//       "type": "Route",
+//       "from": "Biryulyovo Zapadnoye",
+//       "to": "Apteka",
+//       "id": 5
+//     },
+//     {
+//       "type": "Route",
+//       "from": "Biryulyovo Zapadnoye",
+//       "to": "Pokrovskaya",
+//       "id": 6
+//     },
+//     {
+//       "type": "Route",
+//       "from": "Biryulyovo Tovarnaya",
+//       "to": "Pokrovskaya",
+//       "id": 7
+//     },
+//     {
+//       "type": "Route",
+//       "from": "Biryulyovo Tovarnaya",
+//       "to": "Biryulyovo Zapadnoye",
+//       "id": 8
+//     },
+//     {
+//       "type": "Route",
+//       "from": "Biryulyovo Tovarnaya",
+//       "to": "Prazhskaya",
+//       "id": 9
+//     },
+//     {
+//       "type": "Route",
+//       "from": "Apteka",
+//       "to": "Biryulyovo Tovarnaya",
+//       "id": 10
+//     },
+//     {
+//       "type": "Route",
+//       "from": "Biryulyovo Zapadnoye",
+//       "to": "Tolstopaltsevo",
+//       "id": 11
+//     }
+//   ]
+// })");
+
+//         ostringstream oss;
+
+//         Parse(iss, oss);
+
+//         istringstream iss_expect(R"([
+//   {
+//     "request_id": 1,
+//     "stop_count": 6,
+//     "unique_stop_count": 5,
+//     "route_length": 5880,
+//     "curvature": 1.36159
+//   },
+//   {
+//     "request_id": 2,
+//     "stop_count": 11,
+//     "unique_stop_count": 6,
+//     "route_length": 14810,
+//     "curvature": 1.12195
+//   },
+//   {
+//     "request_id": 3,
+//     "stop_count": 11,
+//     "unique_stop_count": 6,
+//     "route_length": 15790,
+//     "curvature": 1.31245
+//   },
+//   {
+//     "request_id": 4,
+//     "buses": [
+//       "297",
+//       "635",
+//       "828"
+//     ]
+//   },
+//   {
+//     "request_id": 5,
+//     "total_time": 7.42,
+//     "items": [
+//         {
+//             "time": 2,
+//             "type": "Wait",
+//             "stop_name": "Biryulyovo Zapadnoye"
+//         },
+//         {
+//             "span_count": 2,
+//             "bus": "828",
+//             "type": "Bus",
+//             "time": 3
+//         },
+//         {
+//             "time": 2,
+//             "type": "Wait",
+//             "stop_name": "Biryusinka"
+//         },
+//         {
+//             "span_count": 1,
+//             "bus": "297",
+//             "type": "Bus",
+//             "time": 0.42
+//         }
+//     ]
+//   },
+//   {
+//     "request_id": 6,
+//     "total_time": 11.44,
+//     "items": [
+//         {
+//             "time": 2,
+//             "type": "Wait",
+//             "stop_name": "Biryulyovo Zapadnoye"
+//         },
+//         {
+//             "span_count": 4,
+//             "bus": "828",
+//             "type": "Bus",
+//             "time": 9.44
+//         }
+//     ]
+//   },
+//   {
+//     "request_id": 7,
+//     "total_time": 10.7,
+//     "items": [
+//         {
+//             "time": 2,
+//             "type": "Wait",
+//             "stop_name": "Biryulyovo Tovarnaya"
+//         },
+//         {
+//             "span_count": 1,
+//             "bus": "635",
+//             "type": "Bus",
+//             "time": 1.78
+//         },
+//         {
+//             "time": 2,
+//             "type": "Wait",
+//             "stop_name": "Universam"
+//         },
+//         {
+//             "span_count": 1,
+//             "bus": "828",
+//             "type": "Bus",
+//             "time": 4.92
+//         }
+//     ]
+//   },
+//   {
+//     "request_id": 8,
+//     "total_time": 8.56,
+//     "items": [
+//         {
+//             "time": 2,
+//             "type": "Wait",
+//             "stop_name": "Biryulyovo Tovarnaya"
+//         },
+//         {
+//             "span_count": 4,
+//             "bus": "297",
+//             "type": "Bus",
+//             "time": 6.56
+//         }
+//     ]
+//   },
+//   {
+//     "request_id": 9,
+//     "total_time": 16.32,
+//     "items": [
+//         {
+//             "time": 2,
+//             "type": "Wait",
+//             "stop_name": "Biryulyovo Tovarnaya"
+//         },
+//         {
+//             "span_count": 5,
+//             "bus": "635",
+//             "type": "Bus",
+//             "time": 14.32
+//         }
+//     ]
+//   },
+//   {
+//     "request_id": 10,
+//     "total_time": 12.04,
+//     "items": [
+//         {
+//             "time": 2,
+//             "type": "Wait",
+//             "stop_name": "Apteka"
+//         },
+//         {
+//             "span_count": 2, ОШИБКААААААААААААААААААААААААААААААААААААААААААААААААААААААА
+//             "bus": "297",
+//             "type": "Bus",
+//             "time": 8.04
+//         }
+//     ]
+//   },
+//   {
+//     "request_id": 11,
+//     "error_message": "not found"
+//   }
+// ])");
+
+//         string str = oss.str();
+//         string str_expect = iss_expect.str();
+
+//         ASSERT_EQUAL(str, str_expect);
+//     }
 }
 
 void TestParseRouteQuery()
@@ -3608,6 +4174,55 @@ void TestParseRouteQuery()
             ASSERT_EQUAL(bus_item->bus, bus3);
             ASSERT_EQUAL(bus_item->span_count, 1U);
             ASSERT(AssertDouble(bus_item->time, 6.44));
+        }
+    }
+    {
+        StopPtr stop1 = make_shared<Stop>(Stop{"1"});
+        StopPtr stop2 = make_shared<Stop>(Stop{"2"});
+        StopPtr stop3 = make_shared<Stop>(Stop{"3"});
+        StopPtr stop4 = make_shared<Stop>(Stop{"4"});
+
+        BusPtr bus1 = make_shared<Bus>(Bus{"841", {stop1, stop2, stop3, stop4, stop1}});
+        bus1->ring = true;
+
+        DataBase db;
+        db.stops = {stop1, stop2, stop3, stop4};
+        db.buses = {bus1};
+
+        db.road_route_length[stop1][stop2] = 100;
+        db.road_route_length[stop2][stop3] = 200;
+        db.road_route_length[stop3][stop4] = 300;
+        db.road_route_length[stop4][stop1] = 400;
+
+        db.CreateInfo(10/*bus_wait_time*/, 6.0/*bus_velocity km/hour*/);
+        // 100 метров/минуту
+
+        // ASSERT_EQUAL(db.graph.GetVertexCount(), 9U);
+        // ASSERT_EQUAL(db.graph.GetEdgeCount(), 24U);
+
+        Router router{db.graph};
+
+        {
+            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop3, stop2, db, router);
+            ASSERT(answer.has_value());
+            ASSERT(AssertDouble(answer->total_time, 10 + 7 + 10 + 1));
+            const vector<Item> &items = answer->items;
+            const WaitItem *wait_item = get_if<WaitItem>(&items[0]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop3);
+            const BusItem *bus_item = get_if<BusItem>(&items[1]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 2U);
+            ASSERT(AssertDouble(bus_item->time, 7));
+            wait_item = get_if<WaitItem>(&items[2]);
+            ASSERT(wait_item);
+            ASSERT_EQUAL(wait_item->stop, stop1);
+            bus_item = get_if<BusItem>(&items[3]);
+            ASSERT(bus_item);
+            ASSERT_EQUAL(bus_item->bus, bus1);
+            ASSERT_EQUAL(bus_item->span_count, 1U);
+            ASSERT(AssertDouble(bus_item->time, 1));
         }
     }
 }
