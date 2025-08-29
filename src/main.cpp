@@ -265,9 +265,6 @@ private:
 
     void CreateGraph()
     {
-        size_t edgs_count = 0U;
-        size_t shadow_edges = 0U;
-        size_t trans_edges = 0U;
         // формируем исскуственные вершины для пересадок в начале и в конце пути
         for (const auto &[stop, bus_to_vertex_id] : stop_and_bus_to_vertex_id)
         {
@@ -307,8 +304,14 @@ private:
                     .weight = road_distance
                 };
 
+                // // если кольцевая и это две последние остановки, то прибавляем
+                // // метры, затраченные в ожидании
+                // if (bus->ring and next(it_next) == bus->stops.end())
+                // {
+                //     edge.weight += routing_settings.meters_past_while_wait_bus;
+                // }
+
                 graph.AddEdge(edge);
-                edgs_count++;
 
                 if (not bus->ring)
                 {
@@ -319,7 +322,6 @@ private:
                         .weight = road_distance
                     };
                     graph.AddEdge(edge);
-                    edgs_count++;
                 }
             }
         }
@@ -344,14 +346,10 @@ private:
                     .weight = routing_settings.meters_past_while_wait_bus
                 };
                 graph.AddEdge(edge);
-                edgs_count++;
-                shadow_edges++;
 
                 edge.from = vertex_id_from;
                 edge.to = begin_end_transfer_vertex_id;
                 graph.AddEdge(edge);
-                edgs_count++;
-                shadow_edges++;
 
                 auto it_next = next(it);
                 if (it_next == bus_to_vertex_id.end())
@@ -364,14 +362,10 @@ private:
                     edge.from = vertex_id_from;
                     edge.to = vertex_id_to;
                     graph.AddEdge(edge);
-                    edgs_count++;
-                    trans_edges++;
 
                     edge.from = vertex_id_to;
                     edge.to = vertex_id_from;
                     graph.AddEdge(edge);
-                    edgs_count++;
-                    trans_edges++;
 
                     ++it_next;
                 }
