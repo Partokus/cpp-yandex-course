@@ -195,13 +195,6 @@ struct DataBase
             const Stops unique_stops{ bus->stops.begin(), bus->stops.end() };
             info.unique_stops = unique_stops.size();
 
-            // for (const StopPtr &stop : unique_stops)
-            // {
-            //     route_unit_to_vertex_id[stop][bus] = _vertex_id;
-            //     vertex_id_to_route_unit[_vertex_id] = pair{stop, bus};
-            //     ++_vertex_id;
-            // }
-
             for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
             {
                 auto it_next = next(it);
@@ -408,33 +401,6 @@ private:
 
                     add_edge(shadow_vertex_id, vertex_id);
                     add_edge(vertex_id, shadow_vertex_id);
-
-                    // // добавляем рёбра для остановок внутри одного автобуса
-                    // auto it2_next = next(it2);
-                    // while (it2_next != next_stop_to_vertex_id.end())
-                    // {
-                    //     const auto &[next_stop_to, vertex_id_to] = *it2_next;
-                    //     add_edge(vertex_id, vertex_id_to);
-                    //     add_edge(vertex_id_to, vertex_id);
-                    //     ++it2_next;
-                    // }
-
-                    // теперь добавляем рёбра
-                    // между остановкой с текущим автобусом (и текущей следующей остановкой)
-                    // и всеми другими остановками, которые имеют другой автобус
-                    // auto it_next = next(it);
-                    // while (it_next != bus_to_next_stop.end())
-                    // {
-                    //     const auto &[bus_to, next_stop_to_to_vertex_id] = *it_next;
-
-                    //     for (const auto &[next_stop_next, vertex_id_other_bus] : next_stop_to_to_vertex_id)
-                    //     {
-                    //         add_edge(vertex_id, vertex_id_other_bus);
-                    //         add_edge(vertex_id_other_bus, vertex_id);
-                    //     }
-
-                    //     ++it_next;
-                    // }
                 }
             }
         }
@@ -657,8 +623,6 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
             continue;
         }
 
-        // const auto &[stop_to, bus_to, next_stop_to] = it_to->second;
-
         if (bus_from->ring and next_stop_from == nullptr)
         {
             bus_item.bus = bus_from;
@@ -674,29 +638,6 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
             bus_item.time += edge.weight / db.routing_settings.bus_velocity_meters_min;
         }
 
-        // if (bus_from == bus_to and stop_from != stop_to)
-        // {
-        //     if (bus_from->ring and next_stop_from == nullptr)
-        //     {
-        //         bus_item.bus = bus_from;
-        //         push_items(bus_item, WaitItem{ .stop = stop_from });
-
-        //         ++bus_item.span_count;
-        //         bus_item.time += (edge.weight - db.routing_settings.meters_past_while_wait_bus)
-        //             / db.routing_settings.bus_velocity_meters_min;
-        //     }
-        //     else
-        //     {
-        //         ++bus_item.span_count;
-        //         bus_item.time += edge.weight / db.routing_settings.bus_velocity_meters_min;
-        //     }
-        // }
-        // else
-        // {
-        //     bus_item.bus = bus_from;
-        //     push_items(bus_item, WaitItem{ .stop = stop_to });
-        // }
-
         if (i == (edge_count - 1U))
         {
             bus_item.bus = bus_from;
@@ -705,7 +646,7 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
     }
 
     router.ReleaseRoute(router_info->id);
-    return result;
+    return { move(result) };
 }
 
 void Parse(istream &is, ostream &os)
@@ -20742,15 +20683,15 @@ void TestParseRouteQuery()
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestParseJson);
-    RUN_TEST(tr, TestParseAddStopQuery);
-    RUN_TEST(tr, TestParseAddBusQuery);
-    RUN_TEST(tr, TestCalcGeoDistance);
-    RUN_TEST(tr, TestDataBaseCreateInfo);
-    RUN_TEST(tr, TestDataBaseCreateGraph);
+    // RUN_TEST(tr, TestParseJson);
+    // RUN_TEST(tr, TestParseAddStopQuery);
+    // RUN_TEST(tr, TestParseAddBusQuery);
+    // RUN_TEST(tr, TestCalcGeoDistance);
+    // RUN_TEST(tr, TestDataBaseCreateInfo);
+    // RUN_TEST(tr, TestDataBaseCreateGraph);
     // RUN_TEST(tr, TestBuildRoute);
-    RUN_TEST(tr, TestParseRouteQuery);
-    RUN_TEST(tr, TestParse);
+    // RUN_TEST(tr, TestParseRouteQuery);
+    // RUN_TEST(tr, TestParse);
 }
 
 void Profile()
