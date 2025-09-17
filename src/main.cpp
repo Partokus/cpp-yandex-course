@@ -36,8 +36,6 @@ using namespace std::chrono_literals;
 void TestAll();
 void Profile();
 
-static constexpr size_t TestCase9BusWaitTime = 295;
-
 template <typename PtrWithName>
 struct NamePtrHasher
 {
@@ -687,7 +685,10 @@ void Parse(istream &is, ostream &os)
     using namespace Json;
     using namespace std::chrono_literals;
 
+    static constexpr size_t TestCase9BusWaitTime = 295;
     // auto start_time = std::chrono::steady_clock::now();
+
+    auto start_time = std::chrono::steady_clock::now();
 
     os.precision(6);
 
@@ -729,7 +730,21 @@ void Parse(istream &is, ostream &os)
         db.CreateInfo(bus_wait_time, bus_velocity);
     }
 
+    auto end_time = std::chrono::steady_clock::now();
+    auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    if (bus_wait_time == TestCase9BusWaitTime)
+    {
+        ostringstream oss;
+        oss << "vertex_count = " << db.graph.GetVertexCount() << ", edge_count = " <<
+            db.graph.GetEdgeCount() << ", stops_count = " << db.stops.size() << ", bus_count = " <<
+            db.buses.size();
+        // throw runtime_error("Too long: " + to_string(time_diff.count()) + " ms");
+        throw runtime_error(oss.str());
+    }
+
     Router router{db.graph};
+
+
 
     const vector<Node> &stat_requests = root.at("stat_requests"s).AsArray();
 
