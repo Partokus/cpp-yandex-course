@@ -1477,7 +1477,7 @@ void TestBuildRoute()
 
         route_info = router.BuildRoute(stop1_bus1_vertex_id, stop5_bus2_vertex_id).value();
         ASSERT(AssertDouble(route_info.weight, 6600.0));
-        ASSERT_EQUAL(route_info.edge_count, 5U);
+        ASSERT_EQUAL(route_info.edge_count, 6U);
         edge_id = router.GetRouteEdge(route_info.id, 0);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop1_bus1_vertex_id);
@@ -1489,19 +1489,23 @@ void TestBuildRoute()
         edge_id = router.GetRouteEdge(route_info.id, 2);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop3_bus1_vertex_id);
-        ASSERT_EQUAL(edge.to, stop3_bus2_vertex_id);
+        ASSERT_EQUAL(edge.to, db.shadow_stops_to_vertex_id[stop3]);
         edge_id = router.GetRouteEdge(route_info.id, 3);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, db.shadow_stops_to_vertex_id[stop3]);
+        ASSERT_EQUAL(edge.to, stop3_bus2_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 4);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop3_bus2_vertex_id);
         ASSERT_EQUAL(edge.to, stop4_bus2_vertex_id);
-        edge_id = router.GetRouteEdge(route_info.id, 4);
+        edge_id = router.GetRouteEdge(route_info.id, 5);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop4_bus2_vertex_id);
         ASSERT_EQUAL(edge.to, stop5_bus2_vertex_id);
 
         route_info = router.BuildRoute(stop5_bus2_vertex_id, stop1_bus1_vertex_id).value();
         ASSERT(AssertDouble(route_info.weight, 6600.0));
-        ASSERT_EQUAL(route_info.edge_count, 5U);
+        ASSERT_EQUAL(route_info.edge_count, 6U);
         edge_id = router.GetRouteEdge(route_info.id, 0);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop5_bus2_vertex_id);
@@ -1513,12 +1517,16 @@ void TestBuildRoute()
         edge_id = router.GetRouteEdge(route_info.id, 2);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop3_bus2_vertex_id);
-        ASSERT_EQUAL(edge.to, stop3_bus1_vertex_id);
+        ASSERT_EQUAL(edge.to, db.shadow_stops_to_vertex_id[stop3]);
         edge_id = router.GetRouteEdge(route_info.id, 3);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, db.shadow_stops_to_vertex_id[stop3]);
+        ASSERT_EQUAL(edge.to, stop3_bus1_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 4);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop3_bus1_vertex_id);
         ASSERT_EQUAL(edge.to, stop2_bus1_vertex_id);
-        edge_id = router.GetRouteEdge(route_info.id, 4);
+        edge_id = router.GetRouteEdge(route_info.id, 5);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop2_bus1_vertex_id);
         ASSERT_EQUAL(edge.to, stop1_bus1_vertex_id);
@@ -1527,20 +1535,25 @@ void TestBuildRoute()
 
         route_info = router.BuildRoute(stop1_bus1_vertex_id, stop6_bus3_vertex_id).value();
         ASSERT(AssertDouble(route_info.weight, 5700.0));
-        ASSERT_EQUAL(route_info.edge_count, 4U);
+        ASSERT_EQUAL(route_info.edge_count, 5U);
         edge_id = router.GetRouteEdge(route_info.id, 0);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop1_bus1_vertex_id);
         ASSERT_EQUAL(edge.to, stop2_bus1_vertex_id);
         edge_id = router.GetRouteEdge(route_info.id, 1);
         edge = db.graph.GetEdge(edge_id);
+
         ASSERT_EQUAL(edge.from, stop2_bus1_vertex_id);
         ASSERT_EQUAL(edge.to, stop3_bus1_vertex_id);
         edge_id = router.GetRouteEdge(route_info.id, 2);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop3_bus1_vertex_id);
-        ASSERT_EQUAL(edge.to, stop3_bus3_vertex_id);
+        ASSERT_EQUAL(edge.to, db.shadow_stops_to_vertex_id[stop3]);
         edge_id = router.GetRouteEdge(route_info.id, 3);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, db.shadow_stops_to_vertex_id[stop3]);
+        ASSERT_EQUAL(edge.to, stop3_bus3_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 4);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop3_bus3_vertex_id);
         ASSERT_EQUAL(edge.to, stop6_bus3_vertex_id);
@@ -1549,7 +1562,7 @@ void TestBuildRoute()
 
         route_info = router.BuildRoute(stop5_bus2_vertex_id, stop6_bus3_vertex_id).value();
         ASSERT(AssertDouble(route_info.weight, 5300.0));
-        ASSERT_EQUAL(route_info.edge_count, 4U);
+        ASSERT_EQUAL(route_info.edge_count, 5U);
         edge_id = router.GetRouteEdge(route_info.id, 0);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop5_bus2_vertex_id);
@@ -1561,8 +1574,12 @@ void TestBuildRoute()
         edge_id = router.GetRouteEdge(route_info.id, 2);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop3_bus2_vertex_id);
-        ASSERT_EQUAL(edge.to, stop3_bus3_vertex_id);
+        ASSERT_EQUAL(edge.to, db.shadow_stops_to_vertex_id[stop3]);
         edge_id = router.GetRouteEdge(route_info.id, 3);
+        edge = db.graph.GetEdge(edge_id);
+        ASSERT_EQUAL(edge.from, db.shadow_stops_to_vertex_id[stop3]);
+        ASSERT_EQUAL(edge.to, stop3_bus3_vertex_id);
+        edge_id = router.GetRouteEdge(route_info.id, 4);
         edge = db.graph.GetEdge(edge_id);
         ASSERT_EQUAL(edge.from, stop3_bus3_vertex_id);
         ASSERT_EQUAL(edge.to, stop6_bus3_vertex_id);
@@ -20683,14 +20700,14 @@ void TestParseRouteQuery()
 void TestAll()
 {
     TestRunner tr{};
-    // RUN_TEST(tr, TestParseJson);
-    // RUN_TEST(tr, TestParseAddStopQuery);
-    // RUN_TEST(tr, TestParseAddBusQuery);
-    // RUN_TEST(tr, TestCalcGeoDistance);
-    // RUN_TEST(tr, TestDataBaseCreateInfo);
-    // RUN_TEST(tr, TestDataBaseCreateGraph);
-    // RUN_TEST(tr, TestBuildRoute);
-    // RUN_TEST(tr, TestParseRouteQuery);
+    RUN_TEST(tr, TestParseJson);
+    RUN_TEST(tr, TestParseAddStopQuery);
+    RUN_TEST(tr, TestParseAddBusQuery);
+    RUN_TEST(tr, TestCalcGeoDistance);
+    RUN_TEST(tr, TestDataBaseCreateInfo);
+    RUN_TEST(tr, TestDataBaseCreateGraph);
+    RUN_TEST(tr, TestBuildRoute);
+    RUN_TEST(tr, TestParseRouteQuery);
     // RUN_TEST(tr, TestParse);
 }
 
