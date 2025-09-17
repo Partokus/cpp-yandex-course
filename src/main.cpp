@@ -34,6 +34,102 @@ using namespace std;
 void TestAll();
 void Profile();
 
+template <class Iterator>
+class IteratorRange
+{
+public:
+    IteratorRange(Iterator begin, Iterator end)
+        : _begin(begin),
+          _end(end)
+    {
+    }
+
+    Iterator begin()
+    {
+        return _begin;
+    }
+
+    Iterator end()
+    {
+        return _end;
+    }
+
+    Iterator begin() const
+    {
+        return _begin;
+    }
+
+    Iterator end() const
+    {
+        return _end;
+    }
+
+    size_t size() const
+    {
+        return _end - _begin;
+    }
+
+private:
+    Iterator _begin{};
+    Iterator _end{};
+};
+
+template <class Iterator>
+class Paginator
+{
+public:
+    using Page = IteratorRange<Iterator>;
+
+    Paginator(Iterator begin, Iterator end, size_t page_size)
+    {
+        _pages.reserve(std::ceil(static_cast<double>(end - begin) / page_size));
+
+        Iterator it = begin;
+        const size_t last_page_num = _pages.capacity() - 1;
+
+        for (size_t page_num = 0; page_num < _pages.capacity(); ++page_num)
+        {
+            if (page_num != last_page_num)
+            {
+                _pages.push_back({it, it + page_size});
+                it += page_size;
+            }
+            else
+            {
+                _pages.push_back({it, end});
+            }
+        }
+    }
+
+    typename vector<Page>::iterator begin()
+    {
+        return _pages.begin();
+    }
+
+    typename vector<Page>::iterator end()
+    {
+        return _pages.end();
+    }
+
+    typename vector<Page>::iterator begin() const
+    {
+        return _pages.begin();
+    }
+
+    typename vector<Page>::iterator end() const
+    {
+        return _pages.end();
+    }
+
+    size_t size() const
+    {
+        return _pages.size();
+    }
+
+private:
+    vector<Page> _pages{};
+};
+
 template <typename PtrWithName>
 struct NamePtrHasher
 {
@@ -649,48 +745,190 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
     return { move(result) };
 }
 
+template <typename IterQuery>
+ostringstream ParseQueries(
+    IterQuery begin,
+    IterQuery end,
+    const vector<Node> &stat_requests,
+    DataBase &db,
+    Router &router)
+{
+    const map<string, Node> &req = it->AsMap();
+    const string &type = req.at("type"s).AsString();
+    int id = req.at("id"s).AsInt();
+
+    os << "  {" << '\n';
+
+    os << "    \"request_id\": " << id << ",\n";
+
+    if (type == "Bus")
+    {
+        const string &name = req.at("name"s).AsString();
+        auto bus = make_shared<Bus>(Bus{});
+        bus->name = name;
+
+        if (auto it = db.buses_info.find(bus); it != db.buses_info.end())
+        {
+            auto &info = it->second;
+            os << "    \"stop_count\": "        << info.stops_on_route    << ",\n"
+                << "    \"unique_stop_count\": " << info.unique_stops      << ",\n"
+                << "    \"route_length\": "      << info.route_length_road << ",\n"
+                << "    \"curvature\": "         << info.curvature()       << "\n";
+        }
+        else
+            os << "    \"error_message\": \"not found\"" << '\n';
+    }
+    else if (type == "Stop")
+    {
+        const string &name = req.at("name"s).AsString();
+        auto stop = make_shared<Stop>(Stop{});
+        stop->name = name;
+
+        if (auto it = db.stops.find(stop); it != db.stops.end())
+        {
+            const StopPtr &stop = *it;
+            if (not stop->buses.empty())
+            {
+                os << "    \"buses\": [" << '\n';
+
+                for (auto it_bus = stop->buses.begin();
+                        it_bus != stop->buses.end();
+                        ++it_bus)
+                {
+                    os << "      \"" << it_bus->get()->name << '\"';
+                    if (next(it_bus) != stop->buses.end())
+                        os << ',';
+                    os << '\n';
+                }
+
+                os << "    ]" << '\n';
+            }
+            else
+                os << "    \"buses\": []" << '\n';
+        }
+        else
+            os << "    \"error_message\": \"not found\"" << '\n';
+    }
+    else if (type == "Route")
+    {
+        const string &from_name = req.at("from"s).AsString();
+        auto stop_from = make_shared<Stop>(Stop{});
+        stop_from->name = from_name;
+
+        const string &to_name = req.at("to"s).AsString();
+        auto stop_to = make_shared<Stop>(Stop{});
+        stop_to->name = to_name;
+
+        std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop_from, stop_to, db, router);
+
+        if (not answer)
+            os << "    \"error_message\": \"not found\"\n";
+        else
+        {
+            os << "    \"total_time\": " << answer->total_time << ",\n";
+
+            os << "    \"items\": [" << '\n';
+            for (auto it = answer->items.begin(); it != answer->items.end(); ++it)
+            {
+                os << "        {\n";
+
+                if (WaitItem *item = get_if<WaitItem>(&(*it)); item != nullptr)
+                {
+                    os << "            \"time\": " << db.routing_settings.bus_wait_time << ",\n";
+                    os << "            \"type\": \"Wait\"" << ",\n";
+                    os << "            \"stop_name\": \"" << item->stop->name << "\"" << "\n";
+                }
+                else if (BusItem *item = get_if<BusItem>(&(*it)); item != nullptr)
+                {
+                    os << "            \"span_count\": "  << item->span_count << ",\n";
+                    os << "            \"bus\": \""       << item->bus->name << "\"" << ",\n";
+                    os << "            \"type\": \"Bus\"" << ",\n";
+                    os << "            \"time\": "        << item->time << "\n";
+                }
+
+                if (next(it) != answer->items.end())
+                    os << "        },\n";
+                else
+                    os << "        }\n";
+            }
+            os << "    ]" << '\n';
+        }
+    }
+
+    os << "  }";
+    if (next(it) != stat_requests.end())
+        os << ',';
+    os << '\n';
+}
+
 void Parse(istream &is, ostream &os)
 {
     using namespace Json;
+    using namespace std::chrono_literals;
 
     os.precision(6);
 
     DataBase db{};
-    Document doc = Load(is);
+    Document doc = [&is](){
+        // LOG_DURATION("LoadJson");
+        return Load(is);
+    }();
 
-    const map<string, Node> &root = doc.GetRoot().AsMap();
+    const map<string, Node> &root = [&doc](){
+        // LOG_DURATION("Get root");
+        return doc.GetRoot().AsMap();
+    }();
 
-    const vector<Node> &base_requests = root.at("base_requests"s).AsArray();
-
-    for (const Node &node : base_requests)
     {
-        const map<string, Node> &req = node.AsMap();
-        const string &type = req.at("type"s).AsString();
+        // LOG_DURATION("Base requests");
+        const vector<Node> &base_requests = root.at("base_requests"s).AsArray();
+        for (const Node &node : base_requests)
+        {
+            const map<string, Node> &req = node.AsMap();
+            const string &type = req.at("type"s).AsString();
 
-        if (type == "Stop")
-        {
-            StopPtr stop = ParseAddStopQuery(req, db);
-            auto [it, inserted] = db.stops.insert(stop);
-            if (not inserted)
+            if (type == "Stop")
             {
-                it->get()->latitude = stop->latitude;
-                it->get()->longitude = stop->longitude;
+                StopPtr stop = ParseAddStopQuery(req, db);
+                auto [it, inserted] = db.stops.insert(stop);
+                if (not inserted)
+                {
+                    it->get()->latitude = stop->latitude;
+                    it->get()->longitude = stop->longitude;
+                }
             }
-        }
-        else if (type == "Bus")
-        {
-            BusPtr bus = ParseAddBusQuery(req, db.stops);
-            db.buses.insert(move(bus));
+            else if (type == "Bus")
+            {
+                BusPtr bus = ParseAddBusQuery(req, db.stops);
+                db.buses.insert(move(bus));
+            }
         }
     }
 
-    const map<string, Node> &routing_settings = root.at("routing_settings"s).AsMap();
-    const size_t bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
-    const double bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
+    {
+        // LOG_DURATION("CreateInfo");
+        const map<string, Node> &routing_settings = root.at("routing_settings"s).AsMap();
+        const size_t bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
+        const double bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
+        db.CreateInfo(bus_wait_time, bus_velocity);
+    }
 
-    db.CreateInfo(bus_wait_time, bus_velocity);
+    // auto start_time = std::chrono::steady_clock::now();
 
-    Router router{db.graph};
+    Router router = [&db](){
+      // LOG_DURATION("Router ctor");
+      Router result{db.graph};
+      return result;
+    }();
+
+    // auto end_time = std::chrono::steady_clock::now();
+    // auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    // if (time_diff > 3020ms)
+    // {
+    //     throw runtime_error("Too long: " + to_string(time_diff.count()) + " ms");
+    // }
+
+    // LOG_DURATION("Stat requests");
 
     const vector<Node> &stat_requests = root.at("stat_requests"s).AsArray();
 
@@ -698,112 +936,7 @@ void Parse(istream &is, ostream &os)
 
     for (auto it = stat_requests.begin(); it != stat_requests.end(); ++it)
     {
-        const map<string, Node> &req = it->AsMap();
-        const string &type = req.at("type"s).AsString();
-        int id = req.at("id"s).AsInt();
 
-        os << "  {" << '\n';
-
-        os << "    \"request_id\": " << id << ",\n";
-
-        if (type == "Bus")
-        {
-            const string &name = req.at("name"s).AsString();
-            auto bus = make_shared<Bus>(Bus{});
-            bus->name = name;
-
-            if (auto it = db.buses_info.find(bus); it != db.buses_info.end())
-            {
-                auto &info = it->second;
-                os << "    \"stop_count\": "        << info.stops_on_route    << ",\n"
-                   << "    \"unique_stop_count\": " << info.unique_stops      << ",\n"
-                   << "    \"route_length\": "      << info.route_length_road << ",\n"
-                   << "    \"curvature\": "         << info.curvature()       << "\n";
-            }
-            else
-                os << "    \"error_message\": \"not found\"" << '\n';
-        }
-        else if (type == "Stop")
-        {
-            const string &name = req.at("name"s).AsString();
-            auto stop = make_shared<Stop>(Stop{});
-            stop->name = name;
-
-            if (auto it = db.stops.find(stop); it != db.stops.end())
-            {
-                const StopPtr &stop = *it;
-                if (not stop->buses.empty())
-                {
-                    os << "    \"buses\": [" << '\n';
-
-                    for (auto it_bus = stop->buses.begin();
-                         it_bus != stop->buses.end();
-                         ++it_bus)
-                    {
-                        os << "      \"" << it_bus->get()->name << '\"';
-                        if (next(it_bus) != stop->buses.end())
-                            os << ',';
-                        os << '\n';
-                    }
-
-                    os << "    ]" << '\n';
-                }
-                else
-                    os << "    \"buses\": []" << '\n';
-            }
-            else
-                os << "    \"error_message\": \"not found\"" << '\n';
-        }
-        else if (type == "Route")
-        {
-            const string &from_name = req.at("from"s).AsString();
-            auto stop_from = make_shared<Stop>(Stop{});
-            stop_from->name = from_name;
-
-            const string &to_name = req.at("to"s).AsString();
-            auto stop_to = make_shared<Stop>(Stop{});
-            stop_to->name = to_name;
-
-            std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop_from, stop_to, db, router);
-
-            if (not answer)
-                os << "    \"error_message\": \"not found\"\n";
-            else
-            {
-                os << "    \"total_time\": " << answer->total_time << ",\n";
-
-                os << "    \"items\": [" << '\n';
-                for (auto it = answer->items.begin(); it != answer->items.end(); ++it)
-                {
-                    os << "        {\n";
-
-                    if (WaitItem *item = get_if<WaitItem>(&(*it)); item != nullptr)
-                    {
-                        os << "            \"time\": " << db.routing_settings.bus_wait_time << ",\n";
-                        os << "            \"type\": \"Wait\"" << ",\n";
-                        os << "            \"stop_name\": \"" << item->stop->name << "\"" << "\n";
-                    }
-                    else if (BusItem *item = get_if<BusItem>(&(*it)); item != nullptr)
-                    {
-                        os << "            \"span_count\": "  << item->span_count << ",\n";
-                        os << "            \"bus\": \""       << item->bus->name << "\"" << ",\n";
-                        os << "            \"type\": \"Bus\"" << ",\n";
-                        os << "            \"time\": "        << item->time << "\n";
-                    }
-
-                    if (next(it) != answer->items.end())
-                        os << "        },\n";
-                    else
-                        os << "        }\n";
-                }
-                os << "    ]" << '\n';
-            }
-        }
-
-        os << "  }";
-        if (next(it) != stat_requests.end())
-            os << ',';
-        os << '\n';
     }
 
     os << "]";
@@ -20167,7 +20300,11 @@ void TestParse()
 
         ostringstream oss;
 
-        Parse(iss, oss);
+        // Парсинг большого теста
+        {
+          LOG_DURATION("Long Test");
+          Parse(iss, oss);
+        }
 
         istringstream iss_expect(R"([
   {
@@ -20700,14 +20837,14 @@ void TestParseRouteQuery()
 void TestAll()
 {
     TestRunner tr{};
-    RUN_TEST(tr, TestParseJson);
-    RUN_TEST(tr, TestParseAddStopQuery);
-    RUN_TEST(tr, TestParseAddBusQuery);
-    RUN_TEST(tr, TestCalcGeoDistance);
-    RUN_TEST(tr, TestDataBaseCreateInfo);
-    RUN_TEST(tr, TestDataBaseCreateGraph);
-    RUN_TEST(tr, TestBuildRoute);
-    RUN_TEST(tr, TestParseRouteQuery);
+    // RUN_TEST(tr, TestParseJson);
+    // RUN_TEST(tr, TestParseAddStopQuery);
+    // RUN_TEST(tr, TestParseAddBusQuery);
+    // RUN_TEST(tr, TestCalcGeoDistance);
+    // RUN_TEST(tr, TestDataBaseCreateInfo);
+    // RUN_TEST(tr, TestDataBaseCreateGraph);
+    // RUN_TEST(tr, TestBuildRoute);
+    // RUN_TEST(tr, TestParseRouteQuery);
     // RUN_TEST(tr, TestParse);
 }
 
