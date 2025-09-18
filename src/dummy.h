@@ -1,5 +1,169 @@
-{"base_requests": [{"latitude": 55.611087, "longitude": 37.20829, "type": "Stop", "road_distances": {"+++": 3900}, "name": "Tolstopaltsevo"}, {"type": "Stop", "name": "+++", "latitude": 55.595884, "longitude": 37.209755, "road_distances": {"Rasskazovka": 9900}}, {"type": "Bus", "name": "256", "stops": ["Biryulyovo Zapadnoye", "Biryusinka", "Universam", "Biryulyovo Tovarnaya", "Biryulyovo Passazhirskaya", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Bus", "name": "750", "is_roundtrip": false, "stops": ["Tolstopaltsevo", "Marushkino", "Rasskazovka"]}, {"type": "Stop", "name": "Rasskazovka", "latitude": 55.632761, "longitude": 37.333324, "road_distances": {}}, {"type": "Stop", "name": "Biryulyovo Zapadnoye", "latitude": 55.574371, "longitude": 37.6517, "road_distances": {"Biryusinka": 1800, "Universam": 2400, "Rossoshanskaya ulitsa": 7500}}, {"type": "Stop", "name": "Biryusinka", "latitude": 55.581065, "longitude": 37.64839, "road_distances": {"Universam": 750}}, {"type": "Stop", "name": "Universam", "latitude": 55.587655, "longitude": 37.645687, "road_distances": {"Biryulyovo Tovarnaya": 900, "Rossoshanskaya ulitsa": 5600}}, {"type": "Stop", "name": "Biryulyovo Tovarnaya", "latitude": 55.592028, "longitude": 37.653656, "road_distances": {"Biryulyovo Passazhirskaya": 1300}}, {"type": "Stop", "name": "Biryulyovo Passazhirskaya", "latitude": 55.580999, "longitude": 37.659164, "road_distances": {"Biryulyovo Zapadnoye": 1200}}, {"type": "Bus", "name": "828", "stops": ["Biryulyovo Zapadnoye", "Universam", "Rossoshanskaya ulitsa", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Stop", "name": "Rossoshanskaya ulitsa", "latitude": 55.595579, "longitude": 37.605757, "road_distances": {}}, {"type": "Stop", "name": "Prazhskaya", "latitude": 55.611678, "longitude": 37.603831, "road_distances": {}}], "stat_requests": [{"id": 599708471, "type": "Bus", "name": "256"}, {"id": 2059890189, "type": "Bus", "name": "750"}, {"id": 222058974, "type": "Bus", "name": "751"}, {"id": 1038752326, "type": "Stop", "name": "Samara"}, {"id": 986197773, "type": "Stop", "name": "Prazhskaya"}, {"id": 932894250, "type": "Stop", "name": "Biryulyovo Zapadnoye"}]}
-
-
-
-{"base_requests": [{"type": "Stop", "name": "A", "latitude": 0.5, "longitude": -1, "road_distances": {"B": 100000}}, {"type": "Stop", "name": "B", "latitude": 0, "longitude": -1.1, "road_distances": {}}, {"type": "Bus", "name": "256", "stops": ["B", "A"], "is_roundtrip": false}], "stat_requests": [{"id": 1317873202, "type": "Bus", "name": "256"}, {"id": 853807922, "type": "Stop", "name": "A"}, {"id": 1416389015, "type": "Stop", "name": "B"}, {"id": 1021316791, "type": "Stop", "name": "C"}]}
+[
+  {
+    "request_id": 1,
+    "stop_count": 6,
+    "unique_stop_count": 5,
+    "route_length": 5880,
+    "curvature": 1.36159
+  },
+  {
+    "request_id": 2,
+    "stop_count": 11,
+    "unique_stop_count": 6,
+    "route_length": 14810,
+    "curvature": 1.12195
+  },
+  {
+    "request_id": 3,
+    "stop_count": 11,
+    "unique_stop_count": 6,
+    "route_length": 15790,
+    "curvature": 1.31245
+  },
+  {
+    "request_id": 4,
+    "buses": [
+      "297",
+      "635",
+      "828"
+    ]
+  },
+  {
+    "request_id": 5,
+    "total_time": 7.42,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 2,
+            "bus": "828",
+            "type": "Bus",
+            "time": 3
+        },
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryusinka"
+        },
+        {
+            "span_count": 1,
+            "bus": "297",
+            "type": "Bus",
+            "time": 0.42
+        }
+    ]
+  },
+  {
+    "request_id": 6,
+    "total_time": 11.44,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 4,
+            "bus": "828",
+            "type": "Bus",
+            "time": 9.44
+        }
+    ]
+  },
+  {
+    "request_id": 7,
+    "total_time": 10.7,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Tovarnaya"
+        },
+        {
+            "span_count": 1,
+            "bus": "635",
+            "type": "Bus",
+            "time": 1.78
+        },
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Universam"
+        },
+        {
+            "span_count": 1,
+            "bus": "828",
+            "type": "Bus",
+            "time": 4.92
+        }
+    ]
+  },
+  {
+    "request_id": 8,
+    "total_time": 8.56,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Tovarnaya"
+        },
+        {
+            "span_count": 4,
+            "bus": "297",
+            "type": "Bus",
+            "time": 6.56
+        }
+    ]
+  },
+  {
+    "request_id": 9,
+    "total_time": 16.32,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Tovarnaya"
+        },
+        {
+            "span_count": 5,
+            "bus": "635",
+            "type": "Bus",
+            "time": 14.32
+        }
+    ]
+  },
+  {
+    "request_id": 10,
+    "total_time": 12.04,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Apteka"
+        },
+        {
+            "span_count": 1,
+            "bus": "297",
+            "type": "Bus",
+            "time": 2.84
+        },
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 1,
+            "bus": "297",
+            "type": "Bus",
+            "time": 5.2
+        }
+    ]
+  },
+  {
+    "request_id": 11,
+    "error_message": "not found"
+  }
