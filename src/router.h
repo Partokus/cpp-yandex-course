@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <queue>
+#include <functional>
 
 namespace Graph
 {
@@ -38,107 +40,125 @@ public:
 private:
     const Graph &graph_;
 
-    struct RouteInternalData
+    // Структура для хранения предварительно вычисленных маршрутов
+    struct VertexRoutes
     {
-        Weight weight;
-        std::optional<EdgeId> prev_edge;
+        std::vector<Weight> distances;
+        std::vector<std::optional<EdgeId>> prev_edges;
     };
-    using RoutesInternalData = std::vector<std::vector<std::optional<RouteInternalData>>>;
 
+    std::vector<VertexRoutes> all_routes_;
+
+    // Кэш развернутых маршрутов
     using ExpandedRoute = std::vector<EdgeId>;
     mutable RouteId next_route_id_ = 0;
     mutable std::unordered_map<RouteId, ExpandedRoute> expanded_routes_cache_;
 
-    void InitializeRoutesInternalData(const Graph &graph)
+    // Вспомогательная структура для очереди с приоритетом
+    struct QueueElement
     {
-        const size_t vertex_count = graph.GetVertexCount();
-        for (VertexId vertex = 0; vertex < vertex_count; ++vertex)
-        {
-            routes_internal_data_[vertex][vertex] = RouteInternalData{0, std::nullopt};
-            for (const EdgeId edge_id : graph.GetIncidentEdges(vertex))
-            {
-                const auto &edge = graph.GetEdge(edge_id);
-                assert(edge.weight >= 0);
-                auto &route_internal_data = routes_internal_data_[vertex][edge.to];
-                if (!route_internal_data || route_internal_data->weight > edge.weight)
-                {
-                    route_internal_data = RouteInternalData{edge.weight, edge_id};
-                }
-            }
-        }
-    }
+        VertexId vertex;
+        Weight distance;
 
-    void RelaxRoute(VertexId vertex_from, VertexId vertex_to,
-                    const RouteInternalData &route_from, const RouteInternalData &route_to)
-    {
-        auto &route_relaxing = routes_internal_data_[vertex_from][vertex_to];
-        const Weight candidate_weight = route_from.weight + route_to.weight;
-        if (!route_relaxing || candidate_weight < route_relaxing->weight)
+        bool operator>(const QueueElement &other) const
         {
-            route_relaxing = {
-                candidate_weight,
-                route_to.prev_edge
-                    ? route_to.prev_edge
-                    : route_from.prev_edge};
+            return distance > other.distance;
         }
-    }
+    };
 
-    void RelaxRoutesInternalDataThroughVertex(size_t vertex_count, VertexId vertex_through)
-    {
-        for (VertexId vertex_from = 0; vertex_from < vertex_count; ++vertex_from)
-        {
-            if (const auto &route_from = routes_internal_data_[vertex_from][vertex_through])
-            {
-                for (VertexId vertex_to = 0; vertex_to < vertex_count; ++vertex_to)
-                {
-                    if (const auto &route_to = routes_internal_data_[vertex_through][vertex_to])
-                    {
-                        RelaxRoute(vertex_from, vertex_to, *route_from, *route_to);
-                    }
-                }
-            }
-        }
-    }
-
-    RoutesInternalData routes_internal_data_;
+    // Вычисление маршрутов из одной вершины с помощью Дейкстры
+    VertexRoutes ComputeRoutesFromVertex(VertexId source) const;
 };
 
 template <typename Weight>
 Router<Weight>::Router(const Graph &graph)
     : graph_(graph),
-        routes_internal_data_(graph.GetVertexCount(), std::vector<std::optional<RouteInternalData>>(graph.GetVertexCount()))
+        all_routes_(graph.GetVertexCount())
 {
-    InitializeRoutesInternalData(graph);
-
-    const size_t vertex_count = graph.GetVertexCount();
-    for (VertexId vertex_through = 0; vertex_through < vertex_count; ++vertex_through)
+    // Предварительно вычисляем маршруты из каждой вершины
+    for (VertexId vertex = 0; vertex < graph.GetVertexCount(); ++vertex)
     {
-        RelaxRoutesInternalDataThroughVertex(vertex_count, vertex_through);
+        all_routes_[vertex] = ComputeRoutesFromVertex(vertex);
     }
+}
+
+template <typename Weight>
+typename Router<Weight>::VertexRoutes Router<Weight>::ComputeRoutesFromVertex(VertexId source) const
+{
+    const size_t vertex_count = graph_.GetVertexCount();
+    VertexRoutes result;
+    result.distances.assign(vertex_count, std::numeric_limits<Weight>::max());
+    result.prev_edges.assign(vertex_count, std::nullopt);
+
+    // Приоритетная очередь для выбора вершины с минимальным расстоянием
+    std::priority_queue<QueueElement, std::vector<QueueElement>, std::greater<QueueElement>> queue;
+
+    result.distances[source] = 0;
+    queue.push({source, 0});
+
+    while (!queue.empty())
+    {
+        auto [current_vertex, current_distance] = queue.top();
+        queue.pop();
+
+        // Если мы уже нашли более короткий путь до этой вершины, пропускаем
+        if (current_distance > result.distances[current_vertex])
+        {
+            continue;
+        }
+
+        // Релаксация всех исходящих ребер
+        for (EdgeId edge_id : graph_.GetIncidentEdges(current_vertex))
+        {
+            const auto &edge = graph_.GetEdge(edge_id);
+            Weight new_distance = result.distances[current_vertex] + edge.weight;
+
+            if (new_distance < result.distances[edge.to])
+            {
+                result.distances[edge.to] = new_distance;
+                result.prev_edges[edge.to] = edge_id;
+                queue.push({edge.to, new_distance});
+            }
+        }
+    }
+
+    return result;
 }
 
 template <typename Weight>
 std::optional<typename Router<Weight>::RouteInfo> Router<Weight>::BuildRoute(VertexId from, VertexId to) const
 {
-    const auto &route_internal_data = routes_internal_data_[from][to];
-    if (!route_internal_data)
+    const auto &routes = all_routes_[from];
+
+    // Если путь не существует
+    if (routes.distances[to] == std::numeric_limits<Weight>::max())
     {
         return std::nullopt;
     }
-    const Weight weight = route_internal_data->weight;
+
+    // Восстанавливаем путь по обратным ссылкам
     std::vector<EdgeId> edges;
-    for (std::optional<EdgeId> edge_id = route_internal_data->prev_edge;
-            edge_id;
-            edge_id = routes_internal_data_[from][graph_.GetEdge(*edge_id).from]->prev_edge)
+    VertexId current = to;
+
+    while (current != from)
     {
+        const auto &edge_id = routes.prev_edges[current];
+        if (!edge_id)
+        {
+            // Это не должно происходить при корректных данных
+            return std::nullopt;
+        }
         edges.push_back(*edge_id);
+        current = graph_.GetEdge(*edge_id).from;
     }
-    std::reverse(std::begin(edges), std::end(edges));
+
+    std::reverse(edges.begin(), edges.end());
 
     const RouteId route_id = next_route_id_++;
     const size_t route_edge_count = edges.size();
     expanded_routes_cache_[route_id] = std::move(edges);
-    return RouteInfo{route_id, weight, route_edge_count};
+
+    return RouteInfo{route_id, routes.distances[to], route_edge_count};
 }
 
 template <typename Weight>
