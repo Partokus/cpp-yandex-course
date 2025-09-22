@@ -1,5 +1,4 @@
-[
-  {
+{
     "request_id": 1,
     "stop_count": 6,
     "unique_stop_count": 5,
@@ -84,7 +83,7 @@
         },
         {
             "span_count": 1,
-            "bus": "635",
+            "bus": "297",
             "type": "Bus",
             "time": 1.78
         },
