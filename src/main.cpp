@@ -46,5 +46,9 @@ int main()
 {
     TestAll();
 
+    vector<size_t> v{8};
+    v.reserve(2);
+    size_t i = 1U;
+    cout << v[i] << endl;
     return 0;
 }
