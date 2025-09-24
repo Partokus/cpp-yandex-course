@@ -42,13 +42,18 @@ void Profile()
 {
 }
 
+auto GetTuple()
+{
+    int x = 8, y = 21;
+    return tie(x, y);
+}
+
 int main()
 {
     TestAll();
 
-    vector<size_t> v{8};
-    v.reserve(2);
-    size_t i = 1U;
-    cout << v[i] << endl;
+    auto [x, y] = GetTuple();
+    cout << x << ' ' << y << endl;
+
     return 0;
 }
