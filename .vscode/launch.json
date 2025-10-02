@@ -2,20 +2,23 @@
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    // Win:
+    // "program": "${workspaceFolder}/build-win/src/white.exe",
+    // "miDebuggerPath": "C:\\mingw64\\bin\\gdb.exe",
     "version": "0.2.0",
     "configurations": [
     {
         "name": "(gdb) Запустить",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/build-win/src/white.exe",
+        "program": "${workspaceFolder}/build-win/src/white",
         "args": [],
         "stopAtEntry": false,
         "cwd": "${fileDirname}",
         "environment": [],
         "externalConsole": false,
         "MIMode": "gdb",
-        "miDebuggerPath": "C:\\mingw64\\bin\\gdb.exe",
+        "miDebuggerPath": "/usr/bin/gdb",
         "setupCommands": [
             {
                 "description": "Включить автоматическое форматирование для gdb",
