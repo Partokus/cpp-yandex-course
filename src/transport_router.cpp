@@ -9,7 +9,7 @@ TransportRouter::TransportRouter(const Descriptions::StopsDict& stops_dict,
     : routing_settings_(MakeRoutingSettings(routing_settings_json))
 {
   const size_t vertex_count = stops_dict.size() * 2;
-  vertices_info_.resize(vertex_count);
+  vertices_info_.reserve(vertex_count);
   graph_ = BusGraph(vertex_count);
 
   FillGraphWithStops(stops_dict);
@@ -60,20 +60,17 @@ void TransportRouter::FillGraphWithBuses(const Descriptions::StopsDict& stops_di
     for (size_t start_stop_idx = 0; start_stop_idx + 1 < stop_count; ++start_stop_idx) {
       const Graph::VertexId start_vertex = stops_vertex_ids_[bus.stops[start_stop_idx]].in;
       int total_distance = 0;
-      for (size_t finish_stop_idx = start_stop_idx + 1; finish_stop_idx < stop_count; ++finish_stop_idx) {
+      for (size_t finish_stop_idx = start_stop_idx + 1; finish_stop_idx <= stop_count; ++finish_stop_idx) {
         total_distance += compute_distance_from(finish_stop_idx - 1);
-        const BusEdgeInfo bus_edge_info = {
+        edges_info_.push_back(BusEdgeInfo{
             .bus_name = bus.name,
             .span_count = finish_stop_idx - start_stop_idx,
-        };
-        edges_info_.push_back(bus_edge_info);
-        const Graph::VertexId finish_vertex = stops_vertex_ids_[bus.stops[finish_stop_idx]].out;
-        const Graph::Edge<double> edge = {
+        });
+        graph_.AddEdge({
             start_vertex,
-            finish_vertex,
+            stops_vertex_ids_[bus.stops[finish_stop_idx]].out,
             total_distance * 1.0 / (routing_settings_.bus_velocity * 1000.0 / 60)  // m / (km/h * 1000 / 60) = min
-        };
-        graph_.AddEdge(edge);
+        });
       }
     }
   }

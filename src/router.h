@@ -66,20 +66,20 @@ namespace Graph {
     std::unordered_set<VertexId> done_vertices;
 
     while (!vertices_by_weight.empty()) {
-      auto min_vertex = *vertices_by_weight.begin();
-      vertices_by_weight.erase(vertices_by_weight.begin());
-      done_vertices.insert(min_vertex.second); // FIXME
+      const auto min_vertex_it = vertices_by_weight.begin();
+      vertices_by_weight.erase(min_vertex_it);
+      done_vertices.insert(min_vertex_it->second);
 
-      for (const EdgeId edge_id : graph_.GetIncidentEdges(min_vertex.second)) {
+      for (const EdgeId edge_id : graph_.GetIncidentEdges(min_vertex_it->second)) {
         const auto& edge = graph_.GetEdge(edge_id);
         if (done_vertices.count(edge.to)) {
           continue;
         }
-        if (!routes_internal_data_[edge.to] || routes_internal_data_[edge.to]->weight > min_vertex.first + edge.weight) {
+        if (!routes_internal_data_[edge.to] || routes_internal_data_[edge.to]->weight > min_vertex_it->first + edge.weight) {
           if (routes_internal_data_[edge.to]) {
             vertices_by_weight.erase({routes_internal_data_[edge.to]->weight, edge.to});
           }
-          routes_internal_data_[edge.to] = RouteInternalData{.weight = min_vertex.first + edge.weight,
+          routes_internal_data_[edge.to] = RouteInternalData{.weight = min_vertex_it->first + edge.weight,
                                                              .prev_edge = edge_id};
           vertices_by_weight.emplace(routes_internal_data_[edge.to]->weight, edge.to);
         }
@@ -92,20 +92,12 @@ namespace Graph {
     }
     const Weight weight = route_internal_data->weight;
     std::vector<EdgeId> edges;
-    std::vector<Edge<double>> edges2;
     for (std::optional<EdgeId> edge_id = route_internal_data->prev_edge;
-         edge_id;) {
-      const auto& edge = graph_.GetEdge(*edge_id);
-      edges2.push_back(edge);
+         edge_id;
+         edge_id = routes_internal_data_[graph_.GetEdge(*edge_id).from]->prev_edge) {
       edges.push_back(*edge_id);
-
-      const auto &router_int_data = routes_internal_data_[graph_.GetEdge(*edge_id).from];
-      if (not router_int_data)
-          break;
-      edge_id = routes_internal_data_[graph_.GetEdge(*edge_id).from]->prev_edge;
     }
     std::reverse(std::begin(edges), std::end(edges));
-    std::reverse(std::begin(edges2), std::end(edges2));
 
     const RouteId route_id = next_route_id_++;
     const size_t route_edge_count = edges.size();
