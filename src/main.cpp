@@ -1,13 +1,6 @@
 #include <profile.h>
 #include <test_runner.h>
 
-#include "descriptions.h"
-#include "json.h"
-#include "requests.h"
-#include "sphere.h"
-#include "transport_catalog.h"
-#include "utils.h"
-
 #include <vector>
 #include <string>
 #include <iostream>
@@ -33,6 +26,7 @@
 #include <tuple>
 #include <bitset>
 #include <cassert>
+#include <limits>
 
 using namespace std;
 using namespace std::chrono;
@@ -54,18 +48,30 @@ int main()
 {
     TestAll();
 
-    const auto input_doc = Json::Load(cin);
-    const auto &input_map = input_doc.GetRoot().AsMap();
+    int64_t left = 0;
+    int64_t right = 0;
 
-    const TransportCatalog db(
-        Descriptions::ReadDescriptions(input_map.at("base_requests").AsArray()),
-        input_map.at("routing_settings").AsMap());
+    cin >> left >> right;
 
-    Json::PrintValue(
-        Requests::ProcessAll(db, input_map.at("stat_requests").AsArray()),
-        cout);
-
-    cout << endl;
-
+    uint64_t resource = std::numeric_limits<int64_t>::max();
+    if (left >= right)
+    {
+        resoure = std::numeric_limits<int64_t>::max() - left;
+        if (right > resource)
+        {
+            cout << "Overflow!";
+        }
+        else
+        {
+            cout << left + right;
+        }
+    }
+    else
+    {
+        resoure = std::abs(left - std::numeric_limits<int64_t>::min());
+        if (right) {
+            
+        }
+    }
     return 0;
 }
