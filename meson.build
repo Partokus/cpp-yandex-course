@@ -6,7 +6,7 @@ project(
         'cpp_std=c++17',
         'buildtype=debug',
         'optimization=g',
-        # 'b_sanitize=address,undefined'
+        'b_sanitize=address,undefined'
     ],
     version: '0.1.0'
 )

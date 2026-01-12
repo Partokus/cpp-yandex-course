@@ -11,7 +11,7 @@
                 "_UNICODE"
             ],
             "intelliSenseMode": "linux-gcc-x64",
-            "compilerPath": "/usr/bin/g++",
+            "compilerPath": "/usr/bin/g++-13",
             "cppStandard": "c++17",
             "cStandard": "c99"
         }
