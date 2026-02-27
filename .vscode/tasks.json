@@ -78,7 +78,7 @@
         {
             "label": "Run",
             "type": "shell",
-            "command": "build-win/src/white.exe",
+            "command": "build-win/src/white",
             "options": {
                 "statusbar": {
                     "label": "$(debug-start) Run",
