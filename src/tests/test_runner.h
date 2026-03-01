@@ -113,7 +113,6 @@ void AssertEqual(const T &t, const U &u, const string &hint = {})
 }
 
 void Assert(bool b, const string &hint);
-bool AssertDouble(double lhs, double rhs);
 
 class TestRunner
 {

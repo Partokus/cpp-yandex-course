@@ -11,6 +11,7 @@
 #include <vector>
 #include <queue>
 #include <functional>
+#include <limits>
 
 namespace Graph
 {
