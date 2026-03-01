@@ -34,12 +34,12 @@ struct Edge
 
     bool operator==(const Edge<Weight> &o) const
     {
-        return tie(from, to) == tie(o.from, o.to);
+        return std::tie(from, to) == std::tie(o.from, o.to);
     }
 
     bool operator<(const Edge<Weight> &o) const
     {
-        return tie(from, to) < tie(o.from, o.to);
+        return std::tie(from, to) < std::tie(o.from, o.to);
     }
 };
 

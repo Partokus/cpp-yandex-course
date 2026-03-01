@@ -62,11 +62,7 @@
                 "clear": true
             },
             "group": "build",
-            "command": "remove-item",
-            "args": [
-                "-r",
-                "build-win"
-            ],
+            "command": "rm -rf build-win",
             "options": {
                 "statusbar": {
                     "label": "$(trash) W-Delete",

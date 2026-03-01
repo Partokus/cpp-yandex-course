@@ -10,7 +10,8 @@ inc = include_directories(
 src = [
     'main.cpp',
     'json.cpp',
-    'svg.cpp',
+    'trans.cpp',
+    'trans_test.cpp',
     'tests/test_runner.cpp'
 ]
 
