@@ -12,6 +12,7 @@ src = [
     'json.cpp',
     'trans.cpp',
     'trans_test.cpp',
+    'svg.cpp',
     'tests/test_runner.cpp'
 ]
 

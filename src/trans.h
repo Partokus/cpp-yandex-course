@@ -2,6 +2,8 @@
 
 #include "json.h"
 #include "router.h"
+#include "svg.h"
+#include "render.h"
 
 #include <vector>
 #include <string>
