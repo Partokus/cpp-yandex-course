@@ -52,6 +52,14 @@ struct Rgb
     uint8_t blue = 0U;
 };
 
+struct Rgba
+{
+    uint8_t red = 0U;
+    uint8_t green = 0U;
+    uint8_t blue = 0U;
+    double alpha = 0.0;
+};
+
 ostream & operator<<(ostream &os, const Rgb &v)
 {
     return os << "rgb("    <<
@@ -60,21 +68,33 @@ ostream & operator<<(ostream &os, const Rgb &v)
         to_string(v.blue)  << ')';
 }
 
+ostream & operator<<(ostream &os, const Rgba &v)
+{
+    return os << "rgb("     <<
+        to_string(v.red)    << ',' <<
+        to_string(v.green)  << ',' <<
+        to_string(v.blue)   << ',' <<
+        to_string(v.alpha)  << ')';
+}
+
 struct Color
 {
     Color() = default;
     Color(const Rgb &v) : value(v) {}
+    Color(const Rgba &v) : value(v) {}
     Color(const string &v) : value(v) {}
     Color(const char *v) : value(string(v)) {}
 
-    variant<string, Rgb> value = "none"s;
+    variant<string, Rgb, Rgba> value = "none"s;
 };
 
 ostream & operator<<(ostream &os, const Color &v)
 {
-    if (holds_alternative<string>(v.value))
-        return os << get<string>(v.value);
-    return os << get<Rgb>(v.value);
+    if (holds_alternative<Rgb>(v.value))
+        return os << get<Rgb>(v.value);
+    else if (holds_alternative<Rgba>(v.value))
+        return os << get<Rgba>(v.value);
+    return os << get<string>(v.value);
 }
 
 Color NoneColor{};
@@ -268,6 +288,12 @@ void TestColorCout()
         Color color{Rgb{10, 0, 150}};
         oss << color;
         ASSERT_EQUAL(oss.str(), "rgb(10,0,150)");
+    }
+    {
+        ostringstream oss;
+        Color color{Rgba{1, 2, 3, 0.8}};
+        oss << color;
+        ASSERT_EQUAL(oss.str(), "rgb(1,2,3,0.800000)");
     }
 }
 

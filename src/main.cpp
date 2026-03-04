@@ -5,6 +5,7 @@
 #include "trans_test.h"
 #include "json.h"
 #include "router.h"
+#include "svg.h"
 
 void TestAll();
 void Profile();
@@ -21,6 +22,10 @@ void TestAll()
     RUN_TEST(tr, TestBuildRoute);
     RUN_TEST(tr, TestParseRouteQuery);
     // RUN_TEST(tr, TestParse);
+
+    RUN_TEST(tr, TestRgbCout);
+    RUN_TEST(tr, TestColorCout);
+    RUN_TEST(tr, TestDocument);
 }
 
 void Profile()
