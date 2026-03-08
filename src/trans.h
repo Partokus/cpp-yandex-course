@@ -150,6 +150,8 @@ struct DataBase
 
     DirectedWeightedGraph graph{0};
 
+    string map;
+
     void CreateInfo(size_t bus_wait_time = 0U, double bus_velocity = 0.0, RenderSettings rs = {}, bool output = false);
 
     // Дорожная единица (Route Unit) представляет из себя структуру, в которой содержится
@@ -206,4 +208,5 @@ double CalcGeoDistance(double lat1, double lon1, double lat2, double lon2);
 StopPtr ParseAddStopQuery(const map<string, Json::Node> &req, DataBase &db);
 BusPtr ParseAddBusQuery(const map<string, Json::Node> &req, Stops &stops);
 std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBase &db, Router &router);
-void Parse(istream &is, ostream &os);
+void Parse(istream &is, ostream &os, DataBase &db);
+void CreateMap(DataBase &db);

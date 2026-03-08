@@ -8,6 +8,7 @@ void TestCalcGeoDistance();
 void TestDataBaseCreateInfo();
 void TestDataBaseCreateGraph();
 void TestMakeRenderSettigs();
+void TestCreateMap();
 void TestBuildRoute();
 void TestParseJson();
 void TestParse();

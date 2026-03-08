@@ -473,13 +473,86 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
     return { move(result) };
 }
 
-void Parse(istream &is, ostream &os)
+void CreateMap(DataBase &db)
+{
+    auto [it_min_lat, it_max_lat] = minmax_element(db.stops.begin(), db.stops.end(),
+        [](const StopPtr &lhs, const StopPtr &rhs)
+        { return lhs->latitude < rhs->latitude; });
+    auto [it_min_lon, it_max_lon] = minmax_element(db.stops.begin(), db.stops.end(),
+        [](const StopPtr &lhs, const StopPtr &rhs)
+        { return lhs->longitude < rhs->longitude; });
+    double min_lat = it_min_lat->get()->latitude;
+    double max_lat = it_max_lat->get()->latitude;
+    double min_lon = it_min_lon->get()->longitude;
+    double max_lon = it_max_lon->get()->longitude;
+
+    double zoom_coef = 0.0;
+    double diff_lon = max_lon - min_lon;
+    double diff_lat = max_lat - min_lat;
+    double width_zoom_coef = 0.0;
+    if (diff_lon != 0.0)
+        width_zoom_coef = (db.render_settings.width - 2.0 * db.render_settings.padding) / diff_lon;
+    double height_zoom_coef = 0.0;
+    if (diff_lat != 0.0)
+        height_zoom_coef = (db.render_settings.height - 2.0 * db.render_settings.padding) / diff_lat;
+
+    if (diff_lon != 0.0 and diff_lat != 0.0)
+        zoom_coef = min(width_zoom_coef, height_zoom_coef);
+    else if (diff_lon != 0.0)
+        zoom_coef = width_zoom_coef;
+    else
+        zoom_coef = height_zoom_coef;
+
+    auto CalcPoint = [min_lon, max_lat, zoom_coef, &db](double lat, double lon) {
+        return Svg::Point{
+            (lon - min_lon) * zoom_coef + db.render_settings.padding,
+            (max_lat - lat) * zoom_coef + db.render_settings.padding
+        };
+    };
+
+    map<BusWeakPtr, Svg::Color, NameWeakPtrKeyLess<BusWeakPtr>> buses{};
+    for (const BusPtr &bus : db.buses)
+        buses.insert({bus, Svg::Color{}});
+
+    auto it_color = db.render_settings.color_palette.begin();
+    for (auto &[bus, bus_color]  : buses)
+    {
+        bus_color = *it_color;
+        if (++it_color == db.render_settings.color_palette.end())
+            it_color = db.render_settings.color_palette.begin();
+    }
+
+    Svg::Document doc{};
+    Svg::Polyline polyline{};
+    polyline.SetStrokeWidth(db.render_settings.line_width).
+        SetStrokeLineCap("round").
+        SetStrokeLineJoin("round");
+
+    for (auto &[bus, bus_color]  : buses)
+    {
+        polyline.SetStrokeColor(bus_color);
+
+        for (const StopPtr &stop : bus.lock()->stops)
+        {
+            polyline.AddPoint(CalcPoint(stop->latitude, stop->longitude));
+        }
+
+        doc.Add(polyline);
+        polyline.points.clear();
+    }
+
+    ostringstream oss;
+    doc.Render(oss);
+    db.map = oss.str();
+    // cout << db.map;
+}
+
+void Parse(istream &is, ostream &os, DataBase &db)
 {
     using namespace Json;
 
     os.precision(6);
 
-    DataBase db{};
     Document doc = Load(is);
 
     const map<string, Node> &root = doc.GetRoot().AsMap();
@@ -624,6 +697,11 @@ void Parse(istream &is, ostream &os)
                 }
                 os << "    ]" << '\n';
             }
+        }
+        else if (type == "Map")
+        {
+            CreateMap(db);
+            os << "    \"map\": " << db.map << "\n";
         }
 
         os << "  }";

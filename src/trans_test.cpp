@@ -77,6 +77,195 @@ void TestMakeRenderSettigs()
     }
 }
 
+void TestCreateMap()
+{
+    using namespace Json;
+    {
+        istringstream input(R"({
+    "routing_settings": {
+        "bus_wait_time": 2,
+        "bus_velocity": 30
+    },
+    "render_settings": {
+        "width": 1200,
+        "height": 1200,
+        "padding": 50,
+        "stop_radius": 5,
+        "line_width": 14,
+        "stop_label_font_size": 20,
+        "stop_label_offset": [
+            7,
+            -3
+        ],
+        "underlayer_color": [
+            255,
+            255,
+            255,
+            0.85
+        ],
+        "underlayer_width": 3,
+        "color_palette": [
+            "green",
+            [
+                255,
+                160,
+                0
+            ],
+            "red"
+        ]
+    },
+    "base_requests": [
+        {
+            "type": "Bus",
+            "name": "14",
+            "stops": [
+                "Улица Лизы Чайкиной",
+                "Электросети",
+                "Ривьерский мост",
+                "Гостиница Сочи",
+                "Кубанская улица",
+                "По требованию",
+                "Улица Докучаева",
+                "Улица Лизы Чайкиной"
+            ],
+            "is_roundtrip": true
+        },
+        {
+            "type": "Bus",
+            "name": "24",
+            "stops": [
+                "Улица Докучаева",
+                "Параллельная улица",
+                "Электросети",
+                "Санаторий Родина"
+            ],
+            "is_roundtrip": false
+        },
+        {
+            "type": "Bus",
+            "name": "114",
+            "stops": [
+                "Морской вокзал",
+                "Ривьерский мост"
+            ],
+            "is_roundtrip": false
+        },
+        {
+            "type": "Stop",
+            "name": "Улица Лизы Чайкиной",
+            "latitude": 43.590317,
+            "longitude": 39.746833,
+            "road_distances": {
+                "Электросети": 4300,
+                "Улица Докучаева": 2000
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "Морской вокзал",
+            "latitude": 43.581969,
+            "longitude": 39.719848,
+            "road_distances": {
+                "Ривьерский мост": 850
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "Электросети",
+            "latitude": 43.598701,
+            "longitude": 39.730623,
+            "road_distances": {
+                "Санаторий Родина": 4500,
+                "Параллельная улица": 1200,
+                "Ривьерский мост": 1900
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "Ривьерский мост",
+            "latitude": 43.587795,
+            "longitude": 39.716901,
+            "road_distances": {
+                "Морской вокзал": 850,
+                "Гостиница Сочи": 1740
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "Гостиница Сочи",
+            "latitude": 43.578079,
+            "longitude": 39.728068,
+            "road_distances": {
+                "Кубанская улица": 320
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "Кубанская улица",
+            "latitude": 43.578509,
+            "longitude": 39.730959,
+            "road_distances": {
+                "По требованию": 370
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "По требованию",
+            "latitude": 43.579285,
+            "longitude": 39.733742,
+            "road_distances": {
+                "Улица Докучаева": 600
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "Улица Докучаева",
+            "latitude": 43.585586,
+            "longitude": 39.733879,
+            "road_distances": {
+                "Параллельная улица": 1100
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "Параллельная улица",
+            "latitude": 43.590041,
+            "longitude": 39.732886,
+            "road_distances": {}
+        },
+        {
+            "type": "Stop",
+            "name": "Санаторий Родина",
+            "latitude": 43.601202,
+            "longitude": 39.715498,
+            "road_distances": {}
+        }
+    ],
+    "stat_requests": [
+        {
+            "id": 826874078,
+            "type": "Bus",
+            "name": "14"
+        },
+        {
+            "id": 1086967114,
+            "type": "Route",
+            "from": "Морской вокзал",
+            "to": "Параллельная улица"
+        },
+        {
+            "id": 1218663236,
+            "type": "Map"
+        }
+    ]
+}
+)");
+        ostringstream oss;
+        DataBase db;
+        Parse(input, oss, db);
+    }
+}
+
 void TestParseAddStopQuery()
 {
     using namespace Json;
@@ -1455,8 +1644,8 @@ void TestParse()
 )");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -1623,8 +1812,8 @@ void TestParse()
 )");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -1803,8 +1992,8 @@ void TestParse()
 )");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -1974,8 +2163,8 @@ void TestParse()
 )");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -2144,8 +2333,8 @@ void TestParse()
 )");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -2349,8 +2538,8 @@ void TestParse()
 )");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -2397,8 +2586,8 @@ void TestParse()
         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40}, "base_requests": [{"latitude": 55.611087, "longitude": 37.20829, "type": "Stop", "road_distances": {"+++": 3900}, "name": "Tolstopaltsevo"}, {"type": "Stop", "name": "+++", "latitude": 55.595884, "longitude": 37.209755, "road_distances": {"Rasskazovka": 9900}}, {"type": "Bus", "name": "256", "stops": ["Biryulyovo Zapadnoye", "Biryusinka", "Universam", "Biryulyovo Tovarnaya", "Biryulyovo Passazhirskaya", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Bus", "name": "750", "is_roundtrip": false, "stops": ["Tolstopaltsevo", "Marushkino", "Rasskazovka"]}, {"type": "Stop", "name": "Rasskazovka", "latitude": 55.632761, "longitude": 37.333324, "road_distances": {}}, {"type": "Stop", "name": "Biryulyovo Zapadnoye", "latitude": 55.574371, "longitude": 37.6517, "road_distances": {"Biryusinka": 1800, "Universam": 2400, "Rossoshanskaya ulitsa": 7500}}, {"type": "Stop", "name": "Biryusinka", "latitude": 55.581065, "longitude": 37.64839, "road_distances": {"Universam": 750}}, {"type": "Stop", "name": "Universam", "latitude": 55.587655, "longitude": 37.645687, "road_distances": {"Biryulyovo Tovarnaya": 900, "Rossoshanskaya ulitsa": 5600}}, {"type": "Stop", "name": "Biryulyovo Tovarnaya", "latitude": 55.592028, "longitude": 37.653656, "road_distances": {"Biryulyovo Passazhirskaya": 1300}}, {"type": "Stop", "name": "Biryulyovo Passazhirskaya", "latitude": 55.580999, "longitude": 37.659164, "road_distances": {"Biryulyovo Zapadnoye": 1200}}, {"type": "Bus", "name": "828", "stops": ["Biryulyovo Zapadnoye", "Universam", "Rossoshanskaya ulitsa", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Stop", "name": "Rossoshanskaya ulitsa", "latitude": 55.595579, "longitude": 37.605757, "road_distances": {}}, {"type": "Stop", "name": "Prazhskaya", "latitude": 55.611678, "longitude": 37.603831, "road_distances": {}}], "stat_requests": [{"id": 599708471, "type": "Bus", "name": "256"}, {"id": 2059890189, "type": "Bus", "name": "750"}, {"id": 222058974, "type": "Bus", "name": "751"}, {"id": 1038752326, "type": "Stop", "name": "Samara"}, {"id": 986197773, "type": "Stop", "name": "Prazhskaya"}, {"id": 932894250, "type": "Stop", "name": "Biryulyovo Zapadnoye"}]})");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -2445,8 +2634,8 @@ void TestParse()
         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40}, "base_requests": [{"type": "Stop", "name": "A", "latitude": 0.5, "longitude": -1, "road_distances": {"B": 100000}}, {"type": "Stop", "name": "B", "latitude": 0, "longitude": -1.1, "road_distances": {}}, {"type": "Bus", "name": "256", "stops": ["B", "A"], "is_roundtrip": false}], "stat_requests": [{"id": 1317873202, "type": "Bus", "name": "256"}, {"id": 853807922, "type": "Stop", "name": "A"}, {"id": 1416389015, "type": "Stop", "name": "B"}, {"id": 1021316791, "type": "Stop", "name": "C"}]})");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -2576,8 +2765,8 @@ void TestParse()
 })");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -2877,8 +3066,8 @@ void TestParse()
 })");
 
         ostringstream oss;
-
-        Parse(iss, oss);
+        DataBase db;
+        Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
   {
@@ -19369,7 +19558,8 @@ void TestParse()
 
         {
             LOG_DURATION("Long Test");
-            Parse(iss, oss);
+            DataBase db;
+            Parse(iss, oss, db);
         }
 
         string str = oss.str();
