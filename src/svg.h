@@ -36,6 +36,9 @@ struct Point
 {
     double x = 0.0;
     double y = 0.0;
+
+    bool operator==(const Point &o) const
+    { return tie(x, y) == tie(o.x, o.y); }
 };
 
 inline ostream & operator<<(ostream &os, const Point &v)
@@ -48,6 +51,9 @@ struct Rgb
     uint8_t red = 0U;
     uint8_t green = 0U;
     uint8_t blue = 0U;
+
+    bool operator==(const Rgb &o) const
+    { return tie(red, green, blue) == tie(o.red, o.green, o.blue); }
 };
 
 struct Rgba
@@ -56,6 +62,9 @@ struct Rgba
     uint8_t green = 0U;
     uint8_t blue = 0U;
     double alpha = 0.0;
+
+    bool operator==(const Rgba &o) const
+    { return tie(red, green, blue, alpha) == tie(o.red, o.green, o.blue, o.alpha); }
 };
 
 inline ostream & operator<<(ostream &os, const Rgb &v)
@@ -84,6 +93,19 @@ struct Color
     Color(const char *v) : value(string(v)) {}
 
     variant<string, Rgb, Rgba> value = "none"s;
+
+    bool operator==(const Color &o) const
+    {
+        if (value.index() != o.value.index())
+            return false;
+        if (holds_alternative<string>(value) and holds_alternative<string>(o.value))
+            return get<string>(value) == get<string>(o.value);
+        else if (holds_alternative<Rgb>(value) and holds_alternative<Rgb>(o.value))
+            return get<Rgb>(value) == get<Rgb>(o.value);
+        else if (holds_alternative<Rgba>(value) and holds_alternative<Rgba>(o.value))
+            return get<Rgba>(value) == get<Rgba>(o.value);
+        return false;
+    }
 };
 
 inline ostream & operator<<(ostream &os, const Color &v)

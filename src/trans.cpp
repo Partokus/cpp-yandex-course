@@ -27,9 +27,10 @@ double CalcGeoDistance(double lat1, double lon1, double lat2, double lon2)
     return EearthRaduis * c;
 }
 
-void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, bool output)
+void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, RenderSettings rs, bool output)
 {
     CreateRoutingSettings(bus_wait_time, bus_velocity);
+    render_settings = rs;
 
     for (const BusPtr &bus : buses)
     {
@@ -511,7 +512,9 @@ void Parse(istream &is, ostream &os)
     const size_t bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
     const double bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
 
-    db.CreateInfo(bus_wait_time, bus_velocity);
+    const map<string, Node> &render_settings_json = root.at("render_settings"s).AsMap();
+
+    db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json));
 
     Router router{db.graph};
 

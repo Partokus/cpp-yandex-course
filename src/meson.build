@@ -13,6 +13,7 @@ src = [
     'trans.cpp',
     'trans_test.cpp',
     'svg.cpp',
+    'render.cpp',
     'tests/test_runner.cpp'
 ]
 

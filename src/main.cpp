@@ -26,6 +26,7 @@ void TestAll()
     RUN_TEST(tr, TestRgbCout);
     RUN_TEST(tr, TestColorCout);
     RUN_TEST(tr, TestDocument);
+    RUN_TEST(tr, TestMakeRenderSettigs);
 }
 
 void Profile()

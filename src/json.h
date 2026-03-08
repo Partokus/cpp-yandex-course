@@ -8,7 +8,7 @@
 namespace Json
 {
 
-class Node : std::variant<std::vector<Node>,
+class Node : public std::variant<std::vector<Node>,
                           std::map<std::string, Node>,
                           double,
                           bool,
@@ -45,6 +45,11 @@ public:
     const std::string & AsString() const
     {
         return std::get<std::string>(*this);
+    }
+
+    bool IsString() const
+    {
+        return this->index() == 4U;
     }
 };
 

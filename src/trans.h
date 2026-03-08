@@ -140,6 +140,8 @@ struct DataBase
         double meters_past_while_wait_bus = 0.0;
     } routing_settings{};
 
+    RenderSettings render_settings{};
+
     template <typename Key, typename Value>
     using UnorderedMap = unordered_map<Key, Value, NamePtrHasher<Key>, NamePtrKeyEqual<Key>>;
 
@@ -148,7 +150,7 @@ struct DataBase
 
     DirectedWeightedGraph graph{0};
 
-    void CreateInfo(size_t bus_wait_time = 0U, double bus_velocity = 0.0, bool output = false);
+    void CreateInfo(size_t bus_wait_time = 0U, double bus_velocity = 0.0, RenderSettings rs = {}, bool output = false);
 
     // Дорожная единица (Route Unit) представляет из себя структуру, в которой содержится
     // остановка, маршрут и следующая остановка в этом маршруте. Комбинации этих трёх состовляющих

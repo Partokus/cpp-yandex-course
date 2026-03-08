@@ -11,6 +11,72 @@ bool AssertDouble(double lhs, double rhs)
     return lhs > (rhs - 0.1) and lhs < (rhs + 0.1);
 }
 
+void TestMakeRenderSettigs()
+{
+        using namespace Json;
+    {
+        istringstream input(R"({
+    "render_settings": {
+        "width": 1200,
+        "height": 1200,
+        "padding": 50,
+        "stop_radius": 5,
+        "line_width": 14,
+        "stop_label_font_size": 20,
+        "stop_label_offset": [
+            7,
+            -3
+        ],
+        "underlayer_color": [
+            255,
+            255,
+            255,
+            0.85
+        ],
+        "underlayer_width": 3,
+        "color_palette": [
+            "green",
+            [
+                255,
+                160,
+                0
+            ],
+            "red",
+            [
+                200,
+                160,
+                5,
+                0.8
+            ]
+        ]
+    }
+}
+)");
+        Document doc = Load(input);
+
+        const map<string, Node> &root = doc.GetRoot().AsMap();
+        const map<string, Node> &render_settings_json = root.at("render_settings"s).AsMap();
+        RenderSettings rs = MakeRenderSettigs(render_settings_json);
+
+        RenderSettings expect{};
+        expect.width = 1200;
+        expect.height = 1200;
+        expect.padding = 50;
+        expect.stop_radius = 5;
+        expect.line_width = 14;
+        expect.stop_label_font_size = 20;
+        expect.stop_label_offset = { 7, -3 };
+        expect.underlayer_color = Svg::Rgba{255, 255, 255, 0.85};
+        expect.underlayer_width = 3;
+        expect.color_palette.push_back("green");
+        expect.color_palette.push_back(Svg::Rgb{255, 160, 0});
+        expect.color_palette.push_back("red");
+        expect.color_palette.push_back(Svg::Rgba{200, 160, 5, 0.8});
+
+        ASSERT(rs == expect);
+    }
+}
+
 void TestParseAddStopQuery()
 {
     using namespace Json;
