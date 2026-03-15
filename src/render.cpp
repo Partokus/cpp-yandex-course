@@ -72,6 +72,8 @@ RenderSettings MakeRenderSettigs(const map<string, Json::Node> &render_settings)
 
 string CreateMap(DataBase &db)
 {
+    const RenderSettings &rs = db.render_settings;
+
     // Отрисовка маршрутов
     auto [it_min_lat, it_max_lat] = minmax_element(db.stops.begin(), db.stops.end(),
         [](const StopPtr &lhs, const StopPtr &rhs)
@@ -89,10 +91,10 @@ string CreateMap(DataBase &db)
     double diff_lat = max_lat - min_lat;
     double width_zoom_coef = 0.0;
     if (diff_lon != 0.0)
-        width_zoom_coef = (db.render_settings.width - 2.0 * db.render_settings.padding) / diff_lon;
+        width_zoom_coef = (rs.width - 2.0 * rs.padding) / diff_lon;
     double height_zoom_coef = 0.0;
     if (diff_lat != 0.0)
-        height_zoom_coef = (db.render_settings.height - 2.0 * db.render_settings.padding) / diff_lat;
+        height_zoom_coef = (rs.height - 2.0 * rs.padding) / diff_lat;
 
     if (diff_lon != 0.0 and diff_lat != 0.0)
         zoom_coef = min(width_zoom_coef, height_zoom_coef);
@@ -101,10 +103,10 @@ string CreateMap(DataBase &db)
     else
         zoom_coef = height_zoom_coef;
 
-    auto CalcPoint = [min_lon, max_lat, zoom_coef, &db](double lat, double lon) {
+    auto CalcPoint = [min_lon, max_lat, zoom_coef, &rs](double lat, double lon) {
         return Svg::Point{
-            (lon - min_lon) * zoom_coef + db.render_settings.padding,
-            (max_lat - lat) * zoom_coef + db.render_settings.padding
+            (lon - min_lon) * zoom_coef + rs.padding,
+            (max_lat - lat) * zoom_coef + rs.padding
         };
     };
 
@@ -112,17 +114,17 @@ string CreateMap(DataBase &db)
     for (const BusPtr &bus : db.buses)
         buses.insert({bus, Svg::Color{}});
 
-    auto it_color = db.render_settings.color_palette.begin();
+    auto it_color = rs.color_palette.begin();
     for (auto &[bus, bus_color]  : buses)
     {
         bus_color = *it_color;
-        if (++it_color == db.render_settings.color_palette.end())
-            it_color = db.render_settings.color_palette.begin();
+        if (++it_color == rs.color_palette.end())
+            it_color = rs.color_palette.begin();
     }
 
     Svg::Document doc{};
     Svg::Polyline polyline{};
-    polyline.SetStrokeWidth(db.render_settings.line_width).
+    polyline.SetStrokeWidth(rs.line_width).
         SetStrokeLineCap("round").
         SetStrokeLineJoin("round");
 
@@ -139,20 +141,44 @@ string CreateMap(DataBase &db)
         polyline.points.clear();
     }
 
-    // Отрисовка остановок
+    // Отрисовка остановок и их названий
     Svg::Circle circle{};
     circle.SetFillColor("white").
-        SetRadius(db.render_settings.stop_radius);
+        SetRadius(rs.stop_radius);
+
+    Svg::Text text{};
+    text.SetOffset(rs.stop_label_offset).
+        SetFontSize(rs.stop_label_font_size).
+        SetFontFamily("Verdana");
+
+    Svg::Text text_back = text;
+
+    text.SetFillColor("black");
+
+    text_back.SetFillColor(rs.underlayer_color).
+        SetStrokeColor(rs.underlayer_color).
+        SetStrokeWidth(rs.underlayer_width).
+        SetStrokeLineCap("round").
+        SetStrokeLineJoin("round");
 
     for (const StopPtr &stop : db.sorted_stops)
     {
-        circle.SetCenter(CalcPoint(stop->latitude, stop->longitude));
+        Point p = CalcPoint(stop->latitude, stop->longitude);
+
+        circle.SetCenter(p);
+        text.SetData(stop->name);
+        text.SetPoint(p);
+        text_back.SetData(stop->name);
+        text_back.SetPoint(p);
+
         doc.Add(circle);
+        doc.Add(text_back);
+        doc.Add(text);
     }
 
     ostringstream oss;
     doc.Render(oss);
-    cout << oss.str();
+    // cout << oss.str();
 
     return oss.str();
 }
