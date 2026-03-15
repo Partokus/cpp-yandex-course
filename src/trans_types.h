@@ -57,6 +57,15 @@ struct NamePtrKeyEqual
 };
 
 template <typename PtrWithName>
+struct NamePtrKeyLess
+{
+    bool operator()(const PtrWithName &lhs, const PtrWithName &rhs) const
+    {
+        return lhs->name < rhs->name;
+    }
+};
+
+template <typename PtrWithName>
 struct NameWeakPtrKeyLess
 {
     bool operator()(const PtrWithName &lhs, const PtrWithName &rhs) const
@@ -81,6 +90,7 @@ struct Stop
     { return name == o.name; }
 };
 using StopPtr = shared_ptr<Stop>;
+using StopsSorted = set<StopPtr, NamePtrKeyLess<StopPtr>>;
 
 struct Bus
 {

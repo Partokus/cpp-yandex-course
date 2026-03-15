@@ -7,6 +7,8 @@ struct DataBase
     Stops stops;
     Buses buses;
 
+    StopsSorted sorted_stops;
+
     struct BusInfo
     {
         size_t stops_on_route = 0U;

@@ -72,6 +72,7 @@ RenderSettings MakeRenderSettigs(const map<string, Json::Node> &render_settings)
 
 string CreateMap(DataBase &db)
 {
+    // Отрисовка маршрутов
     auto [it_min_lat, it_max_lat] = minmax_element(db.stops.begin(), db.stops.end(),
         [](const StopPtr &lhs, const StopPtr &rhs)
         { return lhs->latitude < rhs->latitude; });
@@ -138,10 +139,20 @@ string CreateMap(DataBase &db)
         polyline.points.clear();
     }
 
+    // Отрисовка остановок
+    Svg::Circle circle{};
+    circle.SetFillColor("white").
+        SetRadius(db.render_settings.stop_radius);
+
+    for (const StopPtr &stop : db.sorted_stops)
+    {
+        circle.SetCenter(CalcPoint(stop->latitude, stop->longitude));
+        doc.Add(circle);
+    }
+
     ostringstream oss;
     doc.Render(oss);
-
-    // cout << oss.str();
+    cout << oss.str();
 
     return oss.str();
 }
