@@ -180,5 +180,21 @@ string CreateMap(DataBase &db)
     doc.Render(oss);
     // cout << oss.str();
 
-    return oss.str();
+    string map = oss.str();
+    string result;
+
+    for (char sym : map)
+    {
+        if (sym == '\"')
+        {
+            result.push_back('\\');
+            result.push_back('\"');
+        }
+        else
+            result.push_back(sym);
+    }
+
+    cout << result << endl;
+
+    return result;
 }
