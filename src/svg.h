@@ -29,6 +29,8 @@
 #include <cassert>
 #include <limits>
 
+using namespace std;
+
 namespace Svg
 {
 

@@ -132,9 +132,18 @@ string CreateMap(DataBase &db)
     {
         polyline.SetStrokeColor(bus_color);
 
-        for (const StopPtr &stop : bus.lock()->stops)
+        const vector<StopPtr> &stops = bus.lock()->stops;
+        for (const StopPtr &stop : stops)
         {
             polyline.AddPoint(CalcPoint(stop->latitude, stop->longitude));
+        }
+
+        if (not bus.lock()->ring)
+        {
+            for (auto it = next(stops.rbegin()); it != stops.rend(); ++it)
+            {
+                polyline.AddPoint(CalcPoint(it->get()->latitude, it->get()->longitude));
+            }
         }
 
         doc.Add(polyline);
@@ -145,40 +154,39 @@ string CreateMap(DataBase &db)
     Svg::Circle circle{};
     circle.SetFillColor("white").
         SetRadius(rs.stop_radius);
+    for (const StopPtr &stop : db.sorted_stops)
+    {
+        Point p = CalcPoint(stop->latitude, stop->longitude);
+        circle.SetCenter(p);
+        doc.Add(circle);
+    }
 
     Svg::Text text{};
     text.SetOffset(rs.stop_label_offset).
         SetFontSize(rs.stop_label_font_size).
         SetFontFamily("Verdana");
-
     Svg::Text text_back = text;
-
     text.SetFillColor("black");
-
     text_back.SetFillColor(rs.underlayer_color).
         SetStrokeColor(rs.underlayer_color).
         SetStrokeWidth(rs.underlayer_width).
         SetStrokeLineCap("round").
         SetStrokeLineJoin("round");
-
     for (const StopPtr &stop : db.sorted_stops)
     {
         Point p = CalcPoint(stop->latitude, stop->longitude);
 
-        circle.SetCenter(p);
         text.SetData(stop->name);
         text.SetPoint(p);
         text_back.SetData(stop->name);
         text_back.SetPoint(p);
 
-        doc.Add(circle);
         doc.Add(text_back);
         doc.Add(text);
     }
 
     ostringstream oss;
     doc.Render(oss);
-    // cout << oss.str();
 
     string map = oss.str();
     string result;
@@ -186,15 +194,11 @@ string CreateMap(DataBase &db)
     for (char sym : map)
     {
         if (sym == '\"')
-        {
             result.push_back('\\');
-            result.push_back('\"');
-        }
-        else
-            result.push_back(sym);
+        result.push_back(sym);
     }
 
-    cout << result << endl;
+    // cout << result << endl;
 
     return result;
 }

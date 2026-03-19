@@ -631,7 +631,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
                 db.sorted_stops = { db.stops.begin(), db.stops.end() };
                 db.map = CreateMap(db);
             }
-            os << "    \"map\": " << db.map << "\n";
+            os << "    \"map\": \"" << db.map << "\"\n";
         }
 
         os << "  }";
