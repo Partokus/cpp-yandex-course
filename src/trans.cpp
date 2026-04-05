@@ -507,6 +507,8 @@ void Parse(istream &is, ostream &os, DataBase &db)
         }
     }
 
+    db.sorted_stops = { db.stops.begin(), db.stops.end() };
+
     const map<string, Node> &routing_settings = root.at("routing_settings"s).AsMap();
     const size_t bus_wait_time = routing_settings.at("bus_wait_time"s).AsInt();
     const double bus_velocity = routing_settings.at("bus_velocity"s).AsDouble();
