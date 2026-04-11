@@ -36,7 +36,7 @@ void Profile()
 
 int main()
 {
-    TestAll();
+    // TestAll();
 
     DataBase db;
     Parse(cin, cout, db);

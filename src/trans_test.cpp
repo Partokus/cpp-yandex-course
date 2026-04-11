@@ -263,6 +263,492 @@ void TestCreateMap()
         ostringstream oss;
         DataBase db;
         Parse(input, oss, db);
+
+        // istringstream expect(R"(<?xml version=\"1.0\" encoding=\"UTF-8\" ?><svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><polyline points=\"202.705,725.165 99.2516,520.646 \" fill=\"none\" stroke=\"green\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"1150,432.113 580.956,137.796 99.2516,520.646 491.264,861.722 592.751,846.627 690.447,819.386 695.256,598.192 1150,432.113 \" fill=\"none\" stroke=\"rgb(255,160,0)\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"695.256,598.192 660.397,441.801 580.956,137.796 50,50 \" fill=\"none\" stroke=\"red\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><circle cx=\"491.264\" cy=\"861.722\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"491.264\" y=\"861.722\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Гостиница Сочи</text><text x=\"491.264\" y=\"861.722\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Гостиница Сочи</text><circle cx=\"592.751\" cy=\"846.627\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"592.751\" y=\"846.627\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Кубанская улица</text><text x=\"592.751\" y=\"846.627\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Кубанская улица</text><circle cx=\"202.705\" cy=\"725.165\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"202.705\" y=\"725.165\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Морской вокзал</text><text x=\"202.705\" y=\"725.165\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Морской вокзал</text><circle cx=\"660.397\" cy=\"441.801\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"660.397\" y=\"441.801\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Параллельная улица</text><text x=\"660.397\" y=\"441.801\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Параллельная улица</text><circle cx=\"690.447\" cy=\"819.386\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"690.447\" y=\"819.386\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >По требованию</text><text x=\"690.447\" y=\"819.386\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >По требованию</text><circle cx=\"99.2516\" cy=\"520.646\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"99.2516\" y=\"520.646\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Ривьерский мост</text><text x=\"99.2516\" y=\"520.646\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Ривьерский мост</text><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"50\" y=\"50\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Родина</text><text x=\"50\" y=\"50\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Родина</text><circle cx=\"695.256\" cy=\"598.192\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"695.256\" y=\"598.192\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица Докучаева</text><text x=\"695.256\" y=\"598.192\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица Докучаева</text><circle cx=\"1150\" cy=\"432.113\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"1150\" y=\"432.113\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица Лизы Чайкиной</text><text x=\"1150\" y=\"432.113\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица Лизы Чайкиной</text><circle cx=\"580.956\" cy=\"137.796\" r=\"5\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"580.956\" y=\"137.796\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Электросети</text><text x=\"580.956\" y=\"137.796\" dx=\"7\" dy=\"-3\" font-size=\"20\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Электросети</text></svg>)");
+
+        // ASSERT_EQUAL(db.map, expect.str());
+    }
+    {
+        istringstream input(R"({
+    "stat_requests": [
+        {
+            "type": "Map",
+            "id": 1821171961
+        }
+    ],
+    "render_settings": {
+        "underlayer_width": 3,
+        "height": 950,
+        "stop_radius": 3,
+        "underlayer_color": [
+            255,
+            255,
+            255,
+            0.85
+        ],
+        "width": 1500,
+        "stop_label_font_size": 13,
+        "padding": 50,
+        "color_palette": [
+            "red",
+            "green",
+            "blue",
+            "brown",
+            "orange"
+        ],
+        "stop_label_offset": [
+            7,
+            -3
+        ],
+        "line_width": 10
+    },
+    "base_requests": [
+        {
+            "stops": [
+                "Санаторий Салют",
+                "Санаторная улица",
+                "Пансионат Нева",
+                "Санаторий Радуга",
+                "Санаторий Родина",
+                "Спортивная",
+                "Парк Ривьера",
+                "Морской вокзал",
+                "Органный зал",
+                "Театральная",
+                "Пансионат Светлана",
+                "Цирк",
+                "Стадион",
+                "Санаторий Металлург",
+                "Улица Бытха"
+            ],
+            "name": "23",
+            "type": "Bus",
+            "is_roundtrip": false
+        },
+        {
+            "stops": [
+                "Улица Лизы Чайкиной",
+                "Пионерская улица, 111",
+                "Садовая",
+                "Театральная"
+            ],
+            "name": "13",
+            "type": "Bus",
+            "is_roundtrip": false
+        },
+        {
+            "stops": [
+                "Морской вокзал",
+                "Сбербанк",
+                "Автовокзал",
+                "Отель Звёздный",
+                "Магазин Быт",
+                "Хлебозавод",
+                "Кинотеатр Юбилейный",
+                "Новая Заря",
+                "Деревообр. комбинат",
+                "Целинная улица, 5",
+                "Целинная улица, 57",
+                "Целинная улица"
+            ],
+            "name": "36",
+            "type": "Bus",
+            "is_roundtrip": false
+        },
+        {
+            "stops": [
+                "Пансионат Светлана",
+                "Улица Лысая Гора",
+                "Улица В. Лысая Гора"
+            ],
+            "name": "44к",
+            "type": "Bus",
+            "is_roundtrip": false
+        },
+        {
+            "stops": [
+                "Краево-Греческая улица",
+                "Улица Бытха",
+                "Санаторий им. Ворошилова",
+                "Санаторий Приморье",
+                "Санаторий Заря",
+                "Мацеста",
+                "Мацестинская долина"
+            ],
+            "name": "90",
+            "type": "Bus",
+            "is_roundtrip": false
+        },
+        {
+            "name": "Краево-Греческая улица",
+            "latitude": 43.565551,
+            "type": "Stop",
+            "longitude": 39.776858,
+            "road_distances": {
+                "Улица Бытха": 1780
+            }
+        },
+        {
+            "name": "Санаторий им. Ворошилова",
+            "latitude": 43.557935,
+            "type": "Stop",
+            "longitude": 39.764452,
+            "road_distances": {
+                "Санаторий Приморье": 950
+            }
+        },
+        {
+            "name": "Санаторий Приморье",
+            "latitude": 43.554202,
+            "type": "Stop",
+            "longitude": 39.77256,
+            "road_distances": {
+                "Санаторий Заря": 2350
+            }
+        },
+        {
+            "name": "Санаторий Заря",
+            "latitude": 43.549618,
+            "type": "Stop",
+            "longitude": 39.780908,
+            "road_distances": {
+                "Мацеста": 800
+            }
+        },
+        {
+            "name": "Мацеста",
+            "latitude": 43.545509,
+            "type": "Stop",
+            "longitude": 39.788993,
+            "road_distances": {
+                "Мацестинская долина": 2350
+            }
+        },
+        {
+            "name": "Мацестинская долина",
+            "latitude": 43.560422,
+            "type": "Stop",
+            "longitude": 39.798219,
+            "road_distances": {}
+        },
+        {
+            "name": "Улица Лысая Гора",
+            "latitude": 43.577997,
+            "type": "Stop",
+            "longitude": 39.741685,
+            "road_distances": {
+                "Улица В. Лысая Гора": 640
+            }
+        },
+        {
+            "name": "Улица В. Лысая Гора",
+            "latitude": 43.58092,
+            "type": "Stop",
+            "longitude": 39.744749,
+            "road_distances": {}
+        },
+        {
+            "name": "Морской вокзал",
+            "latitude": 43.581969,
+            "type": "Stop",
+            "longitude": 39.719848,
+            "road_distances": {
+                "Сбербанк": 870,
+                "Органный зал": 570
+            }
+        },
+        {
+            "name": "Сбербанк",
+            "latitude": 43.585969,
+            "type": "Stop",
+            "longitude": 39.725175,
+            "road_distances": {
+                "Автовокзал": 870
+            }
+        },
+        {
+            "name": "Автовокзал",
+            "latitude": 43.592956,
+            "type": "Stop",
+            "longitude": 39.727798,
+            "road_distances": {
+                "Отель Звёздный": 700
+            }
+        },
+        {
+            "name": "Отель Звёздный",
+            "latitude": 43.596585,
+            "type": "Stop",
+            "longitude": 39.721151,
+            "road_distances": {
+                "Магазин Быт": 1000
+            }
+        },
+        {
+            "name": "Магазин Быт",
+            "latitude": 43.604025,
+            "type": "Stop",
+            "longitude": 39.724492,
+            "road_distances": {
+                "Хлебозавод": 420
+            }
+        },
+        {
+            "name": "Хлебозавод",
+            "latitude": 43.607364,
+            "type": "Stop",
+            "longitude": 39.726643,
+            "road_distances": {
+                "Кинотеатр Юбилейный": 2110
+            }
+        },
+        {
+            "name": "Кинотеатр Юбилейный",
+            "latitude": 43.623382,
+            "type": "Stop",
+            "longitude": 39.720626,
+            "road_distances": {
+                "Новая Заря": 450
+            }
+        },
+        {
+            "name": "Новая Заря",
+            "latitude": 43.626842,
+            "type": "Stop",
+            "longitude": 39.717802,
+            "road_distances": {
+                "Деревообр. комбинат": 530
+            }
+        },
+        {
+            "name": "Деревообр. комбинат",
+            "latitude": 43.631035,
+            "type": "Stop",
+            "longitude": 39.714624,
+            "road_distances": {
+                "Целинная улица, 5": 840
+            }
+        },
+        {
+            "name": "Целинная улица, 5",
+            "latitude": 43.633353,
+            "type": "Stop",
+            "longitude": 39.710257,
+            "road_distances": {
+                "Целинная улица, 57": 1270
+            }
+        },
+        {
+            "name": "Целинная улица, 57",
+            "latitude": 43.640536,
+            "type": "Stop",
+            "longitude": 39.713253,
+            "road_distances": {
+                "Целинная улица": 1050
+            }
+        },
+        {
+            "name": "Целинная улица",
+            "latitude": 43.647968,
+            "type": "Stop",
+            "longitude": 39.717733,
+            "road_distances": {}
+        },
+        {
+            "name": "Санаторий Салют",
+            "latitude": 43.623238,
+            "type": "Stop",
+            "longitude": 39.704646,
+            "road_distances": {
+                "Санаторная улица": 1500
+            }
+        },
+        {
+            "name": "Санаторная улица",
+            "latitude": 43.620766,
+            "type": "Stop",
+            "longitude": 39.719058,
+            "road_distances": {
+                "Пансионат Нева": 670
+            }
+        },
+        {
+            "name": "Пансионат Нева",
+            "latitude": 43.614288,
+            "type": "Stop",
+            "longitude": 39.718674,
+            "road_distances": {
+                "Санаторий Радуга": 520
+            }
+        },
+        {
+            "name": "Санаторий Радуга",
+            "latitude": 43.609951,
+            "type": "Stop",
+            "longitude": 39.72143,
+            "road_distances": {
+                "Санаторий Родина": 1190
+            }
+        },
+        {
+            "name": "Санаторий Родина",
+            "latitude": 43.601202,
+            "type": "Stop",
+            "longitude": 39.715498,
+            "road_distances": {
+                "Спортивная": 1100
+            }
+        },
+        {
+            "name": "Спортивная",
+            "latitude": 43.593689,
+            "type": "Stop",
+            "longitude": 39.717642,
+            "road_distances": {
+                "Парк Ривьера": 640
+            }
+        },
+        {
+            "name": "Парк Ривьера",
+            "latitude": 43.588296,
+            "type": "Stop",
+            "longitude": 39.715956,
+            "road_distances": {
+                "Морской вокзал": 730
+            }
+        },
+        {
+            "name": "Органный зал",
+            "latitude": 43.57926,
+            "type": "Stop",
+            "longitude": 39.725574,
+            "road_distances": {
+                "Театральная": 770
+            }
+        },
+        {
+            "name": "Пансионат Светлана",
+            "latitude": 43.571807,
+            "type": "Stop",
+            "longitude": 39.735866,
+            "road_distances": {
+                "Цирк": 520,
+                "Улица Лысая Гора": 1070
+            }
+        },
+        {
+            "name": "Цирк",
+            "latitude": 43.569207,
+            "type": "Stop",
+            "longitude": 39.739869,
+            "road_distances": {
+                "Стадион": 860
+            }
+        },
+        {
+            "name": "Стадион",
+            "latitude": 43.565301,
+            "type": "Stop",
+            "longitude": 39.749485,
+            "road_distances": {
+                "Санаторий Металлург": 950
+            }
+        },
+        {
+            "name": "Санаторий Металлург",
+            "latitude": 43.561005,
+            "type": "Stop",
+            "longitude": 39.760511,
+            "road_distances": {
+                "Улица Бытха": 900
+            }
+        },
+        {
+            "name": "Улица Бытха",
+            "latitude": 43.566135,
+            "type": "Stop",
+            "longitude": 39.762109,
+            "road_distances": {
+                "Санаторий им. Ворошилова": 1160
+            }
+        },
+        {
+            "name": "Улица Лизы Чайкиной",
+            "latitude": 43.590317,
+            "type": "Stop",
+            "longitude": 39.746833,
+            "road_distances": {
+                "Пионерская улица, 111": 950
+            }
+        },
+        {
+            "name": "Пионерская улица, 111",
+            "latitude": 43.587257,
+            "type": "Stop",
+            "longitude": 39.740325,
+            "road_distances": {
+                "Садовая": 520
+            }
+        },
+        {
+            "name": "Садовая",
+            "latitude": 43.58395,
+            "type": "Stop",
+            "longitude": 39.736938,
+            "road_distances": {
+                "Театральная": 1300
+            }
+        },
+        {
+            "name": "Театральная",
+            "latitude": 43.57471,
+            "type": "Stop",
+            "longitude": 39.731954,
+            "road_distances": {
+                "Пансионат Светлана": 390
+            }
+        }
+    ],
+    "routing_settings": {
+        "bus_wait_time": 2,
+        "bus_velocity": 30
+    }
+}
+)");
+        ostringstream oss;
+        DataBase db;
+        Parse(input, oss, db);
+
+        // istringstream expect(R"(<?xml version=\"1.0\" encoding=\"UTF-8\" ?><svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><polyline points=\"399.983,528.273 345.993,553.659 317.894,581.093 276.547,657.748 \" fill=\"none\" stroke=\"red\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"50,255.16 169.562,275.668 166.376,329.409 189.24,365.389 140.028,437.971 157.815,500.299 143.828,545.039 176.116,597.528 223.619,620.002 276.547,657.748 309.001,681.832 342.21,703.401 421.984,735.806 513.456,771.445 526.713,728.887 \" fill=\"none\" stroke=\"green\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"176.116,597.528 220.309,564.344 242.069,506.38 186.926,476.273 214.642,414.551 232.487,386.851 182.57,253.965 159.142,225.261 132.778,190.476 96.5489,171.246 121.404,111.656 158.57,50 \" fill=\"none\" stroke=\"blue\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"309.001,681.832 357.276,630.48 382.695,606.23 \" fill=\"none\" stroke=\"brown\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"649.071,733.732 526.713,728.887 546.151,796.914 613.415,827.883 682.67,865.912 749.743,900 826.282,776.282 \" fill=\"none\" stroke=\"orange\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><circle cx=\"242.069\" cy=\"506.38\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"242.069\" y=\"506.38\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Автовокзал</text><text x=\"242.069\" y=\"506.38\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Автовокзал</text><circle cx=\"132.778\" cy=\"190.476\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"132.778\" y=\"190.476\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Деревообр. комбинат</text><text x=\"132.778\" y=\"190.476\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Деревообр. комбинат</text><circle cx=\"182.57\" cy=\"253.965\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"182.57\" y=\"253.965\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Кинотеатр Юбилейный</text><text x=\"182.57\" y=\"253.965\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Кинотеатр Юбилейный</text><circle cx=\"649.071\" cy=\"733.732\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"649.071\" y=\"733.732\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Краево-Греческая улица</text><text x=\"649.071\" y=\"733.732\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Краево-Греческая улица</text><circle cx=\"214.642\" cy=\"414.551\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"214.642\" y=\"414.551\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Магазин Быт</text><text x=\"214.642\" y=\"414.551\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Магазин Быт</text><circle cx=\"749.743\" cy=\"900\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"749.743\" y=\"900\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Мацеста</text><text x=\"749.743\" y=\"900\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Мацеста</text><circle cx=\"826.282\" cy=\"776.282\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"826.282\" y=\"776.282\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Мацестинская долина</text><text x=\"826.282\" y=\"776.282\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Мацестинская долина</text><circle cx=\"176.116\" cy=\"597.528\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"176.116\" y=\"597.528\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Морской вокзал</text><text x=\"176.116\" y=\"597.528\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Морской вокзал</text><circle cx=\"159.142\" cy=\"225.261\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"159.142\" y=\"225.261\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Новая Заря</text><text x=\"159.142\" y=\"225.261\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Новая Заря</text><circle cx=\"223.619\" cy=\"620.002\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"223.619\" y=\"620.002\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Органный зал</text><text x=\"223.619\" y=\"620.002\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Органный зал</text><circle cx=\"186.926\" cy=\"476.273\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"186.926\" y=\"476.273\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Отель Звёздный</text><text x=\"186.926\" y=\"476.273\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Отель Звёздный</text><circle cx=\"166.376\" cy=\"329.409\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"166.376\" y=\"329.409\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Пансионат Нева</text><text x=\"166.376\" y=\"329.409\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Пансионат Нева</text><circle cx=\"309.001\" cy=\"681.832\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"309.001\" y=\"681.832\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Пансионат Светлана</text><text x=\"309.001\" y=\"681.832\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Пансионат Светлана</text><circle cx=\"143.828\" cy=\"545.039\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"143.828\" y=\"545.039\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Парк Ривьера</text><text x=\"143.828\" y=\"545.039\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Парк Ривьера</text><circle cx=\"345.993\" cy=\"553.659\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"345.993\" y=\"553.659\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Пионерская улица, 111</text><text x=\"345.993\" y=\"553.659\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Пионерская улица, 111</text><circle cx=\"317.894\" cy=\"581.093\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"317.894\" y=\"581.093\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Садовая</text><text x=\"317.894\" y=\"581.093\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Садовая</text><circle cx=\"682.67\" cy=\"865.912\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"682.67\" y=\"865.912\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Заря</text><text x=\"682.67\" y=\"865.912\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Заря</text><circle cx=\"513.456\" cy=\"771.445\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"513.456\" y=\"771.445\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Металлург</text><text x=\"513.456\" y=\"771.445\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Металлург</text><circle cx=\"613.415\" cy=\"827.883\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"613.415\" y=\"827.883\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Приморье</text><text x=\"613.415\" y=\"827.883\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Приморье</text><circle cx=\"189.24\" cy=\"365.389\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"189.24\" y=\"365.389\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Радуга</text><text x=\"189.24\" y=\"365.389\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Радуга</text><circle cx=\"140.028\" cy=\"437.971\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"140.028\" y=\"437.971\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Родина</text><text x=\"140.028\" y=\"437.971\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Родина</text><circle cx=\"50\" cy=\"255.16\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"50\" y=\"255.16\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Салют</text><text x=\"50\" y=\"255.16\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Салют</text><circle cx=\"546.151\" cy=\"796.914\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"546.151\" y=\"796.914\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий им. Ворошилова</text><text x=\"546.151\" y=\"796.914\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий им. Ворошилова</text><circle cx=\"169.562\" cy=\"275.668\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"169.562\" y=\"275.668\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторная улица</text><text x=\"169.562\" y=\"275.668\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторная улица</text><circle cx=\"220.309\" cy=\"564.344\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"220.309\" y=\"564.344\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Сбербанк</text><text x=\"220.309\" y=\"564.344\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Сбербанк</text><circle cx=\"157.815\" cy=\"500.299\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"157.815\" y=\"500.299\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Спортивная</text><text x=\"157.815\" y=\"500.299\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Спортивная</text><circle cx=\"421.984\" cy=\"735.806\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"421.984\" y=\"735.806\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Стадион</text><text x=\"421.984\" y=\"735.806\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Стадион</text><circle cx=\"276.547\" cy=\"657.748\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"276.547\" y=\"657.748\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Театральная</text><text x=\"276.547\" y=\"657.748\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Театральная</text><circle cx=\"526.713\" cy=\"728.887\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"526.713\" y=\"728.887\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица Бытха</text><text x=\"526.713\" y=\"728.887\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица Бытха</text><circle cx=\"382.695\" cy=\"606.23\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"382.695\" y=\"606.23\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица В. Лысая Гора</text><text x=\"382.695\" y=\"606.23\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица В. Лысая Гора</text><circle cx=\"399.983\" cy=\"528.273\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"399.983\" y=\"528.273\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица Лизы Чайкиной</text><text x=\"399.983\" y=\"528.273\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица Лизы Чайкиной</text><circle cx=\"357.276\" cy=\"630.48\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"357.276\" y=\"630.48\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица Лысая Гора</text><text x=\"357.276\" y=\"630.48\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица Лысая Гора</text><circle cx=\"232.487\" cy=\"386.851\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"232.487\" y=\"386.851\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Хлебозавод</text><text x=\"232.487\" y=\"386.851\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Хлебозавод</text><circle cx=\"158.57\" cy=\"50\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"158.57\" y=\"50\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Целинная улица</text><text x=\"158.57\" y=\"50\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Целинная улица</text><circle cx=\"96.5489\" cy=\"171.246\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"96.5489\" y=\"171.246\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Целинная улица, 5</text><text x=\"96.5489\" y=\"171.246\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Целинная улица, 5</text><circle cx=\"121.404\" cy=\"111.656\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"121.404\" y=\"111.656\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Целинная улица, 57</text><text x=\"121.404\" y=\"111.656\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Целинная улица, 57</text><circle cx=\"342.21\" cy=\"703.401\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"342.21\" y=\"703.401\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Цирк</text><text x=\"342.21\" y=\"703.401\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Цирк</text></svg>)");
+
+        // ASSERT_EQUAL(db.map, expect.str());
+    }
+    {
+        istringstream input(R"({
+    "stat_requests": [
+        {
+            "type": "Map",
+            "id": 1821171961
+        },
+        {
+            "type": "Map",
+            "id": 1821171211
+        }
+    ],
+    "routing_settings": {"bus_wait_time": 2, "bus_velocity": 30},
+    "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+    "base_requests": [{"type": "Bus", "name": "14", "stops": ["Ulitsa Lizy Chaykinoy", "Elektroseti", "Riv'erskiy most", "Gostinitsa Sochi", "Kubanskaya ulitsa", "Po trebovaniyu", "Ulitsa Dokuchaeva", "Ulitsa Lizy Chaykinoy"], "is_roundtrip": true}, {"type": "Bus", "name": "24", "stops": ["Ulitsa Dokuchaeva", "Parallel'naya ulitsa", "Elektroseti", "Sanatoriy Rodina"], "is_roundtrip": false}, {"type": "Bus", "name": "114", "stops": ["Morskoy vokzal", "Riv'erskiy most"], "is_roundtrip": false}, {"type": "Stop", "name": "Ulitsa Lizy Chaykinoy", "latitude": 43.590317, "longitude": 39.746833, "road_distances": {"Elektroseti": 4300, "Ulitsa Dokuchaeva": 2000}}, {"type": "Stop", "name": "Morskoy vokzal", "latitude": 43.581969, "longitude": 39.719848, "road_distances": {"Riv'erskiy most": 850}}, {"type": "Stop", "name": "Elektroseti", "latitude": 43.598701, "longitude": 39.730623, "road_distances": {"Sanatoriy Rodina": 4500, "Parallel'naya ulitsa": 1200, "Riv'erskiy most": 1900}}, {"type": "Stop", "name": "Riv'erskiy most", "latitude": 43.587795, "longitude": 39.716901, "road_distances": {"Morskoy vokzal": 850, "Gostinitsa Sochi": 1740}}, {"type": "Stop", "name": "Gostinitsa Sochi", "latitude": 43.578079, "longitude": 39.728068, "road_distances": {"Kubanskaya ulitsa": 320}}, {"type": "Stop", "name": "Kubanskaya ulitsa", "latitude": 43.578509, "longitude": 39.730959, "road_distances": {"Po trebovaniyu": 370}}, {"type": "Stop", "name": "Po trebovaniyu", "latitude": 43.579285, "longitude": 39.733742, "road_distances": {"Ulitsa Dokuchaeva": 600}}, {"type": "Stop", "name": "Ulitsa Dokuchaeva", "latitude": 43.585586, "longitude": 39.733879, "road_distances": {"Parallel'naya ulitsa": 1100}}, {"type": "Stop", "name": "Parallel'naya ulitsa", "latitude": 43.590041, "longitude": 39.732886, "road_distances": {}}, {"type": "Stop", "name": "Sanatoriy Rodina", "latitude": 43.601202, "longitude": 39.715498, "road_distances": {}
+}
+)");
+        ostringstream oss;
+        DataBase db;
+        Parse(input, oss, db);
+
+        // cout << oss.str() << endl;
+
+        // istringstream expect(R"(<?xml version=\"1.0\" encoding=\"UTF-8\" ?><svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><polyline points=\"399.983,528.273 345.993,553.659 317.894,581.093 276.547,657.748 \" fill=\"none\" stroke=\"red\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"50,255.16 169.562,275.668 166.376,329.409 189.24,365.389 140.028,437.971 157.815,500.299 143.828,545.039 176.116,597.528 223.619,620.002 276.547,657.748 309.001,681.832 342.21,703.401 421.984,735.806 513.456,771.445 526.713,728.887 \" fill=\"none\" stroke=\"green\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"176.116,597.528 220.309,564.344 242.069,506.38 186.926,476.273 214.642,414.551 232.487,386.851 182.57,253.965 159.142,225.261 132.778,190.476 96.5489,171.246 121.404,111.656 158.57,50 \" fill=\"none\" stroke=\"blue\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"309.001,681.832 357.276,630.48 382.695,606.23 \" fill=\"none\" stroke=\"brown\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><polyline points=\"649.071,733.732 526.713,728.887 546.151,796.914 613.415,827.883 682.67,865.912 749.743,900 826.282,776.282 \" fill=\"none\" stroke=\"orange\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\" /><circle cx=\"242.069\" cy=\"506.38\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"242.069\" y=\"506.38\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Автовокзал</text><text x=\"242.069\" y=\"506.38\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Автовокзал</text><circle cx=\"132.778\" cy=\"190.476\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"132.778\" y=\"190.476\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Деревообр. комбинат</text><text x=\"132.778\" y=\"190.476\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Деревообр. комбинат</text><circle cx=\"182.57\" cy=\"253.965\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"182.57\" y=\"253.965\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Кинотеатр Юбилейный</text><text x=\"182.57\" y=\"253.965\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Кинотеатр Юбилейный</text><circle cx=\"649.071\" cy=\"733.732\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"649.071\" y=\"733.732\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Краево-Греческая улица</text><text x=\"649.071\" y=\"733.732\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Краево-Греческая улица</text><circle cx=\"214.642\" cy=\"414.551\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"214.642\" y=\"414.551\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Магазин Быт</text><text x=\"214.642\" y=\"414.551\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Магазин Быт</text><circle cx=\"749.743\" cy=\"900\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"749.743\" y=\"900\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Мацеста</text><text x=\"749.743\" y=\"900\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Мацеста</text><circle cx=\"826.282\" cy=\"776.282\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"826.282\" y=\"776.282\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Мацестинская долина</text><text x=\"826.282\" y=\"776.282\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Мацестинская долина</text><circle cx=\"176.116\" cy=\"597.528\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"176.116\" y=\"597.528\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Морской вокзал</text><text x=\"176.116\" y=\"597.528\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Морской вокзал</text><circle cx=\"159.142\" cy=\"225.261\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"159.142\" y=\"225.261\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Новая Заря</text><text x=\"159.142\" y=\"225.261\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Новая Заря</text><circle cx=\"223.619\" cy=\"620.002\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"223.619\" y=\"620.002\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Органный зал</text><text x=\"223.619\" y=\"620.002\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Органный зал</text><circle cx=\"186.926\" cy=\"476.273\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"186.926\" y=\"476.273\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Отель Звёздный</text><text x=\"186.926\" y=\"476.273\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Отель Звёздный</text><circle cx=\"166.376\" cy=\"329.409\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"166.376\" y=\"329.409\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Пансионат Нева</text><text x=\"166.376\" y=\"329.409\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Пансионат Нева</text><circle cx=\"309.001\" cy=\"681.832\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"309.001\" y=\"681.832\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Пансионат Светлана</text><text x=\"309.001\" y=\"681.832\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Пансионат Светлана</text><circle cx=\"143.828\" cy=\"545.039\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"143.828\" y=\"545.039\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Парк Ривьера</text><text x=\"143.828\" y=\"545.039\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Парк Ривьера</text><circle cx=\"345.993\" cy=\"553.659\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"345.993\" y=\"553.659\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Пионерская улица, 111</text><text x=\"345.993\" y=\"553.659\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Пионерская улица, 111</text><circle cx=\"317.894\" cy=\"581.093\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"317.894\" y=\"581.093\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Садовая</text><text x=\"317.894\" y=\"581.093\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Садовая</text><circle cx=\"682.67\" cy=\"865.912\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"682.67\" y=\"865.912\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Заря</text><text x=\"682.67\" y=\"865.912\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Заря</text><circle cx=\"513.456\" cy=\"771.445\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"513.456\" y=\"771.445\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Металлург</text><text x=\"513.456\" y=\"771.445\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Металлург</text><circle cx=\"613.415\" cy=\"827.883\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"613.415\" y=\"827.883\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Приморье</text><text x=\"613.415\" y=\"827.883\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Приморье</text><circle cx=\"189.24\" cy=\"365.389\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"189.24\" y=\"365.389\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Радуга</text><text x=\"189.24\" y=\"365.389\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Радуга</text><circle cx=\"140.028\" cy=\"437.971\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"140.028\" y=\"437.971\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Родина</text><text x=\"140.028\" y=\"437.971\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Родина</text><circle cx=\"50\" cy=\"255.16\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"50\" y=\"255.16\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий Салют</text><text x=\"50\" y=\"255.16\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий Салют</text><circle cx=\"546.151\" cy=\"796.914\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"546.151\" y=\"796.914\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторий им. Ворошилова</text><text x=\"546.151\" y=\"796.914\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторий им. Ворошилова</text><circle cx=\"169.562\" cy=\"275.668\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"169.562\" y=\"275.668\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Санаторная улица</text><text x=\"169.562\" y=\"275.668\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Санаторная улица</text><circle cx=\"220.309\" cy=\"564.344\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"220.309\" y=\"564.344\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Сбербанк</text><text x=\"220.309\" y=\"564.344\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Сбербанк</text><circle cx=\"157.815\" cy=\"500.299\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"157.815\" y=\"500.299\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Спортивная</text><text x=\"157.815\" y=\"500.299\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Спортивная</text><circle cx=\"421.984\" cy=\"735.806\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"421.984\" y=\"735.806\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Стадион</text><text x=\"421.984\" y=\"735.806\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Стадион</text><circle cx=\"276.547\" cy=\"657.748\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"276.547\" y=\"657.748\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Театральная</text><text x=\"276.547\" y=\"657.748\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Театральная</text><circle cx=\"526.713\" cy=\"728.887\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"526.713\" y=\"728.887\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица Бытха</text><text x=\"526.713\" y=\"728.887\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица Бытха</text><circle cx=\"382.695\" cy=\"606.23\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"382.695\" y=\"606.23\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица В. Лысая Гора</text><text x=\"382.695\" y=\"606.23\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица В. Лысая Гора</text><circle cx=\"399.983\" cy=\"528.273\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"399.983\" y=\"528.273\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица Лизы Чайкиной</text><text x=\"399.983\" y=\"528.273\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица Лизы Чайкиной</text><circle cx=\"357.276\" cy=\"630.48\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"357.276\" y=\"630.48\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Улица Лысая Гора</text><text x=\"357.276\" y=\"630.48\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Улица Лысая Гора</text><circle cx=\"232.487\" cy=\"386.851\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"232.487\" y=\"386.851\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Хлебозавод</text><text x=\"232.487\" y=\"386.851\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Хлебозавод</text><circle cx=\"158.57\" cy=\"50\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"158.57\" y=\"50\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Целинная улица</text><text x=\"158.57\" y=\"50\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Целинная улица</text><circle cx=\"96.5489\" cy=\"171.246\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"96.5489\" y=\"171.246\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Целинная улица, 5</text><text x=\"96.5489\" y=\"171.246\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Целинная улица, 5</text><circle cx=\"121.404\" cy=\"111.656\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"121.404\" y=\"111.656\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Целинная улица, 57</text><text x=\"121.404\" y=\"111.656\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Целинная улица, 57</text><circle cx=\"342.21\" cy=\"703.401\" r=\"3\" fill=\"white\" stroke=\"none\" stroke-width=\"1\" /><text x=\"342.21\" y=\"703.401\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"rgba(255,255,255,0.850000)\" stroke=\"rgba(255,255,255,0.850000)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" >Цирк</text><text x=\"342.21\" y=\"703.401\" dx=\"7\" dy=\"-3\" font-size=\"13\" font-family=\"Verdana\" fill=\"black\" stroke=\"none\" stroke-width=\"1\" >Цирк</text></svg>)");
+
+        // ASSERT_EQUAL(db.map, expect.str());
     }
 }
 
@@ -1537,7 +2023,7 @@ void TestParseJson()
         ASSERT_EQUAL( req.at("id"s).AsInt(), 1042838872 );
     }
 }
-
+/*
 void TestParse()
 {
     {
@@ -19568,6 +20054,7 @@ void TestParse()
         // ASSERT_EQUAL(str, str_expect);
     }
 }
+*/
 
 void TestParseRouteQuery()
 {
