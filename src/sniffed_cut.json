@@ -1,0 +1,81 @@
+{
+    "stat_requests": [
+        {
+            "from": "s28",
+            "to": "s67",
+            "type": "Route",
+            "id": 21321321
+        }
+    ],
+    "base_requests": [
+        {
+            "type": "Bus",
+            "name": "b7",
+            "stops": [
+                "s28",
+                "s67",
+                "s27",
+                "s28"
+            ],
+            "is_roundtrip": true
+        },
+        {
+            "type": "Stop",
+            "name": "s27",
+            "latitude": 40.4696,
+            "longitude": 34.6793,
+            "road_distances": {
+                "s28": 949343
+            }
+        },
+        {
+            "type": "Stop",
+            "name": "s28",
+            "latitude": 45.2314,
+            "longitude": 38.4571,
+            "road_distances": {}
+        },
+        {
+            "type": "Stop",
+            "name": "s67",
+            "latitude": 41.9129,
+            "longitude": 39.6545,
+            "road_distances": {
+                "s27": 507108,
+                "s28": 787285
+            }
+        }
+    ],
+    "routing_settings": {
+        "bus_wait_time": 823,
+        "bus_velocity": 526
+    },
+    "render_settings": {
+        "width": 1200,
+        "height": 1200,
+        "padding": 50,
+        "stop_radius": 5,
+        "line_width": 14,
+        "stop_label_font_size": 20,
+        "stop_label_offset": [
+            7,
+            -3
+        ],
+        "underlayer_color": [
+            255,
+            255,
+            255,
+            0.85
+        ],
+        "underlayer_width": 3,
+        "color_palette": [
+            "green",
+            [
+                255,
+                160,
+                0
+            ],
+            "red"
+        ]
+    }
+}

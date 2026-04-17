@@ -75,6 +75,10 @@ void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, RenderSetti
             std::optional<size_t> road_distance = CalcRoadDistance(stop, next_stop);
             if (road_distance)
                 info.route_length_road += *road_distance;
+            else
+                // throw runtime_error("Can't calculate road distance: bus " +
+                //     bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name);
+                cout << "error calc road dist = " << bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name << endl;
             if (not bus->ring)
             {
                 road_distance = CalcRoadDistance(next_stop, stop);
@@ -272,11 +276,6 @@ StopPtr ParseAddStopQuery(const map<string, Json::Node> &req, DataBase &db)
     result->latitude = req.at("latitude"s).AsDouble();
     result->longitude = req.at("longitude"s).AsDouble();
 
-    if (result->name == "s16")
-    {
-        auto i = 0U;
-    }
-
     const map<string, Json::Node> &road_distances = req.at("road_distances").AsMap();
 
     if (road_distances.empty())
@@ -326,11 +325,6 @@ BusPtr ParseAddBusQuery(const map<string, Json::Node> &req, Stops &stops)
     result->name = req.at("name"s).AsString();
     result->ring = req.at("is_roundtrip"s).AsBool();
 
-    if (result->name == "b1")
-    {
-        auto i = 0U;
-    }
-
     auto push_stop = [&stops, &result](string name)
     {
         StopPtr stop = make_shared<Stop>(move(Stop{ move(name) }));
@@ -341,9 +335,20 @@ BusPtr ParseAddBusQuery(const map<string, Json::Node> &req, Stops &stops)
 
     const vector<Node> json_stops = req.at("stops"s).AsArray();
 
+    if (json_stops.empty())
+        throw runtime_error("bus don't have stops");
+
     for (auto it = json_stops.begin(); it != json_stops.end(); ++it)
     {
         push_stop(it->AsString());
+    }
+
+    if (result->ring)
+    {
+        const string &first_stop = json_stops.front().AsString();
+        const string &last_stop = json_stops.back().AsString();
+        if (first_stop != last_stop)
+            throw runtime_error("for ring bus " + result->name + "first and last stops not equal");
     }
 
     return result;
@@ -608,17 +613,30 @@ void Parse(istream &is, ostream &os, DataBase &db)
                 ostringstream oss;
 
                 size_t num = 0U;
+                StopPtr s1 = make_shared<Stop>(Stop{.name = ""});
+                StopPtr s30 = make_shared<Stop>(Stop{.name = ""});
                 for (StopPtr stop : db.stops)
                 {
-                    if (stop->name == stop_from->name)
+                    // if (stop->name == stop_from->name)
+                    // {
+                    //     oss << "stop_from = " << "s" + to_string(num) << endl;
+                    // }
+                    // else if (stop->name == stop_to->name)
+                    // {
+                    //     oss << "stop_to = " << "s" + to_string(num) << endl;
+                    // }
+                    if (num == 1)
                     {
-                        oss << "stop_from = " << "s" + to_string(num) << endl;
+                        s1->name = stop->name;
+                        ++num;
                     }
-                    else if (stop->name == stop_to->name)
+                    if (num == 30)
                     {
-                        oss << "stop_to = " << "s" + to_string(num) << endl;
+                        s30->name = stop->name;
+                        ++num;
                     }
-                    stop->name = "s" + to_string(num++);
+                    else
+                        stop->name = "s" + to_string(num++);
                 }
                 num = 0U;
                 for (BusPtr bus : db.buses)
@@ -626,7 +644,21 @@ void Parse(istream &is, ostream &os, DataBase &db)
                     bus->name = "b" + to_string(num++);
                 }
 
-                BusesSorted buses_sorted{db.buses.begin(), db.buses.end()};
+                oss << s1->name << ":";
+                for (auto &[to_stop, dist] : db.road_route_length[s1])
+                {
+                    if (to_stop->name.size() <= 3 and to_stop->name[0] == 's')
+                        oss << to_stop->name << "(" << dist << "),";
+                }
+                oss << endl;
+                oss << s30->name << ":";
+                for (auto &[to_stop, dist] : db.road_route_length[s30])
+                {
+                    if (to_stop->name.size() <= 3 and to_stop->name[0] == 's')
+                        oss << to_stop->name << "(" << dist << "),";
+                }
+
+                // BusesSorted buses_sorted{db.buses.begin(), db.buses.end()};
 
                 // if (db.map.empty())
                 // {
@@ -654,8 +686,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
 
                 // for (auto &[stop, stops] : rr)
                 // {
-                //     if (stop->name == "s1" or (stop->name.size() <= 3 and stop->name[0] == 's' and
-                //         stop->name >= "s50" and stop->name < "s60"))
+                //     if (stop->name == "s100")
                 //     {
                 //         oss << stop->name << ":";
                 //         for (auto &[to_stop, dist] : stops)
@@ -664,6 +695,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
                 //                 oss << to_stop->name << "(" << dist << "),";
                 //         }
                 //         oss << endl;
+                //         oss << stop->name << ": lat= " << stop->latitude << ",lon= " << stop->longitude << endl;
                 //     }
                 // }
 

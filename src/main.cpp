@@ -27,6 +27,7 @@ void TestAll()
     RUN_TEST(tr, TestColorCout);
     RUN_TEST(tr, TestDocument);
     RUN_TEST(tr, TestMakeRenderSettigs);
+    RUN_TEST(tr, Test15Failed);
     RUN_TEST(tr, TestCreateMap);
 }
 
@@ -36,7 +37,7 @@ void Profile()
 
 int main()
 {
-    // TestAll();
+    TestAll();
 
     DataBase db;
     Parse(cin, cout, db);
