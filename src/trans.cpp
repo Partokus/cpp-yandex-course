@@ -253,6 +253,7 @@ void DataBase::CreateGraph(bool debug)
             }
         }
     }
+    while (true);
 }
 
 /*
