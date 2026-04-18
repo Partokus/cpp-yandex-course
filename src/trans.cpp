@@ -170,7 +170,6 @@ void DataBase::CreateGraph(bool debug)
             StopPtr &from = *it;
             StopPtr &to = *it_next;
             size_t from_pos = distance(bus->stops.begin(), it);
-            cout << "from_pos = " << from_pos << endl;
             size_t to_pos = distance(bus->stops.begin(), it_next);
 
             auto it_road_route = road_route_length.find(from);
@@ -251,6 +250,8 @@ void DataBase::CreateGraph(bool debug)
             }
         }
     }
+
+    while (true);
 }
 
 /*
