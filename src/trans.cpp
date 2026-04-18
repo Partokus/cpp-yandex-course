@@ -124,7 +124,8 @@ void DataBase::CreateGraph(bool debug)
                 for (const auto &[stop_pos, vertex_id] : stop_pos_to_vertex_id)
                 {
                     cout << num++ << ": vertex_id[" << vertex_id << "] = { " <<
-                        "stop( " << stop->name << " ), bus( " << bus->name << ") }" << endl;
+                        "stop( " << stop->name << " ), bus( " << bus->name << "), " <<
+                        "pos( " << stop_pos << " ) }" << endl;
                 }
             }
         }
@@ -169,6 +170,7 @@ void DataBase::CreateGraph(bool debug)
             StopPtr &from = *it;
             StopPtr &to = *it_next;
             size_t from_pos = distance(bus->stops.begin(), it);
+            cout << "from_pos = " << from_pos << endl;
             size_t to_pos = distance(bus->stops.begin(), it_next);
 
             auto it_road_route = road_route_length.find(from);
