@@ -42,16 +42,13 @@ struct DataBase
 
     void CreateInfo(size_t bus_wait_time = 0U, double bus_velocity = 0.0, RenderSettings rs = {}, bool output = false);
 
-    // Дорожная единица (Route Unit) представляет из себя структуру, в которой содержится
-    // остановка, маршрут и следующая остановка в этом маршруте. Комбинации этих трёх состовляющих
+    // Дорожная единица представляет из себя структуру, в которой содержится
+    // остановка, маршрут и номер остановки в этом маршруте. Комбинации этих трёх состовляющих
     // достаточно, чтобы задать уникальную вершину без возникновения конфликтов с другими вершинами
-    // Сигнатура: [stop][bus][next_stop] = vertex_id
-    // next_stop может быть nullptr и это означает, что следующей остановки нет.
-    // Под понятием "следующей остановки нет" скрывается, что текущая остановка является последним
-    // элементов в векторе остановок автобуса, а не то, что остановка конечная
-    UnorderedMap<StopPtr, UnorderedMap<BusPtr, UnorderedMap<StopPtr, Graph::VertexId>>> route_unit_to_vertex_id;
-    // Сигнатура: vertex_id = [stop][bus][next_stop]
-    unordered_map<Graph::VertexId, tuple<StopPtr, BusPtr, StopPtr>> vertex_id_to_route_unit;
+    // Сигнатура: [stop][bus][position_in_bus] = vertex_id
+    UnorderedMap<StopPtr, UnorderedMap<BusPtr, unordered_map<size_t, Graph::VertexId>>> route_unit_to_vertex_id;
+    // Сигнатура: vertex_id = [stop][bus][position_in_bus]
+    unordered_map<Graph::VertexId, tuple<StopPtr, BusPtr, size_t>> vertex_id_to_route_unit;
 
     // Для переходов между разными маршрутами автобусов были добавлены
     // специальные вершины, которые символизируют конкретную остановку внезависимости

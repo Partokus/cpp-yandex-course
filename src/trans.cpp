@@ -52,20 +52,15 @@ void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, RenderSetti
         {
             auto it_next = next(it);
             const StopPtr &stop = *it;
+            size_t stop_position_in_bus = distance(bus->stops.begin(), it);
+            route_unit_to_vertex_id[stop][bus][stop_position_in_bus] = _vertex_id;
+            vertex_id_to_route_unit[_vertex_id] = make_tuple(stop, bus, stop_position_in_bus);
+            ++_vertex_id;
 
             if (it_next == bus->stops.end())
-            {
-                route_unit_to_vertex_id[stop][bus][nullptr] = _vertex_id;
-                vertex_id_to_route_unit[_vertex_id] = make_tuple(stop, bus, nullptr);
-                ++_vertex_id;
                 break;
-            }
 
             const StopPtr &next_stop = *it_next;
-
-            route_unit_to_vertex_id[stop][bus][next_stop] = _vertex_id;
-            vertex_id_to_route_unit[_vertex_id] = make_tuple(stop, bus, next_stop);
-            ++_vertex_id;
 
             info.route_length_geo += CalcGeoDistance(
                 stop->latitude, stop->longitude,
@@ -122,11 +117,11 @@ void DataBase::CreateGraph(bool debug)
     if (debug)
     {
         size_t num = 0U;
-        for (const auto &[stop, bus_to_next_stop] : route_unit_to_vertex_id)
+        for (const auto &[stop, bus_to_stop_pos] : route_unit_to_vertex_id)
         {
-            for (const auto &[bus, next_stop_to_vertex_id] : bus_to_next_stop)
+            for (const auto &[bus, stop_pos_to_vertex_id] : bus_to_stop_pos)
             {
-                for (const auto &[next_stop, vertex_id] : next_stop_to_vertex_id)
+                for (const auto &[stop_pos, vertex_id] : stop_pos_to_vertex_id)
                 {
                     cout << num++ << ": vertex_id[" << vertex_id << "] = { " <<
                         "stop( " << stop->name << " ), bus( " << bus->name << ") }" << endl;
@@ -136,12 +131,12 @@ void DataBase::CreateGraph(bool debug)
     }
 
     // формируем абстрактные вершины для пересадок
-    for (const auto &[stop, bus_to_next_stop] : route_unit_to_vertex_id)
+    for (const auto &[stop, bus_to_stop_pos] : route_unit_to_vertex_id)
     {
         // если у остановки только один автобус и у этой остановки
         // на данном автобусе нет её копий с другой следующей остановкой
         // (то есть у автобуса все остановки уникальны)
-        if (bus_to_next_stop.size() <= 1U and bus_to_next_stop.begin()->second.size() <= 1)
+        if (bus_to_stop_pos.size() <= 1U and bus_to_stop_pos.begin()->second.size() <= 1)
             continue;
 
         abstract_stop_to_vertex_id[stop] = _vertex_id;
@@ -173,8 +168,8 @@ void DataBase::CreateGraph(bool debug)
 
             StopPtr &from = *it;
             StopPtr &to = *it_next;
-            StopPtr to_next = next(it_next) != bus->stops.end() ?
-                                *next(it_next) : nullptr; // следующая остановка после to
+            size_t from_pos = distance(bus->stops.begin(), it);
+            size_t to_pos = distance(bus->stops.begin(), it_next);
 
             auto it_road_route = road_route_length.find(from);
             if (it_road_route == road_route_length.end())
@@ -184,8 +179,8 @@ void DataBase::CreateGraph(bool debug)
                 return;
             double road_distance = it_length->second; // weight, в метрах
 
-            Graph::VertexId vertex_id_from = route_unit_to_vertex_id[from][bus][to];
-            Graph::VertexId vertex_id_to = route_unit_to_vertex_id[to][bus][to_next];
+            Graph::VertexId vertex_id_from = route_unit_to_vertex_id[from][bus][from_pos];
+            Graph::VertexId vertex_id_to = route_unit_to_vertex_id[to][bus][to_pos];
 
             Edge edge{
                 .from = vertex_id_from,
@@ -213,7 +208,8 @@ void DataBase::CreateGraph(bool debug)
                 // ожидание автобуса
                 if (it == bus->stops.begin())
                 {
-                    Graph::VertexId vertex_id_from_with_wait_bus = route_unit_to_vertex_id[from][bus][nullptr];
+                    size_t last_stop_pos = bus->stops.size() - 1U;
+                    Graph::VertexId vertex_id_from_with_wait_bus = route_unit_to_vertex_id[from][bus][last_stop_pos];
                     edge.from = vertex_id_from_with_wait_bus;
                     edge.weight += routing_settings.meters_past_while_wait_bus;
                     graph.AddEdge(edge);
@@ -222,21 +218,21 @@ void DataBase::CreateGraph(bool debug)
         }
     }
 
-    for (const auto &[stop, bus_to_next_stop] : route_unit_to_vertex_id)
+    for (const auto &[stop, bus_to_stop_pos] : route_unit_to_vertex_id)
     {
         // если у остановки только один автобус и у этой остановки
         // на данном автобусе нет её копий с другой следующей остановкой
         // (то есть у автобуса все остановки уникальны)
-        if (bus_to_next_stop.size() <= 1U and bus_to_next_stop.begin()->second.size() <= 1)
+        if (bus_to_stop_pos.size() <= 1U and bus_to_stop_pos.begin()->second.size() <= 1)
             continue;
 
-        for (auto it = bus_to_next_stop.begin(); it != bus_to_next_stop.end(); ++it)
+        for (auto it = bus_to_stop_pos.begin(); it != bus_to_stop_pos.end(); ++it)
         {
-            const auto &[bus, next_stop_to_vertex_id] = *it;
+            const auto &[bus, stop_pos_to_vertex_id] = *it;
 
-            for (auto it2 = next_stop_to_vertex_id.begin(); it2 != next_stop_to_vertex_id.end(); ++it2)
+            for (auto it2 = stop_pos_to_vertex_id.begin(); it2 != stop_pos_to_vertex_id.end(); ++it2)
             {
-                const auto &[next_stop, vertex_id] = *it2;
+                const auto &[stop_pos, vertex_id] = *it2;
 
                 Graph::VertexId shadow_vertex_id = abstract_stop_to_vertex_id[stop];
 
@@ -398,7 +394,23 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
     else
         vertex_id_to = db.route_unit_to_vertex_id[to].begin()->second.begin()->second;
 
+    // cout << "vertex_id_from = " << vertex_id_from << endl;
+    // cout << "vertex_id_to = " << vertex_id_to << endl;
+
     std::optional<RouteInfo> router_info = router.BuildRoute(vertex_id_from, vertex_id_to);
+
+    // RouteInfo &ri = *router_info;
+
+    // cout << "edge_count = " << ri.edge_count << endl;
+
+    // for (size_t i = 0U; i < 10; ++i)
+    // {
+    //     Graph::EdgeId edge_id = router.GetRouteEdge(ri.id, i);
+    //     Edge edge = db.graph.GetEdge(edge_id);
+    //     cout << "edge.from = " << edge.from << endl;
+    //     cout << "edge.to = " << edge.to << endl;
+    // }
+
 
     if (not router_info)
         return std::nullopt;
@@ -448,7 +460,7 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
         Graph::EdgeId edge_id = router.GetRouteEdge(router_info->id, i);
         Graph::Edge edge = db.graph.GetEdge(edge_id);
 
-        const auto &[stop_from, bus_from, next_stop_from] = db.vertex_id_to_route_unit.at(edge.from);
+        const auto &[stop_from, bus_from, stop_pos_from] = db.vertex_id_to_route_unit.at(edge.from);
 
         auto it_to = db.vertex_id_to_route_unit.find(edge.to);
         if (it_to == db.vertex_id_to_route_unit.end())
@@ -462,7 +474,8 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
             continue;
         }
 
-        if (bus_from->ring and next_stop_from == nullptr)
+        size_t last_stop_pos = bus_from->stops.size() - 1U;
+        if (bus_from->ring and stop_pos_from == last_stop_pos)
         {
             bus_item.bus = bus_from;
             push_items(bus_item, WaitItem{ .stop = stop_from });
@@ -530,14 +543,17 @@ void Parse(istream &is, ostream &os, DataBase &db)
 
     const map<string, Node> &render_settings_json = root.at("render_settings"s).AsMap();
 
+    cout << "create info" << endl;
     db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json));
 
+    cout << "create router" << endl;
     Router router{db.graph};
 
     const vector<Node> &stat_requests = root.at("stat_requests"s).AsArray();
 
     os << "[" << '\n';
 
+    cout << "stat req" << endl;
     for (auto it = stat_requests.begin(); it != stat_requests.end(); ++it)
     {
         const map<string, Node> &req = it->AsMap();
@@ -598,6 +614,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
         }
         else if (type == "Route")
         {
+            cout << "route" << endl;
             const string &from_name = req.at("from"s).AsString();
             auto stop_from = make_shared<Stop>(Stop{});
             stop_from->name = from_name;
@@ -607,109 +624,6 @@ void Parse(istream &is, ostream &os, DataBase &db)
             stop_to->name = to_name;
 
             std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop_from, stop_to, db, router);
-
-            if (answer and answer->total_time > 1508.20 and answer->total_time < 1508.35)
-            {
-                ostringstream oss;
-
-                size_t num = 0U;
-                StopPtr s1 = make_shared<Stop>(Stop{.name = ""});
-                StopPtr s30 = make_shared<Stop>(Stop{.name = ""});
-                for (StopPtr stop : db.stops)
-                {
-                    // if (stop->name == stop_from->name)
-                    // {
-                    //     oss << "stop_from = " << "s" + to_string(num) << endl;
-                    // }
-                    // else if (stop->name == stop_to->name)
-                    // {
-                    //     oss << "stop_to = " << "s" + to_string(num) << endl;
-                    // }
-                    if (num == 1)
-                    {
-                        s1->name = stop->name;
-                        ++num;
-                    }
-                    if (num == 30)
-                    {
-                        s30->name = stop->name;
-                        ++num;
-                    }
-                    else
-                        stop->name = "s" + to_string(num++);
-                }
-                num = 0U;
-                for (BusPtr bus : db.buses)
-                {
-                    bus->name = "b" + to_string(num++);
-                }
-
-                oss << s1->name << ":";
-                for (auto &[to_stop, dist] : db.road_route_length[s1])
-                {
-                    if (to_stop->name.size() <= 3 and to_stop->name[0] == 's')
-                        oss << to_stop->name << "(" << dist << "),";
-                }
-                oss << endl;
-                oss << s30->name << ":";
-                for (auto &[to_stop, dist] : db.road_route_length[s30])
-                {
-                    if (to_stop->name.size() <= 3 and to_stop->name[0] == 's')
-                        oss << to_stop->name << "(" << dist << "),";
-                }
-
-                // BusesSorted buses_sorted{db.buses.begin(), db.buses.end()};
-
-                // if (db.map.empty())
-                // {
-                //     db.map = CreateMap(db, true);
-                // }
-
-                // auto begin = buses_sorted.begin();
-                // auto end = buses_sorted.end();
-                // // auto begin = buses_sorted.find(make_shared<Bus>(Bus{.name = "b0"}));
-                // // auto end = buses_sorted.find(make_shared<Bus>(Bus{.name = "b59"}));
-                // for (auto it = begin; it != end; ++it)
-                // {
-                //     oss << it->lock().get()->name << " ring: " << it->lock().get()->ring;
-                //     oss << endl;
-                // }
-
-                // db.sorted_stops = { db.stops.begin(), db.stops.end() };
-
-                // map<StopPtr, map<StopPtr, size_t, NamePtrKeyLess<StopPtr>>, NamePtrKeyLess<StopPtr>> rr;
-
-                // for (auto &[stop, stops] : db.road_route_length)
-                // {
-                //     rr[stop] = {stops.begin(), stops.end()};
-                // }
-
-                // for (auto &[stop, stops] : rr)
-                // {
-                //     if (stop->name == "s100")
-                //     {
-                //         oss << stop->name << ":";
-                //         for (auto &[to_stop, dist] : stops)
-                //         {
-                //             if (to_stop->name.size() <= 3 and to_stop->name[0] == 's')
-                //                 oss << to_stop->name << "(" << dist << "),";
-                //         }
-                //         oss << endl;
-                //         oss << stop->name << ": lat= " << stop->latitude << ",lon= " << stop->longitude << endl;
-                //     }
-                // }
-
-                // auto begin = db.sorted_stops.begin();
-                // auto end = db.sorted_stops.end();
-                // auto begin = db.sorted_stops.find(make_shared<Stop>(Stop{.name = "s40"}));
-                // auto end = db.sorted_stops.find(make_shared<Stop>(Stop{.name = "s60"}));
-                // for (auto it = begin; it != end; ++it)
-                // {
-                //     Stop &stop = *it->get();
-                //     oss << stop.name << ": lat= " << stop.latitude << ",lon= " << stop.longitude << endl;
-                // }
-                throw runtime_error(oss.str());
-            }
 
             if (not answer)
                 os << "    \"error_message\": \"not found\"\n";

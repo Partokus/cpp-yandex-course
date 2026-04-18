@@ -1,0 +1,102 @@
+if (answer and answer->total_time > 1508.20 and answer->total_time < 1508.35)
+{
+    ostringstream oss;
+
+    size_t num = 0U;
+    StopPtr s1 = make_shared<Stop>(Stop{.name = ""});
+    StopPtr s30 = make_shared<Stop>(Stop{.name = ""});
+    for (StopPtr stop : db.stops)
+    {
+        // if (stop->name == stop_from->name)
+        // {
+        //     oss << "stop_from = " << "s" + to_string(num) << endl;
+        // }
+        // else if (stop->name == stop_to->name)
+        // {
+        //     oss << "stop_to = " << "s" + to_string(num) << endl;
+        // }
+        if (num == 1)
+        {
+            s1->name = stop->name;
+            ++num;
+        }
+        if (num == 30)
+        {
+            s30->name = stop->name;
+            ++num;
+        }
+        else
+            stop->name = "s" + to_string(num++);
+    }
+    num = 0U;
+    for (BusPtr bus : db.buses)
+    {
+        bus->name = "b" + to_string(num++);
+    }
+
+    oss << s1->name << ":";
+    for (auto &[to_stop, dist] : db.road_route_length[s1])
+    {
+        if (to_stop->name.size() <= 3 and to_stop->name[0] == 's')
+            oss << to_stop->name << "(" << dist << "),";
+    }
+    oss << endl;
+    oss << s30->name << ":";
+    for (auto &[to_stop, dist] : db.road_route_length[s30])
+    {
+        if (to_stop->name.size() <= 3 and to_stop->name[0] == 's')
+            oss << to_stop->name << "(" << dist << "),";
+    }
+
+    // BusesSorted buses_sorted{db.buses.begin(), db.buses.end()};
+
+    // if (db.map.empty())
+    // {
+    //     db.map = CreateMap(db, true);
+    // }
+
+    // auto begin = buses_sorted.begin();
+    // auto end = buses_sorted.end();
+    // // auto begin = buses_sorted.find(make_shared<Bus>(Bus{.name = "b0"}));
+    // // auto end = buses_sorted.find(make_shared<Bus>(Bus{.name = "b59"}));
+    // for (auto it = begin; it != end; ++it)
+    // {
+    //     oss << it->lock().get()->name << " ring: " << it->lock().get()->ring;
+    //     oss << endl;
+    // }
+
+    // db.sorted_stops = { db.stops.begin(), db.stops.end() };
+
+    // map<StopPtr, map<StopPtr, size_t, NamePtrKeyLess<StopPtr>>, NamePtrKeyLess<StopPtr>> rr;
+
+    // for (auto &[stop, stops] : db.road_route_length)
+    // {
+    //     rr[stop] = {stops.begin(), stops.end()};
+    // }
+
+    // for (auto &[stop, stops] : rr)
+    // {
+    //     if (stop->name == "s100")
+    //     {
+    //         oss << stop->name << ":";
+    //         for (auto &[to_stop, dist] : stops)
+    //         {
+    //             if (to_stop->name.size() <= 3 and to_stop->name[0] == 's')
+    //                 oss << to_stop->name << "(" << dist << "),";
+    //         }
+    //         oss << endl;
+    //         oss << stop->name << ": lat= " << stop->latitude << ",lon= " << stop->longitude << endl;
+    //     }
+    // }
+
+    // auto begin = db.sorted_stops.begin();
+    // auto end = db.sorted_stops.end();
+    // auto begin = db.sorted_stops.find(make_shared<Stop>(Stop{.name = "s40"}));
+    // auto end = db.sorted_stops.find(make_shared<Stop>(Stop{.name = "s60"}));
+    // for (auto it = begin; it != end; ++it)
+    // {
+    //     Stop &stop = *it->get();
+    //     oss << stop.name << ": lat= " << stop.latitude << ",lon= " << stop.longitude << endl;
+    // }
+    throw runtime_error(oss.str());
+}
