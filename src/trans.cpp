@@ -159,6 +159,8 @@ void DataBase::CreateGraph(bool debug)
         }
     }
 
+    while (true);
+
     graph = DirectedWeightedGraph{ _vertex_id };
 
     for (const BusPtr &bus : buses)
@@ -253,7 +255,6 @@ void DataBase::CreateGraph(bool debug)
             }
         }
     }
-    while (true);
 }
 
 /*
