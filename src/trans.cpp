@@ -71,9 +71,9 @@ void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, RenderSetti
             if (road_distance)
                 info.route_length_road += *road_distance;
             else
-                // throw runtime_error("Can't calculate road distance: bus " +
-                //     bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name);
-                cout << "error calc road dist = " << bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name << endl;
+                throw runtime_error("Can't calculate road distance: bus " +
+                    bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name);
+                // cout << "error calc road dist = " << bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name << endl;
             if (not bus->ring)
             {
                 road_distance = CalcRoadDistance(next_stop, stop);
@@ -395,23 +395,7 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
     else
         vertex_id_to = db.route_unit_to_vertex_id[to].begin()->second.begin()->second;
 
-    // cout << "vertex_id_from = " << vertex_id_from << endl;
-    // cout << "vertex_id_to = " << vertex_id_to << endl;
-
     std::optional<RouteInfo> router_info = router.BuildRoute(vertex_id_from, vertex_id_to);
-
-    // RouteInfo &ri = *router_info;
-
-    // cout << "edge_count = " << ri.edge_count << endl;
-
-    // for (size_t i = 0U; i < 10; ++i)
-    // {
-    //     Graph::EdgeId edge_id = router.GetRouteEdge(ri.id, i);
-    //     Edge edge = db.graph.GetEdge(edge_id);
-    //     cout << "edge.from = " << edge.from << endl;
-    //     cout << "edge.to = " << edge.to << endl;
-    // }
-
 
     if (not router_info)
         return std::nullopt;
@@ -544,17 +528,14 @@ void Parse(istream &is, ostream &os, DataBase &db)
 
     const map<string, Node> &render_settings_json = root.at("render_settings"s).AsMap();
 
-    cout << "create info" << endl;
     db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json));
 
-    cout << "create router" << endl;
     Router router{db.graph};
 
     const vector<Node> &stat_requests = root.at("stat_requests"s).AsArray();
 
     os << "[" << '\n';
 
-    cout << "stat req" << endl;
     for (auto it = stat_requests.begin(); it != stat_requests.end(); ++it)
     {
         const map<string, Node> &req = it->AsMap();
@@ -615,7 +596,6 @@ void Parse(istream &is, ostream &os, DataBase &db)
         }
         else if (type == "Route")
         {
-            cout << "route" << endl;
             const string &from_name = req.at("from"s).AsString();
             auto stop_from = make_shared<Stop>(Stop{});
             stop_from->name = from_name;
