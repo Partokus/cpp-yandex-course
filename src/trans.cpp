@@ -334,6 +334,8 @@ BusPtr ParseAddBusQuery(const map<string, Json::Node> &req, Stops &stops)
 
     if (json_stops.empty())
         throw runtime_error("bus don't have stops");
+    if (json_stops.size() == 1U)
+        throw runtime_error("bus have only one stop");
 
     for (auto it = json_stops.begin(); it != json_stops.end(); ++it)
     {
