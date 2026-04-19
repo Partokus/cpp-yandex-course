@@ -606,6 +606,11 @@ void Parse(istream &is, ostream &os, DataBase &db)
 
             std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop_from, stop_to, db, router);
 
+            if (answer and answer->total_time > 1508.20 and answer->total_time < 1508.35)
+            {
+                throw runtime_error("got here!");
+            }
+
             if (not answer)
                 os << "    \"error_message\": \"not found\"\n";
             else
