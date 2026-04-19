@@ -126,10 +126,25 @@ void DataBase::CreateGraph(bool debug)
         {
             for (const auto &[bus, next_stop_to_vertex_id] : bus_to_next_stop)
             {
-                for (const auto &[next_stop, vertex_id] : next_stop_to_vertex_id)
+                for (const auto &[stop_pos, vertex_id] : next_stop_to_vertex_id)
                 {
+                    size_t pos = 0;
+                    auto it = bus->stops.begin();
+                    while (true)
+                    {
+                        it = find_if(it, bus->stops.end(), [&stop](const StopPtr &v)
+                        {
+                            return stop->name == v->name;
+                        });
+                        if (next(it) == bus->stops.end() or next(it)->get()->name == stop_pos->name)
+                        {
+                            pos = distance(bus->stops.begin(), it);
+                            break;
+                        }
+                    }
                     cout << num++ << ": vertex_id[" << vertex_id << "] = { " <<
-                        "stop( " << stop->name << " ), bus( " << bus->name << ") }" << endl;
+                        "stop( " << stop->name << " ), bus( " << bus->name << "), " <<
+                        "pos( " << pos << " ) }" << endl;
                 }
             }
         }
@@ -158,8 +173,6 @@ void DataBase::CreateGraph(bool debug)
                 "stop( " << stop->name << " )" << endl;
         }
     }
-
-    while (true);
 
     graph = DirectedWeightedGraph{ _vertex_id };
 
@@ -532,7 +545,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
 
     const map<string, Node> &render_settings_json = root.at("render_settings"s).AsMap();
 
-    db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json));
+    db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json), true);
 
     Router router{db.graph};
 
