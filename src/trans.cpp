@@ -53,8 +53,6 @@ void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, RenderSetti
             auto it_next = next(it);
             const StopPtr &stop = *it;
             size_t stop_position_in_bus = distance(bus->stops.begin(), it);
-            if (stop_position_in_bus > 100)
-                throw runtime_error("bigger0");
             route_unit_to_vertex_id[stop][bus][stop_position_in_bus] = _vertex_id;
             vertex_id_to_route_unit[_vertex_id] = make_tuple(stop, bus, stop_position_in_bus);
             ++_vertex_id;
