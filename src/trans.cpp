@@ -654,11 +654,11 @@ void Parse(istream &is, ostream &os, DataBase &db)
         }
         else if (type == "Map")
         {
-            if (db.map.empty())
+            if (db.map_svg.empty())
             {
-                db.map = CreateMap(db);
+                db.map_svg = CreateMap(db);
             }
-            os << "    \"map\": \"" << db.map << "\"\n";
+            os << "    \"map\": \"" << db.map_svg << "\"\n";
         }
 
         os << "  }";

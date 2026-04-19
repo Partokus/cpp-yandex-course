@@ -38,7 +38,7 @@ struct DataBase
 
     DirectedWeightedGraph graph{0};
 
-    string map;
+    string map_svg;
 
     void CreateInfo(size_t bus_wait_time = 0U, double bus_velocity = 0.0, RenderSettings rs = {}, bool output = false);
 
