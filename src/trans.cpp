@@ -52,7 +52,7 @@ void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, RenderSetti
         {
             auto it_next = next(it);
             const StopPtr &stop = *it;
-            size_t stop_position_in_bus = distance(bus->stops.begin(), it);
+            size_t stop_position_in_bus = it - bus->stops.begin();
             route_unit_to_vertex_id[stop][bus][stop_position_in_bus] = _vertex_id;
             vertex_id_to_route_unit[_vertex_id] = make_tuple(stop, bus, stop_position_in_bus);
             ++_vertex_id;
@@ -170,8 +170,8 @@ void DataBase::CreateGraph(bool debug)
 
             StopPtr &from = *it;
             StopPtr &to = *it_next;
-            size_t from_pos = distance(bus->stops.begin(), it);
-            size_t to_pos = distance(bus->stops.begin(), it_next);
+            size_t from_pos = it - bus->stops.begin();
+            size_t to_pos = it_next - bus->stops.begin();
 
             auto it_road_route = road_route_length.find(from);
             if (it_road_route == road_route_length.end())

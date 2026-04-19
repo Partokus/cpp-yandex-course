@@ -4166,6 +4166,7 @@ void Test15Failed()
     ostringstream oss;
     DataBase db;
 
+    LOG_DURATION("Test 15 failed");
     Parse(input, oss, db);
 }
 
