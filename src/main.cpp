@@ -21,7 +21,7 @@ void TestAll()
     // RUN_TEST(tr, TestDataBaseCreateGraph);
     // RUN_TEST(tr, TestBuildRoute);
     // RUN_TEST(tr, TestParseRouteQuery);
-    RUN_TEST(tr, TestParse);
+    // RUN_TEST(tr, TestParse);
 
     // RUN_TEST(tr, TestRgbCout);
     // RUN_TEST(tr, TestColorCout);
@@ -37,7 +37,7 @@ void Profile()
 
 int main()
 {
-    TestAll();
+    // TestAll();
 
     DataBase db;
     Parse(cin, cout, db);

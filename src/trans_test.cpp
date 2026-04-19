@@ -4153,9 +4153,9 @@ void TestParseRouteQuery()
 void Test15Failed()
 {
     // ifstream input("src/test15failed.json");
-    ifstream input("src/test15failed.json");
+    ifstream input("src/json_example.json");
     // ifstream input("sniffed_cut.json");
     DataBase db;
 
-    // Parse(input, cout, db);
+    Parse(input, cout, db);
 }
