@@ -1504,6 +1504,7 @@ void TestBuildRoute()
 void TestParseJson()
 {
     istringstream input(R"({
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
   "base_requests": [
     {
       "type": "Stop",
@@ -1664,7 +1665,7 @@ void TestParseJson()
     using namespace Json;
     Document doc = Load(input);
     const map<string, Node> &root = doc.GetRoot().AsMap();
-    ASSERT_EQUAL(root.size(), 2U);
+    ASSERT_EQUAL(root.size(), 3U);
 
     const vector<Node> &base_requests = root.at("base_requests"s).AsArray();
     ASSERT_EQUAL(base_requests.size(), 13U);
@@ -2038,1716 +2039,1725 @@ void TestParseJson()
 
 void TestParse()
 {
-//     {
-//         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
-//   "base_requests": [
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.611087,
-//       "longitude": 37.20829,
-//       "name": "Tolstopaltsevo"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.595884,
-//       "longitude": 37.209755,
-//       "name": "Marushkino"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Biryusinka",
-//         "Universam",
-//         "Biryulyovo Tovarnaya",
-//         "Biryulyovo Passazhirskaya",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "stops": [
-//         "Tolstopaltsevo",
-//         "Marushkino",
-//         "Rasskazovka"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.632761,
-//       "longitude": 37.333324,
-//       "name": "Rasskazovka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.574371,
-//       "longitude": 37.6517,
-//       "name": "Biryulyovo Zapadnoye"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.581065,
-//       "longitude": 37.64839,
-//       "name": "Biryusinka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.587655,
-//       "longitude": 37.645687,
-//       "name": "Universam"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.592028,
-//       "longitude": 37.653656,
-//       "name": "Biryulyovo Tovarnaya"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.580999,
-//       "longitude": 37.659164,
-//       "name": "Biryulyovo Passazhirskaya"
-//     }
-//   ],
-//   "stat_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "id": 0
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "id": 1
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "751",
-//       "id": 2
-//     }
-//   ]
-// }
-// )");
+    {
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+  "base_requests": [
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.611087,
+      "longitude": 37.20829,
+      "name": "Tolstopaltsevo"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.595884,
+      "longitude": 37.209755,
+      "name": "Marushkino"
+    },
+    {
+      "type": "Bus",
+      "name": "256",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo Tovarnaya",
+        "Biryulyovo Passazhirskaya",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "stops": [
+        "Tolstopaltsevo",
+        "Marushkino",
+        "Rasskazovka"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.632761,
+      "longitude": 37.333324,
+      "name": "Rasskazovka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.574371,
+      "longitude": 37.6517,
+      "name": "Biryulyovo Zapadnoye"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.581065,
+      "longitude": 37.64839,
+      "name": "Biryusinka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.587655,
+      "longitude": 37.645687,
+      "name": "Universam"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.592028,
+      "longitude": 37.653656,
+      "name": "Biryulyovo Tovarnaya"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.580999,
+      "longitude": 37.659164,
+      "name": "Biryulyovo Passazhirskaya"
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "256",
+      "id": 0
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "id": 1
+    },
+    {
+      "type": "Bus",
+      "name": "751",
+      "id": 2
+    }
+  ]
+}
+)");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 0,
-//     "stop_count": 6,
-//     "unique_stop_count": 5,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 1,
-//     "stop_count": 5,
-//     "unique_stop_count": 3,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 2,
-//     "error_message": "not found"
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 0,
+    "stop_count": 6,
+    "unique_stop_count": 5,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 1,
+    "stop_count": 5,
+    "unique_stop_count": 3,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 2,
+    "error_message": "not found"
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
-//   "base_requests": [
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.611087,
-//       "longitude": 37.20829,
-//       "name": "Tolstopaltsevo"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.595884,
-//       "longitude": 37.209755,
-//       "name": "Marushkino"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "Malina Kalina",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Biryusinka",
-//         "Universam",
-//         "Biryulyovo Tovarnaya",
-//         "Biryulyovo Passazhirskaya",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "stops": [
-//         "Tolstopaltsevo",
-//         "Marushkino",
-//         "Rasskazovka"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.632761,
-//       "longitude": 37.333324,
-//       "name": "Rasskazovka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.571231,
-//       "longitude": 37.6517,
-//       "name": "Biryulyovo Zapadnoye"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.581065,
-//       "longitude": 37.64839,
-//       "name": "Biryusinka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.587655,
-//       "longitude": 37.645687,
-//       "name": "Universam"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.592028,
-//       "longitude": 37.653656,
-//       "name": "Biryulyovo Tovarnaya"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.580999,
-//       "longitude": 37.659164,
-//       "name": "Biryulyovo Passazhirskaya"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "257",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Biryusinka",
-//         "Universam",
-//         "Biryulyovo Tovarnaya",
-//         "Universam",
-//         "Biryusinka",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "258",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Biryusinka",
-//         "Universam",
-//         "Biryulyovo Tovarnaya"
-//       ],
-//       "is_roundtrip": false
-//     }
-//   ],
-//   "stat_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "Malina Kalina",
-//       "id": 1965312320
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "id": 1965312321
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "751",
-//       "id": 1965312322
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "257",
-//       "id": 1965312323
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "258",
-//       "id": 1965312324
-//     }
-//   ]
-// }
-// )");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+  "base_requests": [
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.611087,
+      "longitude": 37.20829,
+      "name": "Tolstopaltsevo"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.595884,
+      "longitude": 37.209755,
+      "name": "Marushkino"
+    },
+    {
+      "type": "Bus",
+      "name": "Malina Kalina",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo Tovarnaya",
+        "Biryulyovo Passazhirskaya",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "stops": [
+        "Tolstopaltsevo",
+        "Marushkino",
+        "Rasskazovka"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.632761,
+      "longitude": 37.333324,
+      "name": "Rasskazovka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.571231,
+      "longitude": 37.6517,
+      "name": "Biryulyovo Zapadnoye"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.581065,
+      "longitude": 37.64839,
+      "name": "Biryusinka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.587655,
+      "longitude": 37.645687,
+      "name": "Universam"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.592028,
+      "longitude": 37.653656,
+      "name": "Biryulyovo Tovarnaya"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.580999,
+      "longitude": 37.659164,
+      "name": "Biryulyovo Passazhirskaya"
+    },
+    {
+      "type": "Bus",
+      "name": "257",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo Tovarnaya",
+        "Universam",
+        "Biryusinka",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "258",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo Tovarnaya"
+      ],
+      "is_roundtrip": false
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "Malina Kalina",
+      "id": 1965312320
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "id": 1965312321
+    },
+    {
+      "type": "Bus",
+      "name": "751",
+      "id": 1965312322
+    },
+    {
+      "type": "Bus",
+      "name": "257",
+      "id": 1965312323
+    },
+    {
+      "type": "Bus",
+      "name": "258",
+      "id": 1965312324
+    }
+  ]
+}
+)");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 1965312320,
-//     "stop_count": 6,
-//     "unique_stop_count": 5,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 1965312321,
-//     "stop_count": 5,
-//     "unique_stop_count": 3,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 1965312322,
-//     "error_message": "not found"
-//   },
-//   {
-//     "request_id": 1965312323,
-//     "stop_count": 7,
-//     "unique_stop_count": 4,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 1965312324,
-//     "stop_count": 7,
-//     "unique_stop_count": 4,
-//     "route_length": 0,
-//     "curvature": 0
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 1965312320,
+    "stop_count": 6,
+    "unique_stop_count": 5,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 1965312321,
+    "stop_count": 5,
+    "unique_stop_count": 3,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 1965312322,
+    "error_message": "not found"
+  },
+  {
+    "request_id": 1965312323,
+    "stop_count": 7,
+    "unique_stop_count": 4,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 1965312324,
+    "stop_count": 7,
+    "unique_stop_count": 4,
+    "route_length": 0,
+    "curvature": 0
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
-//   "base_requests": [
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.611087,
-//       "longitude": 37.20829,
-//       "name": "Tolstopaltsevo"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.35,
-//       "name": "Marushkino"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.611087,
-//       "longitude": 37.20829,
-//       "name": "Parushka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.35,
-//       "name": "Sasushka"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "stops": [
-//         "Tolstopaltsevo",
-//         "Marushkino",
-//         "Tolstopaltsevo"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "stops": [
-//         "Tolstopaltsevo",
-//         "Marushkino"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "755",
-//       "stops": [
-//         "Parushka",
-//         "Sasushka"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "756",
-//       "stops": [
-//         "Parushka",
-//         "Sasushka"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "757",
-//       "stops": [
-//         "Parushka",
-//         "Sasushka",
-//         "Tolstopaltsevo",
-//         "Marushkino"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "758",
-//       "stops": [
-//         "Parushka",
-//         "Sasushka",
-//         "Marushkino",
-//         "Tolstopaltsevo"
-//       ],
-//       "is_roundtrip": false
-//     }
-//   ],
-//   "stat_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "id": 0
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "id": 1
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "id": 2
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "751",
-//       "id": 3
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "755",
-//       "id": 4
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "756",
-//       "id": 5
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "757",
-//       "id": 6
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "758",
-//       "id": 7
-//     }
-//   ]
-// }
-// )");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+  "base_requests": [
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.611087,
+      "longitude": 37.20829,
+      "name": "Tolstopaltsevo"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.35,
+      "name": "Marushkino"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.611087,
+      "longitude": 37.20829,
+      "name": "Parushka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.35,
+      "name": "Sasushka"
+    },
+    {
+      "type": "Bus",
+      "name": "256",
+      "stops": [
+        "Tolstopaltsevo",
+        "Marushkino",
+        "Tolstopaltsevo"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "stops": [
+        "Tolstopaltsevo",
+        "Marushkino"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Bus",
+      "name": "755",
+      "stops": [
+        "Parushka",
+        "Sasushka"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Bus",
+      "name": "756",
+      "stops": [
+        "Parushka",
+        "Sasushka"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Bus",
+      "name": "757",
+      "stops": [
+        "Parushka",
+        "Sasushka",
+        "Tolstopaltsevo",
+        "Marushkino"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Bus",
+      "name": "758",
+      "stops": [
+        "Parushka",
+        "Sasushka",
+        "Marushkino",
+        "Tolstopaltsevo"
+      ],
+      "is_roundtrip": false
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "256",
+      "id": 0
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "id": 1
+    },
+    {
+      "type": "Bus",
+      "name": "256",
+      "id": 2
+    },
+    {
+      "type": "Bus",
+      "name": "751",
+      "id": 3
+    },
+    {
+      "type": "Bus",
+      "name": "755",
+      "id": 4
+    },
+    {
+      "type": "Bus",
+      "name": "756",
+      "id": 5
+    },
+    {
+      "type": "Bus",
+      "name": "757",
+      "id": 6
+    },
+    {
+      "type": "Bus",
+      "name": "758",
+      "id": 7
+    }
+  ]
+}
+)");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 0,
-//     "stop_count": 3,
-//     "unique_stop_count": 2,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 1,
-//     "stop_count": 3,
-//     "unique_stop_count": 2,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 2,
-//     "stop_count": 3,
-//     "unique_stop_count": 2,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 3,
-//     "error_message": "not found"
-//   },
-//   {
-//     "request_id": 4,
-//     "stop_count": 3,
-//     "unique_stop_count": 2,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 5,
-//     "stop_count": 3,
-//     "unique_stop_count": 2,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 6,
-//     "stop_count": 7,
-//     "unique_stop_count": 4,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 7,
-//     "stop_count": 7,
-//     "unique_stop_count": 4,
-//     "route_length": 0,
-//     "curvature": 0
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 0,
+    "stop_count": 3,
+    "unique_stop_count": 2,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 1,
+    "stop_count": 3,
+    "unique_stop_count": 2,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 2,
+    "stop_count": 3,
+    "unique_stop_count": 2,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 3,
+    "error_message": "not found"
+  },
+  {
+    "request_id": 4,
+    "stop_count": 3,
+    "unique_stop_count": 2,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 5,
+    "stop_count": 3,
+    "unique_stop_count": 2,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 6,
+    "stop_count": 7,
+    "unique_stop_count": 4,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 7,
+    "stop_count": 7,
+    "unique_stop_count": 4,
+    "route_length": 0,
+    "curvature": 0
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
-//   "base_requests": [
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.31,
-//       "name": "X1"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.32,
-//       "name": "X2"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.33,
-//       "name": "X3"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.34,
-//       "name": "X4"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.35,
-//       "name": "X5"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.36,
-//       "name": "X6"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.37,
-//       "name": "X7"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.38,
-//       "name": "X8"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.39,
-//       "name": "X9"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 56.60,
-//       "longitude": 50.40,
-//       "name": "X10 + X1 + X5 + X9"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "X",
-//       "stops": [
-//         "X1",
-//         "X2",
-//         "X3",
-//         "X4",
-//         "X5",
-//         "X6",
-//         "X7",
-//         "X8",
-//         "X9",
-//         "X10 + X1 + X5 + X9"
-//       ],
-//       "is_roundtrip": false
-//     }
-//   ],
-//   "stat_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "X",
-//       "id": 0
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "X",
-//       "id": 1
-//     }
-//   ]
-// }
-// )");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+  "base_requests": [
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.31,
+      "name": "X1"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.32,
+      "name": "X2"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.33,
+      "name": "X3"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.34,
+      "name": "X4"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.35,
+      "name": "X5"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.36,
+      "name": "X6"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.37,
+      "name": "X7"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.38,
+      "name": "X8"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.39,
+      "name": "X9"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 56.60,
+      "longitude": 50.40,
+      "name": "X10 + X1 + X5 + X9"
+    },
+    {
+      "type": "Bus",
+      "name": "X",
+      "stops": [
+        "X1",
+        "X2",
+        "X3",
+        "X4",
+        "X5",
+        "X6",
+        "X7",
+        "X8",
+        "X9",
+        "X10 + X1 + X5 + X9"
+      ],
+      "is_roundtrip": false
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "X",
+      "id": 0
+    },
+    {
+      "type": "Bus",
+      "name": "X",
+      "id": 1
+    }
+  ]
+}
+)");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 0,
-//     "stop_count": 19,
-//     "unique_stop_count": 10,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 1,
-//     "stop_count": 19,
-//     "unique_stop_count": 10,
-//     "route_length": 0,
-//     "curvature": 0
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 0,
+    "stop_count": 19,
+    "unique_stop_count": 10,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 1,
+    "stop_count": 19,
+    "unique_stop_count": 10,
+    "route_length": 0,
+    "curvature": 0
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"(
-// { "routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
-//   "base_requests": [
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.611087,
-//       "longitude": 37.20829,
-//       "name": "Tolstopaltsevo"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.595884,
-//       "longitude": 37.209755,
-//       "name": "Marushkino"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Biryusinka",
-//         "Universam",
-//         "Biryulyovo Tovarnaya",
-//         "Biryulyovo Passazhirskaya",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "stops": [
-//         "Tolstopaltsevo",
-//         "Marushkino",
-//         "Rasskazovka"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.632761,
-//       "longitude": 37.333324,
-//       "name": "Rasskazovka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.574371,
-//       "longitude": 37.6517,
-//       "name": "Biryulyovo Zapadnoye"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.581065,
-//       "longitude": 37.64839,
-//       "name": "Biryusinka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.587655,
-//       "longitude": 37.645687,
-//       "name": "Universam"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.592028,
-//       "longitude": 37.653656,
-//       "name": "Biryulyovo Tovarnaya"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.580999,
-//       "longitude": 37.659164,
-//       "name": "Biryulyovo Passazhirskaya"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "828",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Universam",
-//         "Rossoshanskaya ulitsa",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.595579,
-//       "longitude": 37.605757,
-//       "name": "Rossoshanskaya ulitsa"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.611678,
-//       "longitude": 37.603831,
-//       "name": "Prazhskaya"
-//     }
-//   ],
-//   "stat_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "id": 0
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "id": 1
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "751",
-//       "id": 2
-//     },
-//     {
-//       "type": "Stop",
-//       "name": "Samara",
-//       "id": 3
-//     },
-//     {
-//       "type": "Stop",
-//       "name": "Prazhskaya",
-//       "id": 4
-//     },
-//     {
-//       "type": "Stop",
-//       "name": "Biryulyovo Zapadnoye",
-//       "id": 5
-//     }
-//   ]
-// }
-// )");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"(
+{ "routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+  "base_requests": [
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.611087,
+      "longitude": 37.20829,
+      "name": "Tolstopaltsevo"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.595884,
+      "longitude": 37.209755,
+      "name": "Marushkino"
+    },
+    {
+      "type": "Bus",
+      "name": "256",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo Tovarnaya",
+        "Biryulyovo Passazhirskaya",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "stops": [
+        "Tolstopaltsevo",
+        "Marushkino",
+        "Rasskazovka"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.632761,
+      "longitude": 37.333324,
+      "name": "Rasskazovka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.574371,
+      "longitude": 37.6517,
+      "name": "Biryulyovo Zapadnoye"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.581065,
+      "longitude": 37.64839,
+      "name": "Biryusinka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.587655,
+      "longitude": 37.645687,
+      "name": "Universam"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.592028,
+      "longitude": 37.653656,
+      "name": "Biryulyovo Tovarnaya"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.580999,
+      "longitude": 37.659164,
+      "name": "Biryulyovo Passazhirskaya"
+    },
+    {
+      "type": "Bus",
+      "name": "828",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Universam",
+        "Rossoshanskaya ulitsa",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.595579,
+      "longitude": 37.605757,
+      "name": "Rossoshanskaya ulitsa"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.611678,
+      "longitude": 37.603831,
+      "name": "Prazhskaya"
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "256",
+      "id": 0
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "id": 1
+    },
+    {
+      "type": "Bus",
+      "name": "751",
+      "id": 2
+    },
+    {
+      "type": "Stop",
+      "name": "Samara",
+      "id": 3
+    },
+    {
+      "type": "Stop",
+      "name": "Prazhskaya",
+      "id": 4
+    },
+    {
+      "type": "Stop",
+      "name": "Biryulyovo Zapadnoye",
+      "id": 5
+    }
+  ]
+}
+)");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 0,
-//     "stop_count": 6,
-//     "unique_stop_count": 5,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 1,
-//     "stop_count": 5,
-//     "unique_stop_count": 3,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 2,
-//     "error_message": "not found"
-//   },
-//   {
-//     "request_id": 3,
-//     "error_message": "not found"
-//   },
-//   {
-//     "request_id": 4,
-//     "buses": []
-//   },
-//   {
-//     "request_id": 5,
-//     "buses": [
-//       "256",
-//       "828"
-//     ]
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 0,
+    "stop_count": 6,
+    "unique_stop_count": 5,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 1,
+    "stop_count": 5,
+    "unique_stop_count": 3,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 2,
+    "error_message": "not found"
+  },
+  {
+    "request_id": 3,
+    "error_message": "not found"
+  },
+  {
+    "request_id": 4,
+    "buses": []
+  },
+  {
+    "request_id": 5,
+    "buses": [
+      "256",
+      "828"
+    ]
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
-//   "base_requests": [
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Marushkino": 3900
-//       },
-//       "latitude": 55.611087,
-//       "longitude": 37.20829,
-//       "name": "Tolstopaltsevo"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Rasskazovka": 9900
-//       },
-//       "latitude": 55.595884,
-//       "longitude": 37.209755,
-//       "name": "Marushkino"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Biryusinka",
-//         "Universam",
-//         "Biryulyovo Tovarnaya",
-//         "Biryulyovo Passazhirskaya",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "stops": [
-//         "Tolstopaltsevo",
-//         "Marushkino",
-//         "Rasskazovka"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.632761,
-//       "longitude": 37.333324,
-//       "name": "Rasskazovka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Rossoshanskaya ulitsa": 7500,
-//         "Biryusinka": 1800,
-//         "Universam": 2400
-//       },
-//       "latitude": 55.574371,
-//       "longitude": 37.6517,
-//       "name": "Biryulyovo Zapadnoye"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Universam": 750
-//       },
-//       "latitude": 55.581065,
-//       "longitude": 37.64839,
-//       "name": "Biryusinka"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Rossoshanskaya ulitsa": 5600,
-//         "Biryulyovo Tovarnaya": 900
-//       },
-//       "latitude": 55.587655,
-//       "longitude": 37.645687,
-//       "name": "Universam"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Biryulyovo Passazhirskaya": 1300
-//       },
-//       "latitude": 55.592028,
-//       "longitude": 37.653656,
-//       "name": "Biryulyovo Tovarnaya"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Biryulyovo Zapadnoye": 1200
-//       },
-//       "latitude": 55.580999,
-//       "longitude": 37.659164,
-//       "name": "Biryulyovo Passazhirskaya"
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "828",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Universam",
-//         "Rossoshanskaya ulitsa",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.595579,
-//       "longitude": 37.605757,
-//       "name": "Rossoshanskaya ulitsa"
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "latitude": 55.611678,
-//       "longitude": 37.603831,
-//       "name": "Prazhskaya"
-//     }
-//   ],
-//   "stat_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "256",
-//       "id": 0
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "id": 1
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "751",
-//       "id": 2
-//     },
-//     {
-//       "type": "Stop",
-//       "name": "Samara",
-//       "id": 3
-//     },
-//     {
-//       "type": "Stop",
-//       "name": "Prazhskaya",
-//       "id": 4
-//     },
-//     {
-//       "type": "Stop",
-//       "name": "Biryulyovo Zapadnoye",
-//       "id": 5
-//     }
-//   ]
-// }
-// )");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+  "base_requests": [
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Marushkino": 3900
+      },
+      "latitude": 55.611087,
+      "longitude": 37.20829,
+      "name": "Tolstopaltsevo"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Rasskazovka": 9900
+      },
+      "latitude": 55.595884,
+      "longitude": 37.209755,
+      "name": "Marushkino"
+    },
+    {
+      "type": "Bus",
+      "name": "256",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryusinka",
+        "Universam",
+        "Biryulyovo Tovarnaya",
+        "Biryulyovo Passazhirskaya",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "stops": [
+        "Tolstopaltsevo",
+        "Marushkino",
+        "Rasskazovka"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.632761,
+      "longitude": 37.333324,
+      "name": "Rasskazovka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Rossoshanskaya ulitsa": 7500,
+        "Biryusinka": 1800,
+        "Universam": 2400
+      },
+      "latitude": 55.574371,
+      "longitude": 37.6517,
+      "name": "Biryulyovo Zapadnoye"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Universam": 750
+      },
+      "latitude": 55.581065,
+      "longitude": 37.64839,
+      "name": "Biryusinka"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Rossoshanskaya ulitsa": 5600,
+        "Biryulyovo Tovarnaya": 900
+      },
+      "latitude": 55.587655,
+      "longitude": 37.645687,
+      "name": "Universam"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryulyovo Passazhirskaya": 1300
+      },
+      "latitude": 55.592028,
+      "longitude": 37.653656,
+      "name": "Biryulyovo Tovarnaya"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryulyovo Zapadnoye": 1200
+      },
+      "latitude": 55.580999,
+      "longitude": 37.659164,
+      "name": "Biryulyovo Passazhirskaya"
+    },
+    {
+      "type": "Bus",
+      "name": "828",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Universam",
+        "Rossoshanskaya ulitsa",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.595579,
+      "longitude": 37.605757,
+      "name": "Rossoshanskaya ulitsa"
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "latitude": 55.611678,
+      "longitude": 37.603831,
+      "name": "Prazhskaya"
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "256",
+      "id": 0
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "id": 1
+    },
+    {
+      "type": "Bus",
+      "name": "751",
+      "id": 2
+    },
+    {
+      "type": "Stop",
+      "name": "Samara",
+      "id": 3
+    },
+    {
+      "type": "Stop",
+      "name": "Prazhskaya",
+      "id": 4
+    },
+    {
+      "type": "Stop",
+      "name": "Biryulyovo Zapadnoye",
+      "id": 5
+    }
+  ]
+}
+)");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 0,
-//     "stop_count": 6,
-//     "unique_stop_count": 5,
-//     "route_length": 5950,
-//     "curvature": 1.36124
-//   },
-//   {
-//     "request_id": 1,
-//     "stop_count": 5,
-//     "unique_stop_count": 3,
-//     "route_length": 27600,
-//     "curvature": 1.31808
-//   },
-//   {
-//     "request_id": 2,
-//     "error_message": "not found"
-//   },
-//   {
-//     "request_id": 3,
-//     "error_message": "not found"
-//   },
-//   {
-//     "request_id": 4,
-//     "buses": []
-//   },
-//   {
-//     "request_id": 5,
-//     "buses": [
-//       "256",
-//       "828"
-//     ]
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 0,
+    "stop_count": 6,
+    "unique_stop_count": 5,
+    "route_length": 5950,
+    "curvature": 1.36124
+  },
+  {
+    "request_id": 1,
+    "stop_count": 5,
+    "unique_stop_count": 3,
+    "route_length": 27600,
+    "curvature": 1.31808
+  },
+  {
+    "request_id": 2,
+    "error_message": "not found"
+  },
+  {
+    "request_id": 3,
+    "error_message": "not found"
+  },
+  {
+    "request_id": 4,
+    "buses": []
+  },
+  {
+    "request_id": 5,
+    "buses": [
+      "256",
+      "828"
+    ]
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40}, "base_requests": [{"latitude": 55.611087, "longitude": 37.20829, "type": "Stop", "road_distances": {"+++": 3900}, "name": "Tolstopaltsevo"}, {"type": "Stop", "name": "+++", "latitude": 55.595884, "longitude": 37.209755, "road_distances": {"Rasskazovka": 9900}}, {"type": "Bus", "name": "256", "stops": ["Biryulyovo Zapadnoye", "Biryusinka", "Universam", "Biryulyovo Tovarnaya", "Biryulyovo Passazhirskaya", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Bus", "name": "750", "is_roundtrip": false, "stops": ["Tolstopaltsevo", "Marushkino", "Rasskazovka"]}, {"type": "Stop", "name": "Rasskazovka", "latitude": 55.632761, "longitude": 37.333324, "road_distances": {}}, {"type": "Stop", "name": "Biryulyovo Zapadnoye", "latitude": 55.574371, "longitude": 37.6517, "road_distances": {"Biryusinka": 1800, "Universam": 2400, "Rossoshanskaya ulitsa": 7500}}, {"type": "Stop", "name": "Biryusinka", "latitude": 55.581065, "longitude": 37.64839, "road_distances": {"Universam": 750}}, {"type": "Stop", "name": "Universam", "latitude": 55.587655, "longitude": 37.645687, "road_distances": {"Biryulyovo Tovarnaya": 900, "Rossoshanskaya ulitsa": 5600}}, {"type": "Stop", "name": "Biryulyovo Tovarnaya", "latitude": 55.592028, "longitude": 37.653656, "road_distances": {"Biryulyovo Passazhirskaya": 1300}}, {"type": "Stop", "name": "Biryulyovo Passazhirskaya", "latitude": 55.580999, "longitude": 37.659164, "road_distances": {"Biryulyovo Zapadnoye": 1200}}, {"type": "Bus", "name": "828", "stops": ["Biryulyovo Zapadnoye", "Universam", "Rossoshanskaya ulitsa", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Stop", "name": "Rossoshanskaya ulitsa", "latitude": 55.595579, "longitude": 37.605757, "road_distances": {}}, {"type": "Stop", "name": "Prazhskaya", "latitude": 55.611678, "longitude": 37.603831, "road_distances": {}}], "stat_requests": [{"id": 599708471, "type": "Bus", "name": "256"}, {"id": 2059890189, "type": "Bus", "name": "750"}, {"id": 222058974, "type": "Bus", "name": "751"}, {"id": 1038752326, "type": "Stop", "name": "Samara"}, {"id": 986197773, "type": "Stop", "name": "Prazhskaya"}, {"id": 932894250, "type": "Stop", "name": "Biryulyovo Zapadnoye"}]})");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40}, "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]}, "base_requests": [{"latitude": 55.611087, "longitude": 37.20829, "type": "Stop", "road_distances": {"+++": 3900}, "name": "Tolstopaltsevo"}, {"type": "Stop", "name": "+++", "latitude": 55.595884, "longitude": 37.209755, "road_distances": {"Rasskazovka": 9900}}, {"type": "Bus", "name": "256", "stops": ["Biryulyovo Zapadnoye", "Biryusinka", "Universam", "Biryulyovo Tovarnaya", "Biryulyovo Passazhirskaya", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Bus", "name": "750", "is_roundtrip": false, "stops": ["Tolstopaltsevo", "Marushkino", "Rasskazovka"]}, {"type": "Stop", "name": "Rasskazovka", "latitude": 55.632761, "longitude": 37.333324, "road_distances": {}}, {"type": "Stop", "name": "Biryulyovo Zapadnoye", "latitude": 55.574371, "longitude": 37.6517, "road_distances": {"Biryusinka": 1800, "Universam": 2400, "Rossoshanskaya ulitsa": 7500}}, {"type": "Stop", "name": "Biryusinka", "latitude": 55.581065, "longitude": 37.64839, "road_distances": {"Universam": 750}}, {"type": "Stop", "name": "Universam", "latitude": 55.587655, "longitude": 37.645687, "road_distances": {"Biryulyovo Tovarnaya": 900, "Rossoshanskaya ulitsa": 5600}}, {"type": "Stop", "name": "Biryulyovo Tovarnaya", "latitude": 55.592028, "longitude": 37.653656, "road_distances": {"Biryulyovo Passazhirskaya": 1300}}, {"type": "Stop", "name": "Biryulyovo Passazhirskaya", "latitude": 55.580999, "longitude": 37.659164, "road_distances": {"Biryulyovo Zapadnoye": 1200}}, {"type": "Bus", "name": "828", "stops": ["Biryulyovo Zapadnoye", "Universam", "Rossoshanskaya ulitsa", "Biryulyovo Zapadnoye"], "is_roundtrip": true}, {"type": "Stop", "name": "Rossoshanskaya ulitsa", "latitude": 55.595579, "longitude": 37.605757, "road_distances": {}}, {"type": "Stop", "name": "Prazhskaya", "latitude": 55.611678, "longitude": 37.603831, "road_distances": {}}], "stat_requests": [{"id": 599708471, "type": "Bus", "name": "256"}, {"id": 2059890189, "type": "Bus", "name": "750"}, {"id": 222058974, "type": "Bus", "name": "751"}, {"id": 1038752326, "type": "Stop", "name": "Samara"}, {"id": 986197773, "type": "Stop", "name": "Prazhskaya"}, {"id": 932894250, "type": "Stop", "name": "Biryulyovo Zapadnoye"}]})");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 599708471,
-//     "stop_count": 6,
-//     "unique_stop_count": 5,
-//     "route_length": 5950,
-//     "curvature": 1.36124
-//   },
-//   {
-//     "request_id": 2059890189,
-//     "stop_count": 5,
-//     "unique_stop_count": 3,
-//     "route_length": 0,
-//     "curvature": 0
-//   },
-//   {
-//     "request_id": 222058974,
-//     "error_message": "not found"
-//   },
-//   {
-//     "request_id": 1038752326,
-//     "error_message": "not found"
-//   },
-//   {
-//     "request_id": 986197773,
-//     "buses": []
-//   },
-//   {
-//     "request_id": 932894250,
-//     "buses": [
-//       "256",
-//       "828"
-//     ]
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 599708471,
+    "stop_count": 6,
+    "unique_stop_count": 5,
+    "route_length": 5950,
+    "curvature": 1.36124
+  },
+  {
+    "request_id": 2059890189,
+    "stop_count": 5,
+    "unique_stop_count": 3,
+    "route_length": 0,
+    "curvature": 0
+  },
+  {
+    "request_id": 222058974,
+    "error_message": "not found"
+  },
+  {
+    "request_id": 1038752326,
+    "error_message": "not found"
+  },
+  {
+    "request_id": 986197773,
+    "buses": []
+  },
+  {
+    "request_id": 932894250,
+    "buses": [
+      "256",
+      "828"
+    ]
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40}, "base_requests": [{"type": "Stop", "name": "A", "latitude": 0.5, "longitude": -1, "road_distances": {"B": 100000}}, {"type": "Stop", "name": "B", "latitude": 0, "longitude": -1.1, "road_distances": {}}, {"type": "Bus", "name": "256", "stops": ["B", "A"], "is_roundtrip": false}], "stat_requests": [{"id": 1317873202, "type": "Bus", "name": "256"}, {"id": 853807922, "type": "Stop", "name": "A"}, {"id": 1416389015, "type": "Stop", "name": "B"}, {"id": 1021316791, "type": "Stop", "name": "C"}]})");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40}, "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]}, "base_requests": [{"type": "Stop", "name": "A", "latitude": 0.5, "longitude": -1, "road_distances": {"B": 100000}}, {"type": "Stop", "name": "B", "latitude": 0, "longitude": -1.1, "road_distances": {}}, {"type": "Bus", "name": "256", "stops": ["B", "A"], "is_roundtrip": false}], "stat_requests": [{"id": 1317873202, "type": "Bus", "name": "256"}, {"id": 853807922, "type": "Stop", "name": "A"}, {"id": 1416389015, "type": "Stop", "name": "B"}, {"id": 1021316791, "type": "Stop", "name": "C"}]})");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 1317873202,
-//     "stop_count": 3,
-//     "unique_stop_count": 2,
-//     "route_length": 200000,
-//     "curvature": 1.76372
-//   },
-//   {
-//     "request_id": 853807922,
-//     "buses": [
-//       "256"
-//     ]
-//   },
-//   {
-//     "request_id": 1416389015,
-//     "buses": [
-//       "256"
-//     ]
-//   },
-//   {
-//     "request_id": 1021316791,
-//     "error_message": "not found"
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 1317873202,
+    "stop_count": 3,
+    "unique_stop_count": 2,
+    "route_length": 200000,
+    "curvature": 1.76372
+  },
+  {
+    "request_id": 853807922,
+    "buses": [
+      "256"
+    ]
+  },
+  {
+    "request_id": 1416389015,
+    "buses": [
+      "256"
+    ]
+  },
+  {
+    "request_id": 1021316791,
+    "error_message": "not found"
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"({
-//   "routing_settings": {
-//     "bus_wait_time": 6,
-//     "bus_velocity": 40
-//   },
-//   "base_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "297",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Biryulyovo Tovarnaya",
-//         "Universam",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "635",
-//       "stops": [
-//         "Biryulyovo Tovarnaya",
-//         "Universam",
-//         "Prazhskaya"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Biryulyovo Tovarnaya": 2600
-//       },
-//       "longitude": 37.6517,
-//       "name": "Biryulyovo Zapadnoye",
-//       "latitude": 55.574371
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Prazhskaya": 4650,
-//         "Biryulyovo Tovarnaya": 1380,
-//         "Biryulyovo Zapadnoye": 2500
-//       },
-//       "longitude": 37.645687,
-//       "name": "Universam",
-//       "latitude": 55.587655
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Universam": 890
-//       },
-//       "longitude": 37.653656,
-//       "name": "Biryulyovo Tovarnaya",
-//       "latitude": 55.592028
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "longitude": 37.603938,
-//       "name": "Prazhskaya",
-//       "latitude": 55.611717
-//     }
-//   ],
-//   "stat_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "297",
-//       "id": 1
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "635",
-//       "id": 2
-//     },
-//     {
-//       "type": "Stop",
-//       "name": "Universam",
-//       "id": 3
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Biryulyovo Zapadnoye",
-//       "to": "Universam",
-//       "id": 4
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Biryulyovo Zapadnoye",
-//       "to": "Prazhskaya",
-//       "id": 5
-//     }
-//   ]
-// })");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"({
+  "routing_settings": {
+    "bus_wait_time": 6,
+    "bus_velocity": 40
+  },
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+  "base_requests": [
+    {
+      "type": "Bus",
+      "name": "297",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryulyovo Tovarnaya",
+        "Universam",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "635",
+      "stops": [
+        "Biryulyovo Tovarnaya",
+        "Universam",
+        "Prazhskaya"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryulyovo Tovarnaya": 2600
+      },
+      "longitude": 37.6517,
+      "name": "Biryulyovo Zapadnoye",
+      "latitude": 55.574371
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Prazhskaya": 4650,
+        "Biryulyovo Tovarnaya": 1380,
+        "Biryulyovo Zapadnoye": 2500
+      },
+      "longitude": 37.645687,
+      "name": "Universam",
+      "latitude": 55.587655
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Universam": 890
+      },
+      "longitude": 37.653656,
+      "name": "Biryulyovo Tovarnaya",
+      "latitude": 55.592028
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "longitude": 37.603938,
+      "name": "Prazhskaya",
+      "latitude": 55.611717
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "297",
+      "id": 1
+    },
+    {
+      "type": "Bus",
+      "name": "635",
+      "id": 2
+    },
+    {
+      "type": "Stop",
+      "name": "Universam",
+      "id": 3
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Zapadnoye",
+      "to": "Universam",
+      "id": 4
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Zapadnoye",
+      "to": "Prazhskaya",
+      "id": 5
+    }
+  ]
+})");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 1,
-//     "stop_count": 4,
-//     "unique_stop_count": 3,
-//     "route_length": 5990,
-//     "curvature": 1.42963
-//   },
-//   {
-//     "request_id": 2,
-//     "stop_count": 5,
-//     "unique_stop_count": 3,
-//     "route_length": 11570,
-//     "curvature": 1.30156
-//   },
-//   {
-//     "request_id": 3,
-//     "buses": [
-//       "297",
-//       "635"
-//     ]
-//   },
-//   {
-//     "request_id": 4,
-//     "total_time": 11.235,
-//     "items": [
-//         {
-//             "time": 6,
-//             "type": "Wait",
-//             "stop_name": "Biryulyovo Zapadnoye"
-//         },
-//         {
-//             "span_count": 2,
-//             "bus": "297",
-//             "type": "Bus",
-//             "time": 5.235
-//         }
-//     ]
-//   },
-//   {
-//     "request_id": 5,
-//     "total_time": 24.21,
-//     "items": [
-//         {
-//             "time": 6,
-//             "type": "Wait",
-//             "stop_name": "Biryulyovo Zapadnoye"
-//         },
-//         {
-//             "span_count": 2,
-//             "bus": "297",
-//             "type": "Bus",
-//             "time": 5.235
-//         },
-//         {
-//             "time": 6,
-//             "type": "Wait",
-//             "stop_name": "Universam"
-//         },
-//         {
-//             "span_count": 1,
-//             "bus": "635",
-//             "type": "Bus",
-//             "time": 6.975
-//         }
-//     ]
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 1,
+    "stop_count": 4,
+    "unique_stop_count": 3,
+    "route_length": 5990,
+    "curvature": 1.42963
+  },
+  {
+    "request_id": 2,
+    "stop_count": 5,
+    "unique_stop_count": 3,
+    "route_length": 11570,
+    "curvature": 1.30156
+  },
+  {
+    "request_id": 3,
+    "buses": [
+      "297",
+      "635"
+    ]
+  },
+  {
+    "request_id": 4,
+    "total_time": 11.235,
+    "items": [
+        {
+            "time": 6,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 2,
+            "bus": "297",
+            "type": "Bus",
+            "time": 5.235
+        }
+    ]
+  },
+  {
+    "request_id": 5,
+    "total_time": 24.21,
+    "items": [
+        {
+            "time": 6,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 2,
+            "bus": "297",
+            "type": "Bus",
+            "time": 5.235
+        },
+        {
+            "time": 6,
+            "type": "Wait",
+            "stop_name": "Universam"
+        },
+        {
+            "span_count": 1,
+            "bus": "635",
+            "type": "Bus",
+            "time": 6.975
+        }
+    ]
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect);
-//     }
-//     {
-//         istringstream iss(R"({
-//   "routing_settings": {
-//     "bus_wait_time": 2,
-//     "bus_velocity": 30
-//   },
-//   "base_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "297",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "Biryulyovo Tovarnaya",
-//         "Universam",
-//         "Biryusinka",
-//         "Apteka",
-//         "Biryulyovo Zapadnoye"
-//       ],
-//       "is_roundtrip": true
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "635",
-//       "stops": [
-//         "Biryulyovo Tovarnaya",
-//         "Universam",
-//         "Biryusinka",
-//         "TETs 26",
-//         "Pokrovskaya",
-//         "Prazhskaya"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "828",
-//       "stops": [
-//         "Biryulyovo Zapadnoye",
-//         "TETs 26",
-//         "Biryusinka",
-//         "Universam",
-//         "Pokrovskaya",
-//         "Rossoshanskaya ulitsa"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Biryulyovo Tovarnaya": 2600,
-//         "TETs 26": 1100
-//       },
-//       "longitude": 37.6517,
-//       "name": "Biryulyovo Zapadnoye",
-//       "latitude": 55.574371
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Biryusinka": 760,
-//         "Biryulyovo Tovarnaya": 1380,
-//         "Pokrovskaya": 2460
-//       },
-//       "longitude": 37.645687,
-//       "name": "Universam",
-//       "latitude": 55.587655
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Universam": 890
-//       },
-//       "longitude": 37.653656,
-//       "name": "Biryulyovo Tovarnaya",
-//       "latitude": 55.592028
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Apteka": 210,
-//         "TETs 26": 400
-//       },
-//       "longitude": 37.64839,
-//       "name": "Biryusinka",
-//       "latitude": 55.581065
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Biryulyovo Zapadnoye": 1420
-//       },
-//       "longitude": 37.652296,
-//       "name": "Apteka",
-//       "latitude": 55.580023
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Pokrovskaya": 2850
-//       },
-//       "longitude": 37.642258,
-//       "name": "TETs 26",
-//       "latitude": 55.580685
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Rossoshanskaya ulitsa": 3140
-//       },
-//       "longitude": 37.635517,
-//       "name": "Pokrovskaya",
-//       "latitude": 55.603601
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Pokrovskaya": 3210
-//       },
-//       "longitude": 37.605757,
-//       "name": "Rossoshanskaya ulitsa",
-//       "latitude": 55.595579
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Pokrovskaya": 2260
-//       },
-//       "longitude": 37.603938,
-//       "name": "Prazhskaya",
-//       "latitude": 55.611717
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "750",
-//       "stops": [
-//         "Tolstopaltsevo",
-//         "Rasskazovka"
-//       ],
-//       "is_roundtrip": false
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {
-//         "Rasskazovka": 13800
-//       },
-//       "longitude": 37.20829,
-//       "name": "Tolstopaltsevo",
-//       "latitude": 55.611087
-//     },
-//     {
-//       "type": "Stop",
-//       "road_distances": {},
-//       "longitude": 37.333324,
-//       "name": "Rasskazovka",
-//       "latitude": 55.632761
-//     }
-//   ],
-//   "stat_requests": [
-//     {
-//       "type": "Bus",
-//       "name": "297",
-//       "id": 1
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "635",
-//       "id": 2
-//     },
-//     {
-//       "type": "Bus",
-//       "name": "828",
-//       "id": 3
-//     },
-//     {
-//       "type": "Stop",
-//       "name": "Universam",
-//       "id": 4
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Biryulyovo Zapadnoye",
-//       "to": "Apteka",
-//       "id": 5
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Biryulyovo Zapadnoye",
-//       "to": "Pokrovskaya",
-//       "id": 6
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Biryulyovo Tovarnaya",
-//       "to": "Pokrovskaya",
-//       "id": 7
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Biryulyovo Tovarnaya",
-//       "to": "Biryulyovo Zapadnoye",
-//       "id": 8
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Biryulyovo Tovarnaya",
-//       "to": "Prazhskaya",
-//       "id": 9
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Apteka",
-//       "to": "Biryulyovo Tovarnaya",
-//       "id": 10
-//     },
-//     {
-//       "type": "Route",
-//       "from": "Biryulyovo Zapadnoye",
-//       "to": "Tolstopaltsevo",
-//       "id": 11
-//     }
-//   ]
-// })");
+        ASSERT_EQUAL(str, str_expect);
+    }
+    {
+        istringstream iss(R"({
+  "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
+  "routing_settings": {
+    "bus_wait_time": 2,
+    "bus_velocity": 30
+  },
+  "base_requests": [
+    {
+      "type": "Bus",
+      "name": "297",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "Biryulyovo Tovarnaya",
+        "Universam",
+        "Biryusinka",
+        "Apteka",
+        "Biryulyovo Zapadnoye"
+      ],
+      "is_roundtrip": true
+    },
+    {
+      "type": "Bus",
+      "name": "635",
+      "stops": [
+        "Biryulyovo Tovarnaya",
+        "Universam",
+        "Biryusinka",
+        "TETs 26",
+        "Pokrovskaya",
+        "Prazhskaya"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Bus",
+      "name": "828",
+      "stops": [
+        "Biryulyovo Zapadnoye",
+        "TETs 26",
+        "Biryusinka",
+        "Universam",
+        "Pokrovskaya",
+        "Rossoshanskaya ulitsa"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryulyovo Tovarnaya": 2600,
+        "TETs 26": 1100
+      },
+      "longitude": 37.6517,
+      "name": "Biryulyovo Zapadnoye",
+      "latitude": 55.574371
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryusinka": 760,
+        "Biryulyovo Tovarnaya": 1380,
+        "Pokrovskaya": 2460
+      },
+      "longitude": 37.645687,
+      "name": "Universam",
+      "latitude": 55.587655
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Universam": 890
+      },
+      "longitude": 37.653656,
+      "name": "Biryulyovo Tovarnaya",
+      "latitude": 55.592028
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Apteka": 210,
+        "TETs 26": 400
+      },
+      "longitude": 37.64839,
+      "name": "Biryusinka",
+      "latitude": 55.581065
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Biryulyovo Zapadnoye": 1420
+      },
+      "longitude": 37.652296,
+      "name": "Apteka",
+      "latitude": 55.580023
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Pokrovskaya": 2850
+      },
+      "longitude": 37.642258,
+      "name": "TETs 26",
+      "latitude": 55.580685
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Rossoshanskaya ulitsa": 3140
+      },
+      "longitude": 37.635517,
+      "name": "Pokrovskaya",
+      "latitude": 55.603601
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Pokrovskaya": 3210
+      },
+      "longitude": 37.605757,
+      "name": "Rossoshanskaya ulitsa",
+      "latitude": 55.595579
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Pokrovskaya": 2260
+      },
+      "longitude": 37.603938,
+      "name": "Prazhskaya",
+      "latitude": 55.611717
+    },
+    {
+      "type": "Bus",
+      "name": "750",
+      "stops": [
+        "Tolstopaltsevo",
+        "Rasskazovka"
+      ],
+      "is_roundtrip": false
+    },
+    {
+      "type": "Stop",
+      "road_distances": {
+        "Rasskazovka": 13800
+      },
+      "longitude": 37.20829,
+      "name": "Tolstopaltsevo",
+      "latitude": 55.611087
+    },
+    {
+      "type": "Stop",
+      "road_distances": {},
+      "longitude": 37.333324,
+      "name": "Rasskazovka",
+      "latitude": 55.632761
+    }
+  ],
+  "stat_requests": [
+    {
+      "type": "Bus",
+      "name": "297",
+      "id": 1
+    },
+    {
+      "type": "Bus",
+      "name": "635",
+      "id": 2
+    },
+    {
+      "type": "Bus",
+      "name": "828",
+      "id": 3
+    },
+    {
+      "type": "Stop",
+      "name": "Universam",
+      "id": 4
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Zapadnoye",
+      "to": "Apteka",
+      "id": 5
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Zapadnoye",
+      "to": "Pokrovskaya",
+      "id": 6
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Tovarnaya",
+      "to": "Pokrovskaya",
+      "id": 7
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Tovarnaya",
+      "to": "Biryulyovo Zapadnoye",
+      "id": 8
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Tovarnaya",
+      "to": "Prazhskaya",
+      "id": 9
+    },
+    {
+      "type": "Route",
+      "from": "Apteka",
+      "to": "Biryulyovo Tovarnaya",
+      "id": 10
+    },
+    {
+      "type": "Route",
+      "from": "Biryulyovo Zapadnoye",
+      "to": "Tolstopaltsevo",
+      "id": 11
+    }
+  ]
+})");
 
-//         ostringstream oss;
-//         DataBase db;
-//         Parse(iss, oss, db);
+        ostringstream oss;
+        DataBase db;
+        Parse(iss, oss, db);
 
-//         istringstream iss_expect(R"([
-//   {
-//     "request_id": 1,
-//     "stop_count": 6,
-//     "unique_stop_count": 5,
-//     "route_length": 5880,
-//     "curvature": 1.36159
-//   },
-//   {
-//     "request_id": 2,
-//     "stop_count": 11,
-//     "unique_stop_count": 6,
-//     "route_length": 14810,
-//     "curvature": 1.12195
-//   },
-//   {
-//     "request_id": 3,
-//     "stop_count": 11,
-//     "unique_stop_count": 6,
-//     "route_length": 15790,
-//     "curvature": 1.31245
-//   },
-//   {
-//     "request_id": 4,
-//     "buses": [
-//       "297",
-//       "635",
-//       "828"
-//     ]
-//   },
-//   {
-//     "request_id": 5,
-//     "total_time": 7.42,
-//     "items": [
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Biryulyovo Zapadnoye"
-//         },
-//         {
-//             "span_count": 2,
-//             "bus": "828",
-//             "type": "Bus",
-//             "time": 3
-//         },
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Biryusinka"
-//         },
-//         {
-//             "span_count": 1,
-//             "bus": "297",
-//             "type": "Bus",
-//             "time": 0.42
-//         }
-//     ]
-//   },
-//   {
-//     "request_id": 6,
-//     "total_time": 11.44,
-//     "items": [
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Biryulyovo Zapadnoye"
-//         },
-//         {
-//             "span_count": 4,
-//             "bus": "828",
-//             "type": "Bus",
-//             "time": 9.44
-//         }
-//     ]
-//   },
-//   {
-//     "request_id": 7,
-//     "total_time": 10.7,
-//     "items": [
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Biryulyovo Tovarnaya"
-//         },
-//         {
-//             "span_count": 1,
-//             "bus": "297",
-//             "type": "Bus",
-//             "time": 1.78
-//         },
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Universam"
-//         },
-//         {
-//             "span_count": 1,
-//             "bus": "828",
-//             "type": "Bus",
-//             "time": 4.92
-//         }
-//     ]
-//   },
-//   {
-//     "request_id": 8,
-//     "total_time": 8.56,
-//     "items": [
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Biryulyovo Tovarnaya"
-//         },
-//         {
-//             "span_count": 4,
-//             "bus": "297",
-//             "type": "Bus",
-//             "time": 6.56
-//         }
-//     ]
-//   },
-//   {
-//     "request_id": 9,
-//     "total_time": 16.32,
-//     "items": [
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Biryulyovo Tovarnaya"
-//         },
-//         {
-//             "span_count": 5,
-//             "bus": "635",
-//             "type": "Bus",
-//             "time": 14.32
-//         }
-//     ]
-//   },
-//   {
-//     "request_id": 10,
-//     "total_time": 12.04,
-//     "items": [
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Apteka"
-//         },
-//         {
-//             "span_count": 1,
-//             "bus": "297",
-//             "type": "Bus",
-//             "time": 2.84
-//         },
-//         {
-//             "time": 2,
-//             "type": "Wait",
-//             "stop_name": "Biryulyovo Zapadnoye"
-//         },
-//         {
-//             "span_count": 1,
-//             "bus": "297",
-//             "type": "Bus",
-//             "time": 5.2
-//         }
-//     ]
-//   },
-//   {
-//     "request_id": 11,
-//     "error_message": "not found"
-//   }
-// ])");
+        istringstream iss_expect(R"([
+  {
+    "request_id": 1,
+    "stop_count": 6,
+    "unique_stop_count": 5,
+    "route_length": 5880,
+    "curvature": 1.36159
+  },
+  {
+    "request_id": 2,
+    "stop_count": 11,
+    "unique_stop_count": 6,
+    "route_length": 14810,
+    "curvature": 1.12195
+  },
+  {
+    "request_id": 3,
+    "stop_count": 11,
+    "unique_stop_count": 6,
+    "route_length": 15790,
+    "curvature": 1.31245
+  },
+  {
+    "request_id": 4,
+    "buses": [
+      "297",
+      "635",
+      "828"
+    ]
+  },
+  {
+    "request_id": 5,
+    "total_time": 7.42,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 2,
+            "bus": "828",
+            "type": "Bus",
+            "time": 3
+        },
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryusinka"
+        },
+        {
+            "span_count": 1,
+            "bus": "297",
+            "type": "Bus",
+            "time": 0.42
+        }
+    ]
+  },
+  {
+    "request_id": 6,
+    "total_time": 11.44,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 4,
+            "bus": "828",
+            "type": "Bus",
+            "time": 9.44
+        }
+    ]
+  },
+  {
+    "request_id": 7,
+    "total_time": 10.7,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Tovarnaya"
+        },
+        {
+            "span_count": 1,
+            "bus": "297",
+            "type": "Bus",
+            "time": 1.78
+        },
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Universam"
+        },
+        {
+            "span_count": 1,
+            "bus": "828",
+            "type": "Bus",
+            "time": 4.92
+        }
+    ]
+  },
+  {
+    "request_id": 8,
+    "total_time": 8.56,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Tovarnaya"
+        },
+        {
+            "span_count": 4,
+            "bus": "297",
+            "type": "Bus",
+            "time": 6.56
+        }
+    ]
+  },
+  {
+    "request_id": 9,
+    "total_time": 16.32,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Tovarnaya"
+        },
+        {
+            "span_count": 5,
+            "bus": "635",
+            "type": "Bus",
+            "time": 14.32
+        }
+    ]
+  },
+  {
+    "request_id": 10,
+    "total_time": 12.04,
+    "items": [
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Apteka"
+        },
+        {
+            "span_count": 1,
+            "bus": "297",
+            "type": "Bus",
+            "time": 2.84
+        },
+        {
+            "time": 2,
+            "type": "Wait",
+            "stop_name": "Biryulyovo Zapadnoye"
+        },
+        {
+            "span_count": 1,
+            "bus": "297",
+            "type": "Bus",
+            "time": 5.2
+        }
+    ]
+  },
+  {
+    "request_id": 11,
+    "error_message": "not found"
+  }
+])");
 
-//         string str = oss.str();
-//         string str_expect = iss_expect.str();
+        string str = oss.str();
+        string str_expect = iss_expect.str();
 
-//         ASSERT_EQUAL(str, str_expect); // TODO: bring back
-//     }
+        ASSERT_EQUAL(str, str_expect); // TODO: bring back
+    }
     {
         ifstream input("src/long.json");
+        ostringstream oss;
         DataBase db;
         LOG_DURATION("Long Test");
-        Parse(input, cout, db);
+        Parse(input, oss, db);
     }
 }
 
@@ -4152,24 +4162,33 @@ void TestParseRouteQuery()
 
 void Test15Failed()
 {
-    // ifstream input("src/test15failed.json");
-    ifstream input("src/json_example.json");
-    // ifstream input("sniffed_cut.json");
+    ifstream input("src/test15failed.json");
+    ostringstream oss;
     DataBase db;
 
-    Parse(input, cout, db);
+    Parse(input, oss, db);
 }
 
 void TestRender0()
 {
     ifstream input("src/render_example_0.json");
+    ostringstream oss;
     DataBase db;
-    Parse(input, cout, db);
+    Parse(input, oss, db);
 }
 
 void TestRender1()
 {
     ifstream input("src/render_example_1.json");
+    ostringstream oss;
     DataBase db;
-    Parse(input, cout, db);
+    Parse(input, oss, db);
+}
+
+void TestRender2()
+{
+    ifstream input("src/render_example_2.json");
+    ostringstream oss;
+    DataBase db;
+    Parse(input, oss, db);
 }

@@ -8733,36 +8733,43 @@
             }
         }
     ],
-    "routing_settings": {
-        "bus_wait_time": 823,
-        "bus_velocity": 526
-    },
     "render_settings": {
-        "width": 1200,
-        "height": 1200,
-        "padding": 50,
-        "stop_radius": 5,
-        "line_width": 14,
-        "stop_label_font_size": 20,
-        "stop_label_offset": [
-            7,
-            -3
-        ],
-        "underlayer_color": [
-            255,
-            255,
-            255,
-            0.85
-        ],
-        "underlayer_width": 3,
         "color_palette": [
             "green",
             [
-                255,
-                160,
+                254,
+                0,
+                13,
+                0.2
+            ],
+            [   0,
+                0,
                 0
             ],
-            "red"
-        ]
+            "blue",
+            "brown",
+            "orange"
+        ],
+        "height": 1.85,
+        "line_width": 11.1,
+        "padding": 0,
+        "stop_label_font_size": 7,
+        "stop_label_offset": [
+            0.3,
+            -3.2
+        ],
+        "stop_radius": 1.91,
+        "underlayer_color": [
+            20,
+            0,
+            251,
+            0.12
+        ],
+        "underlayer_width": 2.4,
+        "width": 98.4
+    },
+    "routing_settings": {
+        "bus_velocity": 40,
+        "bus_wait_time": 6
     }
 }
