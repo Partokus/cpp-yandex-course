@@ -78,7 +78,6 @@ Router<Weight>::Router(const Graph &graph)
         all_routes_(graph.GetVertexCount())
 {
     // Предварительно вычисляем маршруты из каждой вершины
-    std::cout << "vertex count = " << graph.GetVertexCount() << std::endl;
     for (VertexId vertex = 0; vertex < graph.GetVertexCount(); ++vertex)
     {
         all_routes_[vertex] = ComputeRoutesFromVertex(vertex);

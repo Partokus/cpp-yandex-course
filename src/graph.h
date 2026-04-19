@@ -71,7 +71,6 @@ DirectedWeightedGraph<Weight>::DirectedWeightedGraph(size_t vertex_count) : inci
 template <typename Weight>
 EdgeId DirectedWeightedGraph<Weight>::AddEdge(const Edge<Weight> &edge)
 {
-    std::cout << "edge: from = " << edge.from << ", to = " << edge.to << ", weight = " << edge.weight << std::endl;
     edges_.push_back(edge);
     const EdgeId id = edges_.size() - 1;
     incidence_lists_[edge.from].push_back(id);
