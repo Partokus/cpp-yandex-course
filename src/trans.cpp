@@ -73,9 +73,10 @@ void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, RenderSetti
             if (road_distance)
                 info.route_length_road += *road_distance;
             else
+            {
                 throw runtime_error("Can't calculate road distance: bus " +
                     bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name);
-                // cout << "error calc road dist = " << bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name << endl;
+            }
             if (not bus->ring)
             {
                 road_distance = CalcRoadDistance(next_stop, stop);
@@ -172,11 +173,7 @@ void DataBase::CreateGraph(bool debug)
             StopPtr &from = *it;
             StopPtr &to = *it_next;
             size_t from_pos = distance(bus->stops.begin(), it);
-            if (from_pos > 100)
-                throw runtime_error("bigger1");
             size_t to_pos = distance(bus->stops.begin(), it_next);
-            if (to_pos > 100)
-                throw runtime_error("bigger2");
 
             auto it_road_route = road_route_length.find(from);
             if (it_road_route == road_route_length.end())
