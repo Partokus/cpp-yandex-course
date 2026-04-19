@@ -75,11 +75,9 @@ private:
 template <typename Weight>
 Router<Weight>::Router(const Graph &graph)
     : graph_(graph),
-        all_routes_(graph.GetVertexCount())
+      all_routes_(graph.GetVertexCount())
 {
     // Предварительно вычисляем маршруты из каждой вершины
-    if (graph.GetVertexCount() > 10'000)
-        throw std::runtime_error("a lot vertexes");
     for (VertexId vertex = 0; vertex < graph.GetVertexCount(); ++vertex)
     {
         all_routes_[vertex] = ComputeRoutesFromVertex(vertex);
