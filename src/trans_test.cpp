@@ -4159,3 +4159,17 @@ void Test15Failed()
 
     Parse(input, cout, db);
 }
+
+void TestRender0()
+{
+    ifstream input("src/render_example_0.json");
+    DataBase db;
+    Parse(input, cout, db);
+}
+
+void TestRender1()
+{
+    ifstream input("src/render_example_1.json");
+    DataBase db;
+    Parse(input, cout, db);
+}

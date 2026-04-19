@@ -29,6 +29,8 @@ void TestAll()
     // RUN_TEST(tr, TestMakeRenderSettigs);
     // RUN_TEST(tr, Test15Failed);
     // RUN_TEST(tr, TestCreateMap);
+    RUN_TEST(tr, TestRender0);
+    RUN_TEST(tr, TestRender1);
 }
 
 void Profile()
@@ -37,7 +39,7 @@ void Profile()
 
 int main()
 {
-    // TestAll();
+    TestAll();
 
     DataBase db;
     Parse(cin, cout, db);
