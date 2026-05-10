@@ -181,8 +181,8 @@ void DataBase::CreateGraph(bool debug)
                 return;
             double road_distance = it_length->second; // weight, в метрах
 
-            Graph::VertexId vertex_id_from = route_unit_to_vertex_id[from][bus][from_pos];
-            Graph::VertexId vertex_id_to = route_unit_to_vertex_id[to][bus][to_pos];
+            Graph::VertexId vertex_id_from = route_unit_to_vertex_id.at(from).at(bus).at(from_pos);
+            Graph::VertexId vertex_id_to = route_unit_to_vertex_id.at(to).at(bus).at(to_pos);
 
             Edge edge{
                 .from = vertex_id_from,
@@ -211,7 +211,7 @@ void DataBase::CreateGraph(bool debug)
                 if (it == bus->stops.begin())
                 {
                     size_t last_stop_pos = bus->stops.size() - 1U;
-                    Graph::VertexId vertex_id_from_with_wait_bus = route_unit_to_vertex_id[from][bus][last_stop_pos];
+                    Graph::VertexId vertex_id_from_with_wait_bus = route_unit_to_vertex_id.at(from).at(bus).at(last_stop_pos);
                     edge.from = vertex_id_from_with_wait_bus;
                     edge.weight += routing_settings.meters_past_while_wait_bus;
                     graph.AddEdge(edge);
@@ -387,7 +387,7 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
         is_from_abstract_vertex = true;
     }
     else
-        vertex_id_from = db.route_unit_to_vertex_id[from].begin()->second.begin()->second;
+        vertex_id_from = db.route_unit_to_vertex_id.at(from).cbegin()->second.cbegin()->second;
 
     if (auto it = db.abstract_stop_to_vertex_id.find(to);
         it != db.abstract_stop_to_vertex_id.end())
@@ -396,7 +396,7 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
         is_to_abstract_vertex = true;
     }
     else
-        vertex_id_to = db.route_unit_to_vertex_id[to].begin()->second.begin()->second;
+        vertex_id_to = db.route_unit_to_vertex_id.at(to).cbegin()->second.cbegin()->second;
 
     std::optional<RouteInfo> router_info = router.BuildRoute(vertex_id_from, vertex_id_to);
 
@@ -453,7 +453,7 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
         auto it_to = db.vertex_id_to_route_unit.find(edge.to);
         if (it_to == db.vertex_id_to_route_unit.end())
         {
-            StopPtr stop_to = db.vertex_id_to_abstract_stop[edge.to];
+            StopPtr stop_to = db.vertex_id_to_abstract_stop.at(edge.to);
             bus_item.bus = bus_from;
             push_items(bus_item, WaitItem{ .stop = stop_to });
             // в следующем цикле stop_from будет равен абстрактной вершине,
@@ -531,7 +531,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
 
     const map<string, Node> &render_settings_json = root.at("render_settings"s).AsMap();
 
-    db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json));
+    db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json), true);
 
     Router router{db.graph};
 
@@ -609,10 +609,10 @@ void Parse(istream &is, ostream &os, DataBase &db)
 
             std::optional<RouteQueryAnswer> answer = ParseRouteQuery(stop_from, stop_to, db, router);
 
-            if (answer and answer->total_time > 1508.20 and answer->total_time < 1508.35)
-            {
-                throw runtime_error("got here!");
-            }
+            // if (answer and answer->total_time > 1508.20 and answer->total_time < 2000.0)
+            // {
+            //     throw runtime_error("got here!");
+            // }
 
             if (not answer)
                 os << "    \"error_message\": \"not found\"\n";
