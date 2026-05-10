@@ -208,7 +208,7 @@ public:
     template <typename T>
     void Add(T obj)
     {
-        _objects.push_back(make_unique<T>(move(obj)));
+        _objects.push_back(make_unique<T>(std::move(obj)));
     }
 
     void Render(ostream &os);

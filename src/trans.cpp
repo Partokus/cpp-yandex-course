@@ -325,8 +325,8 @@ BusPtr ParseAddBusQuery(const map<string, Json::Node> &req, Stops &stops)
 
     auto push_stop = [&stops, &result](string name)
     {
-        StopPtr stop = make_shared<Stop>(move(Stop{ move(name) }));
-        auto [it, inserted] = stops.insert(move(stop));
+        StopPtr stop = make_shared<Stop>(Stop{ std::move(name) });
+        auto [it, inserted] = stops.insert(std::move(stop));
         result->stops.push_back(*it);
         it->get()->buses.insert(result);
     };
@@ -486,7 +486,7 @@ std::optional<RouteQueryAnswer> ParseRouteQuery(StopPtr from, StopPtr to, DataBa
     }
 
     router.ReleaseRoute(router_info->id);
-    return { move(result) };
+    return { std::move(result) };
 }
 
 void Parse(istream &is, ostream &os, DataBase &db)
@@ -519,7 +519,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
         else if (type == "Bus")
         {
             BusPtr bus = ParseAddBusQuery(req, db.stops);
-            db.buses.insert(move(bus));
+            db.buses.insert(std::move(bus));
         }
     }
 
@@ -531,7 +531,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
 
     const map<string, Node> &render_settings_json = root.at("render_settings"s).AsMap();
 
-    db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json), true);
+    db.CreateInfo(bus_wait_time, bus_velocity, MakeRenderSettigs(render_settings_json));
 
     Router router{db.graph};
 

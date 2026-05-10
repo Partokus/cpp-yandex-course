@@ -5,7 +5,7 @@ using namespace std;
 namespace Json
 {
 
-Document::Document(Node root) : root(move(root))
+Document::Document(Node root) : root(std::move(root))
 {
 }
 
@@ -29,7 +29,7 @@ Node LoadArray(istream &input)
         result.push_back(LoadNode(input));
     }
 
-    return Node(move(result));
+    return Node(std::move(result));
 }
 
 Node LoadDouble(istream &input)
@@ -63,7 +63,7 @@ Node LoadString(istream &input)
 {
     string line;
     getline(input, line, '"');
-    return Node(move(line));
+    return Node(std::move(line));
 }
 
 Node LoadDict(istream &input)
@@ -79,10 +79,10 @@ Node LoadDict(istream &input)
 
         string key = LoadString(input).AsString();
         input >> c;
-        result.emplace(move(key), LoadNode(input));
+        result.emplace(std::move(key), LoadNode(input));
     }
 
-    return Node(move(result));
+    return Node(std::move(result));
 }
 
 Node LoadNode(istream &input)

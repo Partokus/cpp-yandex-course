@@ -2040,6 +2040,13 @@ void TestParseJson()
 void TestParse()
 {
     {
+        ifstream input("src/long.json");
+        ostringstream oss;
+        DataBase db;
+        LOG_DURATION("Long Test");
+        Parse(input, oss, db);
+    }
+    {
         istringstream iss(R"({"routing_settings": {"bus_wait_time": 6, "bus_velocity": 40},
   "render_settings": {"width": 1200, "height": 1200, "padding": 50, "stop_radius": 5, "line_width": 14, "stop_label_font_size": 20, "stop_label_offset": [7, -3], "underlayer_color": [255, 255, 255, 0.85], "underlayer_width": 3, "color_palette": ["green", [255, 160, 0], "red"]},
   "base_requests": [
@@ -3751,13 +3758,6 @@ void TestParse()
         string str_expect = iss_expect.str();
 
         ASSERT_EQUAL(str, str_expect); // TODO: bring back
-    }
-    {
-        ifstream input("src/long.json");
-        ostringstream oss;
-        DataBase db;
-        LOG_DURATION("Long Test");
-        Parse(input, oss, db);
     }
 }
 
