@@ -12,7 +12,6 @@
 #include <queue>
 #include <functional>
 #include <limits>
-#include <iostream>
 
 namespace Graph
 {
@@ -24,6 +23,7 @@ private:
     using Graph = DirectedWeightedGraph<Weight>;
 
 public:
+    // Конструктор теперь «легкий» — работает за O(1)
     Router(const Graph &graph);
 
     using RouteId = uint64_t;
@@ -42,21 +42,21 @@ public:
 private:
     const Graph &graph_;
 
-    // Структура для хранения предварительно вычисленных маршрутов
     struct VertexRoutes
     {
         std::vector<Weight> distances;
         std::vector<std::optional<EdgeId>> prev_edges;
     };
 
-    std::vector<VertexRoutes> all_routes_;
+    // Кэш для результатов Дейкстры. Ключ — стартовая вершина 'from'
+    // mutable позволяет изменять кэш внутри const-метода BuildRoute
+    mutable std::unordered_map<VertexId, VertexRoutes> computed_routes_cache_;
 
     // Кэш развернутых маршрутов
     using ExpandedRoute = std::vector<EdgeId>;
     mutable RouteId next_route_id_ = 0;
     mutable std::unordered_map<RouteId, ExpandedRoute> expanded_routes_cache_;
 
-    // Вспомогательная структура для очереди с приоритетом
     struct QueueElement
     {
         VertexId vertex;
@@ -68,20 +68,15 @@ private:
         }
     };
 
-    // Вычисление маршрутов из одной вершины с помощью Дейкстры
+    // Вычисление маршрутов из конкретной вершины по требованию
     VertexRoutes ComputeRoutesFromVertex(VertexId source) const;
 };
 
 template <typename Weight>
 Router<Weight>::Router(const Graph &graph)
-    : graph_(graph),
-      all_routes_(graph.GetVertexCount())
+    : graph_(graph)
 {
-    // Предварительно вычисляем маршруты из каждой вершины
-    for (VertexId vertex = 0; vertex < graph.GetVertexCount(); ++vertex)
-    {
-        all_routes_[vertex] = ComputeRoutesFromVertex(vertex);
-    }
+    // Ничего не считаем заранее, экономим CPU и RAM на старте
 }
 
 template <typename Weight>
@@ -92,7 +87,6 @@ typename Router<Weight>::VertexRoutes Router<Weight>::ComputeRoutesFromVertex(Ve
     result.distances.assign(vertex_count, std::numeric_limits<Weight>::max());
     result.prev_edges.assign(vertex_count, std::nullopt);
 
-    // Приоритетная очередь для выбора вершины с минимальным расстоянием
     std::priority_queue<QueueElement, std::vector<QueueElement>, std::greater<QueueElement>> queue;
 
     result.distances[source] = 0;
@@ -103,16 +97,20 @@ typename Router<Weight>::VertexRoutes Router<Weight>::ComputeRoutesFromVertex(Ve
         auto [current_vertex, current_distance] = queue.top();
         queue.pop();
 
-        // Если мы уже нашли более короткий путь до этой вершины, пропускаем
         if (current_distance > result.distances[current_vertex])
         {
             continue;
         }
 
-        // Релаксация всех исходящих ребер
         for (EdgeId edge_id : graph_.GetIncidentEdges(current_vertex))
         {
             const auto &edge = graph_.GetEdge(edge_id);
+            
+            // Защита от переполнения: если текущее расстояние "бесконечность", пропускаем релаксацию
+            if (result.distances[current_vertex] == std::numeric_limits<Weight>::max()) {
+                continue;
+            }
+
             Weight new_distance = result.distances[current_vertex] + edge.weight;
 
             if (new_distance < result.distances[edge.to])
@@ -130,15 +128,23 @@ typename Router<Weight>::VertexRoutes Router<Weight>::ComputeRoutesFromVertex(Ve
 template <typename Weight>
 std::optional<typename Router<Weight>::RouteInfo> Router<Weight>::BuildRoute(VertexId from, VertexId to) const
 {
-    const auto &routes = all_routes_[from];
+    // Шаг 1: Проверяем, запускали ли мы уже Дейкстру из вершины 'from'
+    auto it = computed_routes_cache_.find(from);
+    if (it == computed_routes_cache_.end())
+    {
+        // Если нет — запускаем один раз и сохраняем в кэш
+        it = computed_routes_cache_.emplace(from, ComputeRoutesFromVertex(from)).first;
+    }
 
-    // Если путь не существует
+    const auto &routes = it->second;
+
+    // Шаг 2: Проверяем достижимость целевой вершины
     if (routes.distances[to] == std::numeric_limits<Weight>::max())
     {
         return std::nullopt;
     }
 
-    // Восстанавливаем путь по обратным ссылкам
+    // Шаг 3: Восстанавливаем путь
     std::vector<EdgeId> edges;
     VertexId current = to;
 
@@ -147,7 +153,6 @@ std::optional<typename Router<Weight>::RouteInfo> Router<Weight>::BuildRoute(Ver
         const auto &edge_id = routes.prev_edges[current];
         if (!edge_id)
         {
-            // Это не должно происходить при корректных данных
             return std::nullopt;
         }
         edges.push_back(*edge_id);
