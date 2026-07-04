@@ -4,6 +4,8 @@ using namespace std;
 using namespace Json;
 using namespace Svg;
 
+using BusToColorMap = map<BusWeakPtr, Svg::Color, NameWeakPtrKeyLess<BusWeakPtr>>;
+
 Svg::Color MakeColor(const Json::Node &color)
 {
     Color result{};
@@ -67,12 +69,72 @@ RenderSettings MakeRenderSettigs(const map<string, Json::Node> &render_settings)
     for (const Node &node : color_palette)
         result.color_palette.push_back(MakeColor(node));
 
-    result.bus_label_font_size = render_settings.at("bus_label_font_size"s).AsInt();
-    const vector<Node> &bus_label_offset = render_settings.at("bus_label_offset"s).AsArray();
-    result.bus_label_offset = Point{ bus_label_offset[0].AsDouble(), bus_label_offset[1].AsDouble() };
+    if (render_settings.count("bus_label_font_size"s))
+    {
+        result.bus_label_font_size = render_settings.at("bus_label_font_size"s).AsInt();
+        const vector<Node> &bus_label_offset = render_settings.at("bus_label_offset"s).AsArray();
+        result.bus_label_offset = Point{ bus_label_offset[0].AsDouble(), bus_label_offset[1].AsDouble() };
+    }
 
     return result;
 }
+
+// Проекция координат на карту
+class PointCalculator
+{
+public:
+    PointCalculator(DataBase &db)
+        : _padding(db.render_settings.padding)
+    {
+        const RenderSettings &rs = db.render_settings;
+
+        auto [it_min_lat, it_max_lat] = minmax_element(db.stops.begin(), db.stops.end(),
+            [](const StopPtr &lhs, const StopPtr &rhs)
+            { return lhs->latitude < rhs->latitude; });
+        auto [it_min_lon, it_max_lon] = minmax_element(db.stops.begin(), db.stops.end(),
+            [](const StopPtr &lhs, const StopPtr &rhs)
+            { return lhs->longitude < rhs->longitude; });
+        double min_lat = it_min_lat->get()->latitude;
+        double max_lat = it_max_lat->get()->latitude;
+        double min_lon = it_min_lon->get()->longitude;
+        double max_lon = it_max_lon->get()->longitude;
+
+        double zoom_coef = 0.0;
+        double diff_lon = max_lon - min_lon;
+        double diff_lat = max_lat - min_lat;
+        double width_zoom_coef = 0.0;
+        if (diff_lon != 0.0)
+            width_zoom_coef = (rs.width - 2.0 * rs.padding) / diff_lon;
+        double height_zoom_coef = 0.0;
+        if (diff_lat != 0.0)
+            height_zoom_coef = (rs.height - 2.0 * rs.padding) / diff_lat;
+
+        if (diff_lon != 0.0 and diff_lat != 0.0)
+            zoom_coef = min(width_zoom_coef, height_zoom_coef);
+        else if (diff_lon != 0.0)
+            zoom_coef = width_zoom_coef;
+        else
+            zoom_coef = height_zoom_coef;
+
+        _zoom_coef = zoom_coef;
+        _min_lon = min_lon;
+        _max_lat = max_lat;
+    }
+
+    Svg::Point Calculate(double lat, double lon) const
+    {
+        return {
+            (lon - _min_lon) * _zoom_coef + _padding,
+            (_max_lat - lat) * _zoom_coef + _padding
+        };
+    }
+
+private:
+    double _padding = 0.0;
+    double _min_lon = 0.0;
+    double _max_lat = 0.0;
+    double _zoom_coef = 0.0;
+};
 
 string CreateMap(DataBase &db)
 {
@@ -80,48 +142,15 @@ string CreateMap(DataBase &db)
     Svg::Text text{};
     Svg::Text text_back{};
 
+    PointCalculator point_calculator{db};
+
     // Отрисовка маршрутов
-    auto [it_min_lat, it_max_lat] = minmax_element(db.stops.begin(), db.stops.end(),
-        [](const StopPtr &lhs, const StopPtr &rhs)
-        { return lhs->latitude < rhs->latitude; });
-    auto [it_min_lon, it_max_lon] = minmax_element(db.stops.begin(), db.stops.end(),
-        [](const StopPtr &lhs, const StopPtr &rhs)
-        { return lhs->longitude < rhs->longitude; });
-    double min_lat = it_min_lat->get()->latitude;
-    double max_lat = it_max_lat->get()->latitude;
-    double min_lon = it_min_lon->get()->longitude;
-    double max_lon = it_max_lon->get()->longitude;
-
-    double zoom_coef = 0.0;
-    double diff_lon = max_lon - min_lon;
-    double diff_lat = max_lat - min_lat;
-    double width_zoom_coef = 0.0;
-    if (diff_lon != 0.0)
-        width_zoom_coef = (rs.width - 2.0 * rs.padding) / diff_lon;
-    double height_zoom_coef = 0.0;
-    if (diff_lat != 0.0)
-        height_zoom_coef = (rs.height - 2.0 * rs.padding) / diff_lat;
-
-    if (diff_lon != 0.0 and diff_lat != 0.0)
-        zoom_coef = min(width_zoom_coef, height_zoom_coef);
-    else if (diff_lon != 0.0)
-        zoom_coef = width_zoom_coef;
-    else
-        zoom_coef = height_zoom_coef;
-
-    auto CalcPoint = [min_lon, max_lat, zoom_coef, &rs](double lat, double lon) {
-        return Svg::Point{
-            (lon - min_lon) * zoom_coef + rs.padding,
-            (max_lat - lat) * zoom_coef + rs.padding
-        };
-    };
-
-    map<BusWeakPtr, Svg::Color, NameWeakPtrKeyLess<BusWeakPtr>> buses{};
+    BusToColorMap buses_to_color{};
     for (const BusPtr &bus : db.buses)
-        buses.insert({bus, Svg::Color{}});
+        buses_to_color.insert({bus, Svg::Color{}});
 
     auto it_color = rs.color_palette.begin();
-    for (auto &[bus, bus_color]  : buses)
+    for (auto &[bus, bus_color] : buses_to_color)
     {
         bus_color = *it_color;
         if (++it_color == rs.color_palette.end())
@@ -134,21 +163,21 @@ string CreateMap(DataBase &db)
         SetStrokeLineCap("round").
         SetStrokeLineJoin("round");
 
-    for (auto &[bus, bus_color]  : buses)
+    for (auto &[bus, bus_color] : buses_to_color)
     {
         polyline.SetStrokeColor(bus_color);
 
         const vector<StopPtr> &stops = bus.lock()->stops;
         for (const StopPtr &stop : stops)
         {
-            polyline.AddPoint(CalcPoint(stop->latitude, stop->longitude));
+            polyline.AddPoint(point_calculator.Calculate(stop->latitude, stop->longitude));
         }
 
         if (not bus.lock()->ring)
         {
             for (auto it = next(stops.rbegin()); it != stops.rend(); ++it)
             {
-                polyline.AddPoint(CalcPoint(it->get()->latitude, it->get()->longitude));
+                polyline.AddPoint(point_calculator.Calculate(it->get()->latitude, it->get()->longitude));
             }
         }
 
@@ -169,7 +198,7 @@ string CreateMap(DataBase &db)
         SetStrokeLineCap("round").
         SetStrokeLineJoin("round");
 
-    for (auto &[bus_ptr, bus_color]  : buses)
+    for (auto &[bus_ptr, bus_color] : buses_to_color)
     {
         Bus &bus = *bus_ptr.lock().get();
         StopPtr first_stop = bus.stops.front();
@@ -178,7 +207,7 @@ string CreateMap(DataBase &db)
         text.SetFillColor(bus_color);
         text_back.SetData(bus.name);
 
-        Svg::Point first_stop_point = CalcPoint(first_stop->latitude, first_stop->longitude);
+        Svg::Point first_stop_point = point_calculator.Calculate(first_stop->latitude, first_stop->longitude);
         text.SetPoint(first_stop_point);
         text_back.SetPoint(first_stop_point);
         doc.Add(text_back);
@@ -188,7 +217,7 @@ string CreateMap(DataBase &db)
 
         if (not bus.ring and first_stop->name != last_stop->name)
         {
-            Svg::Point last_stop_point = CalcPoint(last_stop->latitude, last_stop->longitude);
+            Svg::Point last_stop_point = point_calculator.Calculate(last_stop->latitude, last_stop->longitude);
             text.SetPoint(last_stop_point);
             text_back.SetPoint(last_stop_point);
             doc.Add(text_back);
@@ -202,7 +231,7 @@ string CreateMap(DataBase &db)
         SetRadius(rs.stop_radius);
     for (const StopPtr &stop : db.sorted_stops)
     {
-        Point p = CalcPoint(stop->latitude, stop->longitude);
+        Point p = point_calculator.Calculate(stop->latitude, stop->longitude);
         circle.SetCenter(p);
         doc.Add(circle);
     }
@@ -220,7 +249,7 @@ string CreateMap(DataBase &db)
         SetStrokeLineJoin("round");
     for (const StopPtr &stop : db.sorted_stops)
     {
-        Point p = CalcPoint(stop->latitude, stop->longitude);
+        Point p = point_calculator.Calculate(stop->latitude, stop->longitude);
 
         text.SetData(stop->name);
         text.SetPoint(p);

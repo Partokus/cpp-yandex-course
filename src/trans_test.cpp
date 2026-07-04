@@ -4193,3 +4193,27 @@ void TestRender2()
     DataBase db;
     Parse(input, oss, db);
 }
+
+void TestRenderBusNames()
+{
+    {
+        ifstream input("src/render_example_3.json");
+        ifstream input_expect("src/render_example_expect_3.txt");
+        string expect;
+        getline(input_expect, expect);
+        ostringstream oss;
+        DataBase db;
+        Parse(input, oss, db);
+        ASSERT_EQUAL(db.map_svg, expect);
+    }
+    {
+        ifstream input("src/render_example_4.json");
+        ifstream input_expect("src/render_example_expect_4.txt");
+        string expect;
+        getline(input_expect, expect);
+        ostringstream oss;
+        DataBase db;
+        Parse(input, oss, db);
+        ASSERT_EQUAL(db.map_svg, expect);
+    }
+}

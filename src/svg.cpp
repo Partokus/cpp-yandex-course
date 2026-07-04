@@ -179,13 +179,13 @@ void TestDocument()
         Document doc{};
         ostringstream oss;
         Polyline{}.AddPoint({1.5, 2.6}).Render(oss);
-        ASSERT_EQUAL(oss.str(), "<polyline points=\"1.5,2.6 \" fill=\"none\" stroke=\"none\" stroke-width=\"1\" />");
+        ASSERT_EQUAL(oss.str(), "<polyline points=\"1.5,2.6\" fill=\"none\" stroke=\"none\" stroke-width=\"1\" />");
     }
     {
         Document doc{};
         ostringstream oss;
         Polyline{}.AddPoint({1.5, 2.6}).AddPoint({2.0, 2.0}).AddPoint({3.5, 3.5}).Render(oss);
-        ASSERT_EQUAL(oss.str(), "<polyline points=\"1.5,2.6 2,2 3.5,3.5 \" fill=\"none\" stroke=\"none\" stroke-width=\"1\" />");
+        ASSERT_EQUAL(oss.str(), "<polyline points=\"1.5,2.6 2,2 3.5,3.5\" fill=\"none\" stroke=\"none\" stroke-width=\"1\" />");
     }
     {
         Document doc{};
@@ -215,6 +215,6 @@ void TestDocument()
         doc.Add(Polyline{}.AddPoint({1.5, 2.6}).AddPoint({2.0, 2.0}).AddPoint({3.5, 3.5}));
         doc.Add(Text{}.SetData("Lets go").SetFontFamily("Vernanda"));
         doc.Render(oss);
-        ASSERT_EQUAL(oss.str(), "<?xml version=\"1.0\" encoding=\"UTF-8\" ?><svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><circle cx=\"1\" cy=\"1\" r=\"1\" fill=\"white\" stroke=\"black\" stroke-width=\"5.5\" stroke-linecap=\"MyLineCap\" stroke-linejoin=\"MyLineJoin\" /><polyline points=\"1.5,2.6 2,2 3.5,3.5 \" fill=\"none\" stroke=\"none\" stroke-width=\"1\" /><text x=\"0\" y=\"0\" dx=\"0\" dy=\"0\" font-size=\"1\" font-family=\"Vernanda\" fill=\"none\" stroke=\"none\" stroke-width=\"1\" >Lets go</text></svg>");
+        ASSERT_EQUAL(oss.str(), "<?xml version=\"1.0\" encoding=\"UTF-8\" ?><svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><circle cx=\"1\" cy=\"1\" r=\"1\" fill=\"white\" stroke=\"black\" stroke-width=\"5.5\" stroke-linecap=\"MyLineCap\" stroke-linejoin=\"MyLineJoin\" /><polyline points=\"1.5,2.6 2,2 3.5,3.5\" fill=\"none\" stroke=\"none\" stroke-width=\"1\" /><text x=\"0\" y=\"0\" dx=\"0\" dy=\"0\" font-size=\"1\" font-family=\"Vernanda\" fill=\"none\" stroke=\"none\" stroke-width=\"1\" >Lets go</text></svg>");
     }
 }

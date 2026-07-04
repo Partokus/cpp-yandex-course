@@ -32,6 +32,7 @@ void TestAll()
     RUN_TEST(tr, TestRender0);
     RUN_TEST(tr, TestRender1);
     RUN_TEST(tr, TestRender2);
+    RUN_TEST(tr, TestRenderBusNames);
 }
 
 void Profile()

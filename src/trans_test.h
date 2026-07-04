@@ -17,3 +17,4 @@ void Test15Failed();
 void TestRender0();
 void TestRender1();
 void TestRender2();
+void TestRenderBusNames();
