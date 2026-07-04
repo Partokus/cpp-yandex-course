@@ -1060,16 +1060,16 @@ void TestDataBaseCreateInfo()
         db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7};
         db.buses = {bus1, bus2, bus3};
 
-        // for (const auto &bus : db.buses)
-        // {
-        //     for (auto it = bus->stops.begin(); it != bus->stops.end(); ++it)
-        //     {
-        //         auto it_next = next(it);
-        //         if (it_next == bus->stops.end())
-        //             break;
-        //         db.road_route_length[*it][*it_next] = 1;
-        //     }
-        // }
+        for (StopPtr stop : db.stops)
+        {
+            for (StopPtr stop_next : db.stops)
+            {
+                if (stop->name != stop_next->name)
+                {
+                    db.road_route_length[stop][stop_next] = 1;
+                }
+            }
+        }
 
         db.CreateInfo();
 
@@ -1099,6 +1099,17 @@ void TestDataBaseCreateInfo()
         db.stops = {stop1, stop2, stop3, stop4, stop5, stop6, stop7, stop8};
         db.buses = {bus1, bus2};
 
+        for (StopPtr stop : db.stops)
+        {
+            for (StopPtr stop_next : db.stops)
+            {
+                if (stop->name != stop_next->name)
+                {
+                    db.road_route_length[stop][stop_next] = 1;
+                }
+            }
+        }
+
         db.CreateInfo();
 
         ASSERT_EQUAL(db.buses_info[bus1].stops_on_route, 6U);
@@ -1121,10 +1132,16 @@ void TestDataBaseCreateInfo()
         db.stops = {stop1, stop2, stop3};
         db.buses = {bus1};
 
-        db.road_route_length[stop1][stop2] = 1000;
-        db.road_route_length[stop2][stop1] = 1000;
-        db.road_route_length[stop2][stop3] = 1500;
-        db.road_route_length[stop3][stop2] = 1500;
+        for (StopPtr stop : db.stops)
+        {
+            for (StopPtr stop_next : db.stops)
+            {
+                if (stop->name != stop_next->name)
+                {
+                    db.road_route_length[stop][stop_next] = 1;
+                }
+            }
+        }
 
         db.CreateInfo();
 
@@ -2043,6 +2060,7 @@ void TestParse()
         ifstream input("src/long.json");
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         LOG_DURATION("Long Test");
         Parse(input, oss, db);
     }
@@ -2152,6 +2170,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -2321,6 +2340,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -2502,6 +2522,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -2674,6 +2695,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -2845,6 +2867,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -3051,6 +3074,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -3099,6 +3123,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -3147,6 +3172,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -3279,6 +3305,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([
@@ -3581,6 +3608,7 @@ void TestParse()
 
         ostringstream oss;
         DataBase db;
+        db.ignore_road_route_length = true;
         Parse(iss, oss, db);
 
         istringstream iss_expect(R"([

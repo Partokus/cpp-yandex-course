@@ -35,6 +35,7 @@ struct DataBase
 
     UnorderedMap<BusPtr, BusInfo> buses_info;
     UnorderedMap<StopPtr, UnorderedMap<StopPtr, size_t>> road_route_length; // в метрах
+    bool ignore_road_route_length = false; // отладочный флаг, чтобы не обращать внимания на отсутствие расстояний между остановками
 
     DirectedWeightedGraph graph{0};
 

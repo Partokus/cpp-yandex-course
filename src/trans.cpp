@@ -72,8 +72,11 @@ void DataBase::CreateInfo(size_t bus_wait_time, double bus_velocity, RenderSetti
                 info.route_length_road += *road_distance;
             else
             {
-                throw runtime_error("Can't calculate road distance: bus " +
-                    bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name);
+                if (not ignore_road_route_length)
+                {
+                    throw runtime_error("Can't calculate road distance: bus " +
+                        bus->name + ", stop " + stop->name + ", next_stop " + next_stop->name);
+                }
             }
             if (not bus->ring)
             {
@@ -494,7 +497,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
 {
     using namespace Json;
 
-    os << std::setprecision(16);
+    os << std::setprecision(6);
 
     Document doc = Load(is);
 
