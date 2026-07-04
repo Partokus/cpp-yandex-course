@@ -14,6 +14,8 @@ struct RenderSettings
     Svg::Color underlayer_color = Svg::NoneColor;
     double underlayer_width = 0.0;
     std::vector<Svg::Color> color_palette{};
+    size_t bus_label_font_size = 0U;
+    Svg::Point bus_label_offset{};
 
     bool operator==(const RenderSettings &o) const
     {

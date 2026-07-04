@@ -494,7 +494,7 @@ void Parse(istream &is, ostream &os, DataBase &db)
 {
     using namespace Json;
 
-    os.precision(6);
+    os << std::setprecision(16);
 
     Document doc = Load(is);
 

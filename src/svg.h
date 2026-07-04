@@ -191,6 +191,7 @@ public:
     Text & SetOffset(Point value) { offset = value; return *this; }
     Text & SetFontSize(uint32_t value) { font_size = value; return *this; }
     Text & SetFontFamily(const string &value) { font_family = value; return *this; }
+    Text & SetFontWeight(const string &value) { font_weight = value; return *this; }
     Text & SetData(const string &value) { data = value; return *this; }
 
     void Render(ostream &os) override;
@@ -199,6 +200,7 @@ public:
     Point offset{};
     uint32_t font_size = 1U;
     string font_family{};
+    string font_weight{};
     string data{};
 };
 

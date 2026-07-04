@@ -67,12 +67,18 @@ RenderSettings MakeRenderSettigs(const map<string, Json::Node> &render_settings)
     for (const Node &node : color_palette)
         result.color_palette.push_back(MakeColor(node));
 
+    result.bus_label_font_size = render_settings.at("bus_label_font_size"s).AsInt();
+    const vector<Node> &bus_label_offset = render_settings.at("bus_label_offset"s).AsArray();
+    result.bus_label_offset = Point{ bus_label_offset[0].AsDouble(), bus_label_offset[1].AsDouble() };
+
     return result;
 }
 
 string CreateMap(DataBase &db)
 {
     const RenderSettings &rs = db.render_settings;
+    Svg::Text text{};
+    Svg::Text text_back{};
 
     // Отрисовка маршрутов
     auto [it_min_lat, it_max_lat] = minmax_element(db.stops.begin(), db.stops.end(),
@@ -150,6 +156,46 @@ string CreateMap(DataBase &db)
         polyline.points.clear();
     }
 
+    // Отрисовка названий автобусов у конечных остановок (первой и последней)
+    text = {};
+    text.SetOffset(rs.bus_label_offset).
+        SetFontSize(rs.bus_label_font_size).
+        SetFontWeight("bold").
+        SetFontFamily("Verdana");
+    text_back = text;
+    text_back.SetFillColor(rs.underlayer_color).
+        SetStrokeColor(rs.underlayer_color).
+        SetStrokeWidth(rs.underlayer_width).
+        SetStrokeLineCap("round").
+        SetStrokeLineJoin("round");
+
+    for (auto &[bus_ptr, bus_color]  : buses)
+    {
+        Bus &bus = *bus_ptr.lock().get();
+        StopPtr first_stop = bus.stops.front();
+
+        text.SetData(bus.name);
+        text.SetFillColor(bus_color);
+        text_back.SetData(bus.name);
+
+        Svg::Point first_stop_point = CalcPoint(first_stop->latitude, first_stop->longitude);
+        text.SetPoint(first_stop_point);
+        text_back.SetPoint(first_stop_point);
+        doc.Add(text_back);
+        doc.Add(text);
+
+        StopPtr last_stop = bus.stops.back();
+
+        if (not bus.ring and first_stop->name != last_stop->name)
+        {
+            Svg::Point last_stop_point = CalcPoint(last_stop->latitude, last_stop->longitude);
+            text.SetPoint(last_stop_point);
+            text_back.SetPoint(last_stop_point);
+            doc.Add(text_back);
+            doc.Add(text);
+        }
+    }
+
     // Отрисовка остановок и их названий
     Svg::Circle circle{};
     circle.SetFillColor("white").
@@ -161,11 +207,11 @@ string CreateMap(DataBase &db)
         doc.Add(circle);
     }
 
-    Svg::Text text{};
+    text = {};
     text.SetOffset(rs.stop_label_offset).
         SetFontSize(rs.stop_label_font_size).
         SetFontFamily("Verdana");
-    Svg::Text text_back = text;
+    text_back = text;
     text.SetFillColor("black");
     text_back.SetFillColor(rs.underlayer_color).
         SetStrokeColor(rs.underlayer_color).
@@ -186,6 +232,7 @@ string CreateMap(DataBase &db)
     }
 
     ostringstream oss;
+    oss << std::setprecision(16);
     doc.Render(oss);
 
     string map = oss.str();

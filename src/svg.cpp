@@ -17,8 +17,13 @@ void Polyline::Render(std::ostream &os)
 {
     os << "<polyline points=\"";
 
-    for (const Point point : points)
-        os << point << ' ';
+    for (size_t i = 0; i < points.size(); ++i)
+    {
+        os << points[i];
+        bool is_last = (i + 1) == points.size();
+        if (not is_last)
+            os << ' ';
+    }
 
     os << "\" ";
 
@@ -35,6 +40,9 @@ void Text::Render(ostream &os)
 
     if (not font_family.empty())
         os << "font-family=\"" << font_family << "\" ";
+
+    if (not font_weight.empty())
+        os << "font-weight=\"" << font_weight << "\" ";
 
     RenderCommon(os);
     os << ">" << data << "</text>";
