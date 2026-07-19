@@ -109,5 +109,8 @@
         "text_encoding": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
-    "C_Cpp.default.compilerPath": "/usr/bin/g++-13"
+    "C_Cpp.default.compilerPath": "/usr/bin/g++-13",
+    "clangd.arguments": [
+        "--compile-commands-dir=build-clang"
+    ]
 }
