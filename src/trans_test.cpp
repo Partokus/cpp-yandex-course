@@ -14,7 +14,7 @@ bool AssertDouble(double lhs, double rhs)
 
 void TestMakeRenderSettigs()
 {
-        using namespace Json;
+    using namespace Json;
     {
         istringstream input(R"({
     "render_settings": {
