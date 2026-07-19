@@ -4160,13 +4160,13 @@ void TestParseRouteQuery()
     }
 }
 
-void Test15Failed()
+void Test15()
 {
-    ifstream input("src/test15failed.json");
+    ifstream input("src/test15.json");
     ostringstream oss;
     DataBase db;
 
-    LOG_DURATION("Test 15 failed");
+    LOG_DURATION("Test15");
     Parse(input, oss, db);
 }
 

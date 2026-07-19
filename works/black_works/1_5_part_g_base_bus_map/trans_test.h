@@ -13,7 +13,7 @@ void TestBuildRoute();
 void TestParseJson();
 void TestParse();
 void TestParseRouteQuery();
-void Test15Failed();
+void Test15();
 void TestRender0();
 void TestRender1();
 void TestRender2();

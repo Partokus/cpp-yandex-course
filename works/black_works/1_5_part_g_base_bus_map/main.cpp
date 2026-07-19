@@ -27,7 +27,7 @@ void TestAll()
     RUN_TEST(tr, TestColorCout);
     RUN_TEST(tr, TestDocument);
     RUN_TEST(tr, TestMakeRenderSettigs);
-    RUN_TEST(tr, Test15Failed);
+    RUN_TEST(tr, Test15);
     RUN_TEST(tr, TestCreateMap);
     RUN_TEST(tr, TestRender0);
     RUN_TEST(tr, TestRender1);
