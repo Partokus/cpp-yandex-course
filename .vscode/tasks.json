@@ -10,7 +10,12 @@
             "group": "build",
             "command": "meson",
             "args": [
-                "build-win"
+                "build-clang",
+                "--cross-file=${workspaceRoot}/cross/clang.txt",
+                "--buildtype=debugoptimized",
+                // "--strip",
+                // "--unity",
+                // "--default-library=static",
             ],
             "options": {
                 "statusbar": {
@@ -32,11 +37,11 @@
                 "compile",
             ],
             "options": {
-                "cwd": "${workspaceRoot}/build-win",
+                "cwd": "${workspaceRoot}/build-clang",
                 "statusbar": {
                     "label": "$(star-full) W-Build",
                     "color": "#A8FF60",
-                    "tooltip": "meson compile -C build-win"
+                    "tooltip": "meson compile -C build-clang"
                 }
             },
             "problemMatcher": {
@@ -62,19 +67,19 @@
                 "clear": true
             },
             "group": "build",
-            "command": "rm -rf build-win",
+            "command": "rm -rf build-clang",
             "options": {
                 "statusbar": {
                     "label": "$(trash) W-Delete",
                     "color": "#FF6C60",
-                    "tooltip": "delete build-win"
+                    "tooltip": "delete build-clang"
                 }
             }
         },
         {
             "label": "Run",
             "type": "shell",
-            "command": "build-win/src/white",
+            "command": "build-clang/src/white",
             "options": {
                 "statusbar": {
                     "label": "$(debug-start) Run",
