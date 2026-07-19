@@ -2057,7 +2057,7 @@ void TestParseJson()
 void TestParse()
 {
     {
-        ifstream input("src/long.json");
+        ifstream input("json/long.json");
         ostringstream oss;
         DataBase db;
         db.ignore_road_route_length = true;
@@ -4190,7 +4190,7 @@ void TestParseRouteQuery()
 
 void Test15Failed()
 {
-    ifstream input("src/test15failed.json");
+    ifstream input("json/test15failed.json");
     ostringstream oss;
     DataBase db;
 
@@ -4200,7 +4200,7 @@ void Test15Failed()
 
 void TestRender0()
 {
-    ifstream input("src/render_example_0.json");
+    ifstream input("json/render_example_0.json");
     ostringstream oss;
     DataBase db;
     Parse(input, oss, db);
@@ -4208,7 +4208,7 @@ void TestRender0()
 
 void TestRender1()
 {
-    ifstream input("src/render_example_1.json");
+    ifstream input("json/render_example_1.json");
     ostringstream oss;
     DataBase db;
     Parse(input, oss, db);
@@ -4216,7 +4216,7 @@ void TestRender1()
 
 void TestRender2()
 {
-    ifstream input("src/render_example_2.json");
+    ifstream input("json/render_example_2.json");
     ostringstream oss;
     DataBase db;
     Parse(input, oss, db);
@@ -4225,8 +4225,8 @@ void TestRender2()
 void TestRenderBusNames()
 {
     {
-        ifstream input("src/render_example_3.json");
-        ifstream input_expect("src/render_example_expect_3.txt");
+        ifstream input("json/render_example_3.json");
+        ifstream input_expect("txt/render_example_expect_3.txt");
         string expect;
         getline(input_expect, expect);
         ostringstream oss;
@@ -4235,8 +4235,8 @@ void TestRenderBusNames()
         ASSERT_EQUAL(db.map_svg, expect);
     }
     {
-        ifstream input("src/render_example_4.json");
-        ifstream input_expect("src/render_example_expect_4.txt");
+        ifstream input("json/render_example_4.json");
+        ifstream input_expect("txt/render_example_expect_4.txt");
         string expect;
         getline(input_expect, expect);
         ostringstream oss;
