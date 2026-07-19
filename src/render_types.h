@@ -16,6 +16,7 @@ struct RenderSettings
     std::vector<Svg::Color> color_palette{};
     size_t bus_label_font_size = 0U;
     Svg::Point bus_label_offset{};
+    std::vector<string> layers{"bus_lines", "bus_labels", "stop_points", "stop_labels"};
 
     bool operator==(const RenderSettings &o) const
     {

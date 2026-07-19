@@ -76,6 +76,14 @@ RenderSettings MakeRenderSettigs(const map<string, Json::Node> &render_settings)
         result.bus_label_offset = Point{ bus_label_offset[0].AsDouble(), bus_label_offset[1].AsDouble() };
     }
 
+    if (render_settings.count("layers"))
+    {
+        const vector<Node> &layers = render_settings.at("layers"s).AsArray();
+        result.layers.clear();
+        for (const Node &layer : layers)
+            result.layers.push_back(layer.AsString());
+    }
+
     return result;
 }
 
@@ -136,28 +144,12 @@ private:
     double _zoom_coef = 0.0;
 };
 
-string CreateMap(DataBase &db)
+// Отрисовка линий автобусов
+void RenderLayerBusLines(
+    Svg::Document &doc, DataBase &db,
+    BusToColorMap &buses_to_color, PointCalculator &point_calculator)
 {
     const RenderSettings &rs = db.render_settings;
-    Svg::Text text{};
-    Svg::Text text_back{};
-
-    PointCalculator point_calculator{db};
-
-    // Отрисовка маршрутов
-    BusToColorMap buses_to_color{};
-    for (const BusPtr &bus : db.buses)
-        buses_to_color.insert({bus, Svg::Color{}});
-
-    auto it_color = rs.color_palette.begin();
-    for (auto &[bus, bus_color] : buses_to_color)
-    {
-        bus_color = *it_color;
-        if (++it_color == rs.color_palette.end())
-            it_color = rs.color_palette.begin();
-    }
-
-    Svg::Document doc{};
     Svg::Polyline polyline{};
     polyline.SetStrokeWidth(rs.line_width).
         SetStrokeLineCap("round").
@@ -184,9 +176,17 @@ string CreateMap(DataBase &db)
         doc.Add(polyline);
         polyline.points.clear();
     }
+}
 
-    // Отрисовка названий автобусов у конечных остановок (первой и последней)
-    text = {};
+// Отрисовка названий автобусов у конечных остановок (первой и последней)
+void RenderLayerBusLabels(
+    Svg::Document &doc, DataBase &db,
+    BusToColorMap &buses_to_color, PointCalculator &point_calculator)
+{
+    const RenderSettings &rs = db.render_settings;
+    Svg::Text text{};
+    Svg::Text text_back{};
+
     text.SetOffset(rs.bus_label_offset).
         SetFontSize(rs.bus_label_font_size).
         SetFontWeight("bold").
@@ -224,8 +224,13 @@ string CreateMap(DataBase &db)
             doc.Add(text);
         }
     }
+}
 
-    // Отрисовка остановок и их названий
+// Отрисовка кругов остановок
+void RenderLayerStopPoints(
+    Svg::Document &doc, DataBase &db, PointCalculator &point_calculator)
+{
+    const RenderSettings &rs = db.render_settings;
     Svg::Circle circle{};
     circle.SetFillColor("white").
         SetRadius(rs.stop_radius);
@@ -235,8 +240,15 @@ string CreateMap(DataBase &db)
         circle.SetCenter(p);
         doc.Add(circle);
     }
+}
 
-    text = {};
+void RenderLayerStopLabels(
+    Svg::Document &doc, DataBase &db, PointCalculator &point_calculator)
+{
+    const RenderSettings &rs = db.render_settings;
+    Svg::Text text{};
+    Svg::Text text_back{};
+
     text.SetOffset(rs.stop_label_offset).
         SetFontSize(rs.stop_label_font_size).
         SetFontFamily("Verdana");
@@ -258,6 +270,41 @@ string CreateMap(DataBase &db)
 
         doc.Add(text_back);
         doc.Add(text);
+    }
+}
+
+string CreateMap(DataBase &db)
+{
+    const RenderSettings &rs = db.render_settings;
+    Svg::Document doc{};
+    Svg::Text text{};
+    Svg::Text text_back{};
+
+    PointCalculator point_calculator{db};
+
+    BusToColorMap buses_to_color{};
+    for (const BusPtr &bus : db.buses)
+        buses_to_color.insert({bus, Svg::Color{}});
+    auto it_color = rs.color_palette.begin();
+    for (auto &[bus, bus_color] : buses_to_color)
+    {
+        bus_color = *it_color;
+        if (++it_color == rs.color_palette.end())
+            it_color = rs.color_palette.begin();
+    }
+
+    for (const string &layer : rs.layers)
+    {
+        if (layer == "bus_lines"s)
+            RenderLayerBusLines(doc, db, buses_to_color, point_calculator);
+        else if (layer == "bus_labels"s)
+            RenderLayerBusLabels(doc, db, buses_to_color, point_calculator);
+        else if (layer == "stop_points"s)
+            RenderLayerStopPoints(doc, db, point_calculator);
+        else if (layer == "stop_labels"s)
+            RenderLayerStopLabels(doc, db, point_calculator);
+        else
+            throw runtime_error("Unknown layer\n");
     }
 
     ostringstream oss;
