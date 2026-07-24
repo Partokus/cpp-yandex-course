@@ -112,5 +112,15 @@
     "C_Cpp.default.compilerPath": "/usr/bin/g++-13",
     "clangd.arguments": [
         "--compile-commands-dir=build-clang"
-    ]
+    ],
+    // "clangd.completion.enabled": false,
+    // "editor.quickSuggestions": {
+    //     "other": false,
+    //     "comments": false,
+    //     "strings": false
+    // },
+    "editor.suggestOnTriggerCharacters": false,
+    "editor.inlineSuggest.enabled": false,
+    "github.copilot.enable": false,
+    "github.copilot.inlineSuggest.enable": false
 }

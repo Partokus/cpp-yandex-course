@@ -9,7 +9,8 @@ inc = include_directories(
 
 src = [
     'main.cpp',
-    'tests/test_runner.cpp'
+    'tests/test_runner.cpp',
+    'json_printer.cpp'
 ]
 
 white = executable('white',
